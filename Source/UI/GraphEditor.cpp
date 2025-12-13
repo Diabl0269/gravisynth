@@ -1,6 +1,7 @@
 #include "GraphEditor.h"
 #include "../Modules/ADSRModule.h"
 #include "../Modules/FilterModule.h"
+#include "../Modules/LFOModule.h"
 #include "../Modules/OscillatorModule.h"
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
@@ -59,10 +60,12 @@ void GraphEditor::updateComponents() {
           comp->setTopLeftPosition(830, 50);
         else if (name == "Filter Env")
           comp->setTopLeftPosition(830, 450);
+        else if (name == "LFO")
+          comp->setTopLeftPosition(10, 500); // Under Sequencer (ends at 460).
         else if (name == "VCA")
           comp->setTopLeftPosition(1120, 50);
         else if (name.containsIgnoreCase("Output"))
-          comp->setTopLeftPosition(1120, 450);
+          comp->setTopLeftPosition(1120, 500);
         else if (name.containsIgnoreCase("Input"))
           comp->setTopLeftPosition(10, 10);
         else
@@ -360,6 +363,8 @@ void GraphEditor::itemDropped(const SourceDetails &dragSourceDetails) {
     newProcessor = std::make_unique<VCAModule>();
   else if (name == "Sequencer")
     newProcessor = std::make_unique<SequencerModule>();
+  else if (name == "LFO")
+    newProcessor = std::make_unique<LFOModule>();
 
   if (newProcessor) {
     auto node = audioEngine.getGraph().addNode(std::move(newProcessor));

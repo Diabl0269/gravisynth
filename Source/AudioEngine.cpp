@@ -1,6 +1,7 @@
 #include "AudioEngine.h"
 #include "Modules/ADSRModule.h"
 #include "Modules/FilterModule.h"
+#include "Modules/LFOModule.h"
 #include "Modules/OscillatorModule.h"
 #include "Modules/SequencerModule.h"
 #include "Modules/VCAModule.h"
@@ -68,6 +69,7 @@ void AudioEngine::createDefaultPatch() {
       mainProcessorGraph.addNode(std::make_unique<ADSRModule>("Amp Env"));
   auto filterAdsrNode =
       mainProcessorGraph.addNode(std::make_unique<ADSRModule>("Filter Env"));
+  auto lfoNode = mainProcessorGraph.addNode(std::make_unique<LFOModule>());
 
   // Set positions
   // UI auto-layout handles standard modules.

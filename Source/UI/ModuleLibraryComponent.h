@@ -5,7 +5,7 @@
 class ModuleLibraryComponent : public juce::Component {
 public:
   ModuleLibraryComponent() {
-    moduleNames = {"Oscillator", "Filter",    "ADSR",
+    moduleNames = {"Oscillator", "Filter",    "LFO",   "ADSR",
                    "VCA",        "Sequencer", "Output"};
   }
 

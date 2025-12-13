@@ -11,6 +11,8 @@ public:
                      "resonance", "Resonance", 0.0f, 1.0f, 0.5f));
     addParameter(driveParam = new juce::AudioParameterFloat("drive", "Drive",
                                                             1.0f, 10.0f, 2.0f));
+    addParameter(modAmountParam = new juce::AudioParameterFloat(
+                     "modAmount", "FM Amount", 0.0f, 1.0f, 1.0f));
   }
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override {
@@ -25,17 +27,20 @@ public:
   void processBlock(juce::AudioBuffer<float> &buffer,
                     juce::MidiBuffer &midiMessages) override {
 
-    // Capture MIDI CC 74 for modulation amount
+    // MIDI CC 74 can still control it if we want, or just rely on parameter
     for (const auto metadata : midiMessages) {
       auto msg = metadata.getMessage();
       if (msg.isController() && msg.getControllerNumber() == 74) {
-        modulationAmount = msg.getControllerValue() / 127.0f;
+        // Optional: map CC to parameter?
+        // *modAmountParam = msg.getControllerValue() / 127.0f;
+        // Let's leave CC out for now to avoid confusion/overwriting
       }
     }
 
     float baseCutoff = *cutoffParam;
     float res = *resonanceParam;
     float drive = *driveParam;
+    float modAmt = *modAmountParam;
 
     filter.setResonance(res);
     filter.setDrive(drive);
@@ -64,7 +69,7 @@ public:
       if (cvCh) {
         // Exponential FM
         float octaves = 4.0f;
-        float pitchMod = cvCh[i] * modulationAmount * octaves;
+        float pitchMod = cvCh[i] * modAmt * octaves;
         mod = std::pow(2.0f, pitchMod);
       } else {
         mod = 1.0f;
@@ -84,9 +89,8 @@ public:
 
 private:
   juce::dsp::LadderFilter<float> filter;
-  float modulationAmount = 1.0f;
-
   juce::AudioParameterFloat *cutoffParam;
   juce::AudioParameterFloat *resonanceParam;
   juce::AudioParameterFloat *driveParam;
+  juce::AudioParameterFloat *modAmountParam;
 };
