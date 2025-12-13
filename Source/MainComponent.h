@@ -2,9 +2,11 @@
 
 #include "AudioEngine.h"
 #include "UI/GraphEditor.h"
+#include "UI/ModuleLibraryComponent.h"
 #include <JuceHeader.h>
 
-class MainComponent : public juce::Component {
+class MainComponent : public juce::Component,
+                      public juce::DragAndDropContainer {
 public:
   MainComponent();
   ~MainComponent() override;
@@ -15,6 +17,7 @@ public:
 private:
   AudioEngine audioEngine;
   GraphEditor graphEditor;
+  ModuleLibraryComponent moduleLibrary;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

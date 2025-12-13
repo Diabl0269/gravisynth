@@ -1,49 +1,73 @@
 #include "GraphEditor.h"
+#include "../Modules/ADSRModule.h"
+#include "../Modules/FilterModule.h"
+#include "../Modules/OscillatorModule.h"
+#include "../Modules/SequencerModule.h"
+#include "../Modules/VCAModule.h"
 #include "ModuleComponent.h"
 
 GraphEditor::GraphEditor(AudioEngine &engine) : audioEngine(engine) {
-  updateComponents();
-  // startTimer(500); // Check for graph changes periodically (naive approach)
+  startTimerHz(30);
 }
 
 GraphEditor::~GraphEditor() {}
 
 void GraphEditor::updateComponents() {
-  // Naive sync: clear and recreate. In production we'd diff.
-  removeAllChildren();
   moduleComponents.clear();
+  removeAllChildren();
 
   auto &graph = audioEngine.getGraph();
+
   for (auto *node : graph.getNodes()) {
-    if (auto *processor = node->getProcessor()) {
-      // Create component for ANY processor (ModuleBase OR IO)
-      auto *comp = new ModuleComponent(processor, *this);
+    auto *processor = node->getProcessor();
+    // Skip IO processors for UI if desired, or show them.
+    // IO processors don't have ModuleBase logic usually?
+    // ModuleBase* module = dynamic_cast<ModuleBase*>(processor);
+    // If not ModuleBase, we might crash if ModuleComponent expects it.
+    // Check ModuleComponent.h: `ModuleComponent(AudioProcessor* processor)`?
+    // No, `ModuleComponent` calls `module->getName()`. AudioProcessor has
+    // generic getName. `module->getTotalNumInputChannels()`. Generic has it.
+    // `module->producesMidi()`. Generic has it.
+
+    // BUT `ModuleComponent` constructor currently takes `ModuleBase*`.
+    // Wait, let's check `ModuleComponent.h`.
+    // `ModuleComponent(ModuleBase* module, GraphEditor& owner)`
+
+    // Default IO processors are NOT ModuleBase.
+    // Allow all processors (including IO)
+    // if (auto *module = dynamic_cast<ModuleBase *>(processor)) {
+    if (processor) {
+      auto *comp = moduleComponents.add(new ModuleComponent(processor, *this));
       addAndMakeVisible(comp);
 
-      // Deterministic Layout
-      // Deterministic Layout
-      if (processor->getName() == "Sequencer")
-        comp->setTopLeftPosition(10, 100); // Left-most, wide
-      else if (processor->getName() == "Oscillator")
-        comp->setTopLeftPosition(540, 100); // Right of Sequencer (510+padding)
-      else if (processor->getName() == "Amp Env")
-        comp->setTopLeftPosition(1000, 350); // Below VCA/Filter area
-      else if (processor->getName() == "Filter Env")
-        comp->setTopLeftPosition(760, 350); // Below Filter
-      else if (processor->getName() == "ADSR")
-        comp->setTopLeftPosition(540, 350); // Fallback
-      else if (processor->getName() == "Filter")
-        comp->setTopLeftPosition(760, 100); // Right of Osc
-      else if (processor->getName() == "VCA")
-        comp->setTopLeftPosition(980, 100); // Right of Filter (Linear flow)
-      else if (processor->getName() == "Audio Output")
-        comp->setTopLeftPosition(1200, 100); // Far right
-      else if (processor->getName() == "Audio Input")
-        comp->setTopLeftPosition(10, 10);
-      else
-        comp->setTopLeftPosition(100 + (moduleComponents.size() * 20), 500);
+      // Check for saved position
+      auto x = node->properties.getWithDefault("x", -1);
+      auto y = node->properties.getWithDefault("y", -1);
 
-      moduleComponents.add(comp);
+      if (static_cast<int>(x) != -1 && static_cast<int>(y) != -1) {
+        comp->setTopLeftPosition(static_cast<int>(x), static_cast<int>(y));
+      } else {
+        // Default layout
+        juce::String name = processor->getName();
+        if (name == "Sequencer")
+          comp->setTopLeftPosition(10, 80);
+        else if (name == "Oscillator")
+          comp->setTopLeftPosition(540, 50);
+        else if (name == "Amp Env")
+          comp->setTopLeftPosition(540, 450);
+        else if (name == "Filter")
+          comp->setTopLeftPosition(830, 50);
+        else if (name == "Filter Env")
+          comp->setTopLeftPosition(830, 450);
+        else if (name == "VCA")
+          comp->setTopLeftPosition(1120, 50);
+        else if (name.containsIgnoreCase("Output"))
+          comp->setTopLeftPosition(1120, 450);
+        else if (name.containsIgnoreCase("Input"))
+          comp->setTopLeftPosition(10, 10);
+        else
+          comp->setTopLeftPosition(100 + (moduleComponents.size() * 30), 400);
+      }
     }
   }
 }
@@ -237,13 +261,35 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
 
 void GraphEditor::resized() {}
 
-void GraphEditor::timerCallback() {
-  // updateComponents(); // CAUSES FLICKER/RESET
-  // TODO: Smart diffing
+void GraphEditor::updateModulePosition(ModuleComponent *module) {
+  if (!module)
+    return;
+  for (auto *n : audioEngine.getGraph().getNodes()) {
+    if (n->getProcessor() == module->getModule()) {
+      n->properties.set("x", module->getX());
+      n->properties.set("y", module->getY());
+      break;
+    }
+  }
 }
 
-void GraphEditor::mouseDoubleClick(const juce::MouseEvent &) {
-  updateComponents();
+void GraphEditor::deleteModule(ModuleComponent *module) {
+  auto &graph = audioEngine.getGraph();
+  juce::AudioProcessorGraph::NodeID nodeId;
+
+  // Find NodeID
+  for (auto *n : graph.getNodes()) {
+    if (n->getProcessor() == module->getModule()) {
+      nodeId = n->nodeID;
+      break;
+    }
+  }
+
+  if (nodeId.uid == 0)
+    return; // Not found
+
+  graph.removeNode(nodeId);
+  updateComponents(); // Rebuild moduleComponents
   repaint();
 }
 
@@ -289,4 +335,40 @@ void GraphEditor::disconnectPort(ModuleComponent *module, int portIndex,
   }
 
   repaint();
+}
+
+void GraphEditor::timerCallback() {
+  // empty for now, or use for other periodic updates
+}
+
+bool GraphEditor::isInterestedInDragSource(
+    const SourceDetails &dragSourceDetails) {
+  return true;
+}
+
+void GraphEditor::itemDropped(const SourceDetails &dragSourceDetails) {
+  juce::String name = dragSourceDetails.description.toString();
+  std::unique_ptr<juce::AudioProcessor> newProcessor;
+
+  if (name == "Oscillator")
+    newProcessor = std::make_unique<OscillatorModule>();
+  else if (name == "Filter")
+    newProcessor = std::make_unique<FilterModule>();
+  else if (name == "ADSR")
+    newProcessor = std::make_unique<ADSRModule>();
+  else if (name == "VCA")
+    newProcessor = std::make_unique<VCAModule>();
+  else if (name == "Sequencer")
+    newProcessor = std::make_unique<SequencerModule>();
+
+  if (newProcessor) {
+    auto node = audioEngine.getGraph().addNode(std::move(newProcessor));
+    if (node) {
+      auto dropPos = dragSourceDetails.localPosition;
+      node->properties.set("x", dropPos.x);
+      node->properties.set("y", dropPos.y);
+
+      updateComponents();
+    }
+  }
 }

@@ -5,16 +5,17 @@
 
 class ModuleComponent;
 
-class GraphEditor : public juce::Component, public juce::Timer {
+class GraphEditor : public juce::Component,
+                    public juce::Timer,
+                    public juce::DragAndDropTarget {
 public:
   GraphEditor(AudioEngine &engine);
   ~GraphEditor() override;
 
-  void paint(juce::Graphics &) override;
+  void paint(juce::Graphics &g) override;
   void resized() override;
 
   void timerCallback() override;
-  void mouseDoubleClick(const juce::MouseEvent &) override;
   void updateComponents();
 
   // Interactions
@@ -25,6 +26,13 @@ public:
   void endConnectionDrag(juce::Point<int> screenPos);
   void disconnectPort(ModuleComponent *module, int portIndex, bool isInput,
                       bool isMidi);
+  void deleteModule(ModuleComponent *module);
+  void updateModulePosition(ModuleComponent *module);
+
+  // DragAndDropTarget overrides
+  bool
+  isInterestedInDragSource(const SourceDetails &dragSourceDetails) override;
+  void itemDropped(const SourceDetails &dragSourceDetails) override;
 
 private:
   AudioEngine &audioEngine;

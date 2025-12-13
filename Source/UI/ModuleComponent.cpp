@@ -376,9 +376,18 @@ void ModuleComponent::mouseDown(const juce::MouseEvent &e) {
                                 e.getScreenPosition());
     }
   } else {
-    dragger.startDraggingComponent(this, e);
+    // Click on Body
+    if (e.mods.isPopupMenu()) {
+      juce::PopupMenu m;
+      m.addItem("Delete Module", [this] { owner.deleteModule(this); });
+      m.showMenuAsync(juce::PopupMenu::Options());
+    } else {
+      dragger.startDraggingComponent(this, e);
+    }
   }
 }
+
+void ModuleComponent::moved() { owner.updateModulePosition(this); }
 
 void ModuleComponent::mouseDrag(const juce::MouseEvent &e) {
   if (getPortForPoint(e.getMouseDownPosition())) {

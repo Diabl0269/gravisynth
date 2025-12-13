@@ -1,10 +1,10 @@
 #include "MainComponent.h"
 
 MainComponent::MainComponent() : graphEditor(audioEngine) {
+  setSize(800, 600);
   addAndMakeVisible(graphEditor);
-  setSize(1200, 800);
+  addAndMakeVisible(moduleLibrary);
 
-  // Initialize audio engine
   if (juce::RuntimePermissions::isRequired(
           juce::RuntimePermissions::recordAudio) &&
       !juce::RuntimePermissions::isGranted(
@@ -24,9 +24,16 @@ MainComponent::MainComponent() : graphEditor(audioEngine) {
 
 MainComponent::~MainComponent() { audioEngine.shutdown(); }
 
+//==============================================================================
 void MainComponent::paint(juce::Graphics &g) {
+  // (Our component is opaque, so we must completely fill the background with a
+  // solid colour)
   g.fillAll(
       getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 }
 
-void MainComponent::resized() { graphEditor.setBounds(getLocalBounds()); }
+void MainComponent::resized() {
+  auto bounds = getLocalBounds();
+  moduleLibrary.setBounds(bounds.removeFromLeft(200));
+  graphEditor.setBounds(bounds);
+}
