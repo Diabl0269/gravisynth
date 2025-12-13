@@ -1,7 +1,9 @@
 #include "ModuleComponent.h"
 #include "../Modules/SequencerModule.h"
+#include "GraphEditor.h"
 
-ModuleComponent::ModuleComponent(juce::AudioProcessor *m) : module(m) {
+ModuleComponent::ModuleComponent(juce::AudioProcessor *m, GraphEditor &owner)
+    : module(m), owner(owner) {
   createControls();
   startTimerHz(30); // 30 FPS for step visualization
 }
@@ -89,7 +91,7 @@ void ModuleComponent::createControls() {
   int rows = (numSliders + 1) / 2;
   contentHeight += rows * 80;
 
-  setSize(200, std::max(100, contentHeight + 20));
+  setSize(280, std::max(100, contentHeight + 20)); // Increased width
 }
 
 void ModuleComponent::paint(juce::Graphics &g) {
@@ -118,6 +120,124 @@ void ModuleComponent::paint(juce::Graphics &g) {
   g.setColour(juce::Colours::white);
   g.drawText(module->getName(), 0, 0, getWidth(), 24,
              juce::Justification::centred, true);
+
+  // --- PORTS ---
+  int numIns = module->getTotalNumInputChannels();
+  int numOuts = module->getTotalNumOutputChannels();
+
+  if (module->getName() == "Sequencer") {
+    numIns = 0; // Visual fix
+    if (module->producesMidi()) {
+      g.setColour(juce::Colours::white);
+      auto p = getPortCenter(0, false);
+      g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+      g.drawText("Midi Out", p.x - 65, p.y - 5, 60, 10,
+                 juce::Justification::right, false);
+    }
+  } else {
+    // MIDI Input (Top Left if accepts midi components)
+    if (module->acceptsMidi()) {
+      g.setColour(juce::Colours::white);
+      // Draw at top left? Or index -1?
+      // Let's reuse getPortCenter logic but custom.
+      auto p = juce::Point<int>(10, 30); // Top left near header
+      g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+      g.drawText("Midi In", p.x + 10, p.y - 5, 60, 10,
+                 juce::Justification::left, false);
+    }
+
+    // Inputs
+    g.setColour(juce::Colours::yellow);
+    for (int i = 0; i < numIns; ++i) {
+      auto p = getPortCenter(i, true);
+      g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+
+      juce::String label = "In " + juce::String(i);
+      // Custom labels for Filter
+      if (module->getName() == "Filter") {
+        if (i == 0)
+          label = "Audio";
+        if (i == 1)
+          label = "Freq CV";
+      }
+      if (module->getName() == "VCA") {
+        if (i == 0)
+          label = "Audio";
+        if (i == 1)
+          label = "CV";
+      }
+
+      g.drawText(label, p.x + 10, p.y - 10, 60, 20, juce::Justification::left,
+                 false);
+    }
+
+    // Outputs
+    for (int i = 0; i < numOuts; ++i) {
+      auto p = getPortCenter(i, false);
+      g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+
+      juce::String label = "Out " + juce::String(i);
+      g.drawText(label, p.x - 70, p.y - 10, 60, 20, juce::Justification::right,
+                 false);
+    }
+  }
+}
+
+juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
+  int yStep = 20;
+  int headerHeight = 30;
+
+  if (isInput) {
+    return {10, headerHeight + index * yStep + 20}; // Left side
+  } else {
+    return {getWidth() - 10, headerHeight + index * yStep + 20}; // Right side
+  }
+}
+
+std::optional<ModuleComponent::Port>
+ModuleComponent::getPortForPoint(juce::Point<int> localPoint) {
+  int numIns = module->getTotalNumInputChannels();
+  int numOuts = module->getTotalNumOutputChannels();
+
+  // Special handling for Sequencer Midi Out
+  if (module->getName() == "Sequencer" && module->producesMidi()) {
+    auto p = getPortCenter(0, false);
+    if (localPoint.getDistanceFrom(p) < 10) {
+      return Port{{p.x - 5, p.y - 5, 10, 10},
+                  0,
+                  false,
+                  true}; // Index 0, Output, IsMidi
+    }
+  }
+
+  // MIDI Input detection
+  if (module->acceptsMidi() &&
+      !(module->getName() ==
+        "Sequencer")) { // Sequencer accepts midi? No, it produces.
+    auto p = juce::Point<int>(10, 30);
+    if (localPoint.getDistanceFrom(p) < 10) {
+      return Port{
+          {p.x - 5, p.y - 5, 10, 10}, 0, true, true}; // Index 0, Input, IsMidi
+    }
+  }
+
+  // Inputs
+  for (int i = 0; i < numIns; ++i) {
+    auto p = getPortCenter(i, true);
+    if (localPoint.getDistanceFrom(p) < 10) {
+      return Port{{p.x - 5, p.y - 5, 10, 10}, i, true, false};
+    }
+  }
+
+  // Outputs
+  for (int i = 0; i < numOuts; ++i) {
+    auto p = getPortCenter(i, false);
+    if (localPoint.getDistanceFrom(p) < 10) {
+      return Port{{p.x - 5, p.y - 5, 10, 10}, i, false, false};
+    }
+  }
+
+  return std::nullopt;
 }
 
 void ModuleComponent::resized() {
@@ -129,15 +249,15 @@ void ModuleComponent::resized() {
     // Top Row: Run and BPM
     for (auto *toggle : toggles) {
       if (toggle->getComponentID().equalsIgnoreCase("run")) {
-        toggle->setBounds(x, y, 60, 24);
+        toggle->setBounds(x + 30, y, 60, 24); // Add margin
         x += 70;
       }
     }
 
     for (int i = 0; i < sliders.size(); ++i) {
       if (sliders[i]->getComponentID().equalsIgnoreCase("bpm")) {
-        sliderLabels[i]->setBounds(x, y, 60, 20);
-        sliders[i]->setBounds(x, y + 20, 60, 50);
+        sliderLabels[i]->setBounds(x + 20, y, 60, 20); // Add margin
+        sliders[i]->setBounds(x + 20, y + 20, 60, 50);
         x += 70;
       }
     }
@@ -184,14 +304,16 @@ void ModuleComponent::resized() {
 
   // --- ADSR Layout ---
   if (module->getName().contains("ADSR") || module->getName().contains("Env")) {
-    setSize(220, 180); // Fixed size for ADSR
+    int margin = 30;                // Side margins for ports
+    setSize(220 + margin * 2, 180); // Increase width
     int y = 30;
+    int contentWidth = getWidth() - margin * 2;
     int sliderWidth = 50;
     int sliderHeight = 120;
 
     // We expect 4 sliders: A, D, S, R
     for (int i = 0; i < sliders.size(); ++i) {
-      int x = 10 + i * sliderWidth;
+      int x = margin + 10 + i * sliderWidth;
       sliderLabels[i]->setBounds(x, y, sliderWidth, 20);
       sliders[i]->setBounds(x, y + 20, sliderWidth, sliderHeight);
     }
@@ -200,27 +322,33 @@ void ModuleComponent::resized() {
 
   // --- Default Layout ---
   int y = 30;
+  // Increase top y if MIDI IN is present to avoid overlap
+  if (module->acceptsMidi())
+    y += 30;
+
+  int margin = 70; // Wider margin for labels
+  int contentWidth = getWidth() - (margin * 2);
 
   for (int i = 0; i < comboBoxes.size(); ++i) {
-    comboLabels[i]->setBounds(10, y, getWidth() - 20, 20);
+    comboLabels[i]->setBounds(margin, y, contentWidth, 20);
     y += 20;
-    comboBoxes[i]->setBounds(10, y, getWidth() - 20, 24);
+    comboBoxes[i]->setBounds(margin, y, contentWidth, 24);
     y += 30;
   }
 
   for (int i = 0; i < toggles.size(); ++i) {
-    toggles[i]->setBounds(10, y, getWidth() - 20, 24);
+    toggles[i]->setBounds(margin, y, contentWidth, 24);
     y += 30;
   }
 
-  int sliderWidth = (getWidth() - 20) / 2;
+  int sliderWidth = contentWidth / 2;
   int sliderHeight = 60;
 
   for (int i = 0; i < sliders.size(); ++i) {
     int row = i / 2;
     int col = i % 2;
 
-    int x = 10 + col * sliderWidth;
+    int x = margin + col * sliderWidth;
     int localY = y + row * (sliderHeight + 20);
 
     sliderLabels[i]->setBounds(x, localY, sliderWidth, 20);
@@ -229,11 +357,41 @@ void ModuleComponent::resized() {
 }
 
 void ModuleComponent::mouseDown(const juce::MouseEvent &e) {
-  dragger.startDraggingComponent(this, e);
+  auto port = getPortForPoint(e.getPosition());
+  if (port) {
+    if (e.mods.isPopupMenu()) {
+      // Right click -> Disconnect
+      // Show menu? Or just disconnect?
+      // User asked for "way to disconnect". Instant disconnect is fast.
+      // Or a menu "Disconnect".
+      juce::PopupMenu m;
+      m.addItem("Disconnect", [this, port] {
+        owner.disconnectPort(this, port->index, port->isInput, port->isMidi);
+      });
+
+      m.showMenuAsync(juce::PopupMenu::Options());
+    } else {
+      // Start Connection Drag
+      owner.beginConnectionDrag(this, port->index, port->isInput, port->isMidi,
+                                e.getScreenPosition());
+    }
+  } else {
+    dragger.startDraggingComponent(this, e);
+  }
 }
 
 void ModuleComponent::mouseDrag(const juce::MouseEvent &e) {
-  dragger.dragComponent(this, e, nullptr);
-  if (auto *p = getParentComponent())
-    p->repaint();
+  if (getPortForPoint(e.getMouseDownPosition())) {
+    owner.dragConnection(e.getScreenPosition());
+  } else {
+    dragger.dragComponent(this, e, nullptr);
+    if (auto *p = getParentComponent())
+      p->repaint();
+  }
+}
+
+void ModuleComponent::mouseUp(const juce::MouseEvent &e) {
+  if (getPortForPoint(e.getMouseDownPosition())) {
+    owner.endConnectionDrag(e.getScreenPosition());
+  }
 }

@@ -2,9 +2,11 @@
 
 #include <JuceHeader.h>
 
+class GraphEditor; // Forward declaration
+
 class ModuleComponent : public juce::Component, public juce::Timer {
 public:
-  ModuleComponent(juce::AudioProcessor *module);
+  ModuleComponent(juce::AudioProcessor *module, GraphEditor &owner);
   ~ModuleComponent() override;
 
   void paint(juce::Graphics &) override;
@@ -13,11 +15,24 @@ public:
 
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
 
   juce::AudioProcessor *getModule() const { return module; }
 
+  // Interaction Logic
+  struct Port {
+    juce::Rectangle<int> area;
+    int index;
+    bool isInput;
+    bool isMidi = false;
+  };
+
+  std::optional<Port> getPortForPoint(juce::Point<int> localPoint);
+  juce::Point<int> getPortCenter(int index, bool isInput);
+
 private:
   juce::AudioProcessor *module;
+  GraphEditor &owner;
   juce::ComponentDragger dragger;
 
   // Auto-UI
@@ -28,13 +43,7 @@ private:
   juce::OwnedArray<juce::ToggleButton> toggles;
 
   // Attachments need to be kept alive.
-  // We are using raw pointers for params currently, so we'll do simple listener
-  // or direct polling. Ideally use ParameterAttachments. Let's simpler
-  // approach: Component::Listener or polling? JUCE's
-  // GenericAudioProcessorEditor does this well. Let's use std::vector of
-  // unique_ptrs to attachments if we had APVTS. Since we used raw
-  // AudioParameters, we can use SliderParameterAttachment.
-
+  // We are using raw pointers for parameters currently.
   juce::OwnedArray<juce::SliderParameterAttachment> sliderAttachments;
   juce::OwnedArray<juce::ComboBoxParameterAttachment> comboAttachments;
   juce::OwnedArray<juce::ButtonParameterAttachment> buttonAttachments;
