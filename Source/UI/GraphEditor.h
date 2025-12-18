@@ -38,9 +38,33 @@ public:
   isInterestedInDragSource(const SourceDetails &dragSourceDetails) override;
   void itemDropped(const SourceDetails &dragSourceDetails) override;
 
+  // Mouse Overrides
+  void mouseWheelMove(const juce::MouseEvent &e,
+                      const juce::MouseWheelDetails &wheel) override;
+  void mouseDown(const juce::MouseEvent &e) override;
+  void mouseDrag(const juce::MouseEvent &e) override;
+
 private:
+  class GraphContentComponent : public juce::Component {
+  public:
+    GraphContentComponent(GraphEditor &editor);
+    void paint(juce::Graphics &g) override;
+    void resized() override;
+
+    juce::OwnedArray<ModuleComponent> &getModules() { return moduleComponents; }
+
+  private:
+    GraphEditor &editor;
+    juce::OwnedArray<ModuleComponent> moduleComponents;
+  };
+
   AudioEngine &audioEngine;
-  juce::OwnedArray<ModuleComponent> moduleComponents;
+  GraphContentComponent content;
+
+  // Navigation State
+  float zoomLevel = 1.0f;
+  juce::Point<float> panOffset;
+  juce::Point<int> lastMousePos;
 
   // Drag State
   bool isDraggingConnection = false;
@@ -49,6 +73,8 @@ private:
   bool dragSourceIsInput = false;
   bool dragSourceIsMidi = false;
   juce::Point<int> dragCurrentPos;
+
+  void updateTransform();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphEditor)
 };

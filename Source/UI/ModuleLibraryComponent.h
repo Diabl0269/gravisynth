@@ -2,11 +2,12 @@
 
 #include <JuceHeader.h>
 
-class ModuleLibraryComponent : public juce::Component {
+class ModuleLibraryComponent : public juce::Component,
+                               public juce::DragAndDropContainer {
 public:
   ModuleLibraryComponent() {
-    moduleNames = {"Oscillator", "Filter",    "LFO",   "ADSR",
-                   "VCA",        "Sequencer", "Output"};
+    moduleNames = {"Oscillator", "Filter",     "LFO",   "ADSR",  "VCA",
+                   "Sequencer",  "Distortion", "Delay", "Reverb"};
   }
 
   void paint(juce::Graphics &g) override {
@@ -32,8 +33,9 @@ public:
       dg.drawText(moduleNames[index], dragImage.getBounds(),
                   juce::Justification::centred, false);
 
-      juce::DragAndDropContainer::findParentDragContainerFor(this)
-          ->startDragging(moduleNames[index], this, dragImage);
+      if (auto *container =
+              juce::DragAndDropContainer::findParentDragContainerFor(this))
+        container->startDragging(moduleNames[index], this, dragImage);
     }
   }
 

@@ -1,5 +1,8 @@
 #include "GraphEditor.h"
 #include "../Modules/ADSRModule.h"
+#include "../Modules/FX/DelayModule.h"
+#include "../Modules/FX/DistortionModule.h"
+#include "../Modules/FX/ReverbModule.h"
 #include "../Modules/FilterModule.h"
 #include "../Modules/LFOModule.h"
 #include "../Modules/OscillatorModule.h"
@@ -7,79 +10,23 @@
 #include "../Modules/VCAModule.h"
 #include "ModuleComponent.h"
 
-GraphEditor::GraphEditor(AudioEngine &engine) : audioEngine(engine) {
+GraphEditor::GraphEditor(AudioEngine &engine)
+    : audioEngine(engine), content(*this) {
+  addAndMakeVisible(content);
+  content.setInterceptsMouseClicks(false, true); // Fallback clicks to parent
   startTimerHz(30);
 }
 
 GraphEditor::~GraphEditor() {}
 
-void GraphEditor::updateComponents() {
-  moduleComponents.clear();
-  removeAllChildren();
+GraphEditor::GraphContentComponent::GraphContentComponent(GraphEditor &ed)
+    : editor(ed) {}
 
-  auto &graph = audioEngine.getGraph();
-
-  for (auto *node : graph.getNodes()) {
-    auto *processor = node->getProcessor();
-    // Skip IO processors for UI if desired, or show them.
-    // IO processors don't have ModuleBase logic usually?
-    // ModuleBase* module = dynamic_cast<ModuleBase*>(processor);
-    // If not ModuleBase, we might crash if ModuleComponent expects it.
-    // Check ModuleComponent.h: `ModuleComponent(AudioProcessor* processor)`?
-    // No, `ModuleComponent` calls `module->getName()`. AudioProcessor has
-    // generic getName. `module->getTotalNumInputChannels()`. Generic has it.
-    // `module->producesMidi()`. Generic has it.
-
-    // BUT `ModuleComponent` constructor currently takes `ModuleBase*`.
-    // Wait, let's check `ModuleComponent.h`.
-    // `ModuleComponent(ModuleBase* module, GraphEditor& owner)`
-
-    // Default IO processors are NOT ModuleBase.
-    // Allow all processors (including IO)
-    // if (auto *module = dynamic_cast<ModuleBase *>(processor)) {
-    if (processor) {
-      auto *comp = moduleComponents.add(new ModuleComponent(processor, *this));
-      addAndMakeVisible(comp);
-
-      // Check for saved position
-      auto x = node->properties.getWithDefault("x", -1);
-      auto y = node->properties.getWithDefault("y", -1);
-
-      if (static_cast<int>(x) != -1 && static_cast<int>(y) != -1) {
-        comp->setTopLeftPosition(static_cast<int>(x), static_cast<int>(y));
-      } else {
-        // Default layout
-        juce::String name = processor->getName();
-        if (name == "Sequencer")
-          comp->setTopLeftPosition(10, 80);
-        else if (name == "Oscillator")
-          comp->setTopLeftPosition(540, 50);
-        else if (name == "Amp Env")
-          comp->setTopLeftPosition(540, 450);
-        else if (name == "Filter")
-          comp->setTopLeftPosition(830, 50);
-        else if (name == "Filter Env")
-          comp->setTopLeftPosition(830, 450);
-        else if (name == "LFO")
-          comp->setTopLeftPosition(10, 500); // Under Sequencer (ends at 460).
-        else if (name == "VCA")
-          comp->setTopLeftPosition(1120, 50);
-        else if (name.containsIgnoreCase("Output"))
-          comp->setTopLeftPosition(1120, 500);
-        else if (name.containsIgnoreCase("Input"))
-          comp->setTopLeftPosition(10, 10);
-        else
-          comp->setTopLeftPosition(100 + (moduleComponents.size() * 30), 400);
-      }
-    }
-  }
-}
-
-void GraphEditor::paint(juce::Graphics &g) {
+void GraphEditor::GraphContentComponent::paint(juce::Graphics &g) {
   g.fillAll(juce::Colours::darkgrey);
 
   // Draw connections
-  auto &graph = audioEngine.getGraph();
+  auto &graph = editor.audioEngine.getGraph();
   g.setColour(juce::Colours::yellow);
 
   for (auto &connection : graph.getConnections()) {
@@ -87,19 +34,16 @@ void GraphEditor::paint(juce::Graphics &g) {
     bool found1 = false;
     bool found2 = false;
 
-    // Naive search for components matching the nodes
     for (auto *comp : moduleComponents) {
       if (auto *module = comp->getModule()) {
-
         auto *node1 = graph.getNodeForId(connection.source.nodeID);
         auto *node2 = graph.getNodeForId(connection.destination.nodeID);
 
         if (node1 && node1->getProcessor() == module) {
-          // connection.source is an Output from node1
           juce::Point<int> localP;
           if (connection.source.channelIndex ==
               juce::AudioProcessorGraph::midiChannelIndex) {
-            localP = comp->getPortCenter(0, false); // Sequencer Midi Out
+            localP = comp->getPortCenter(0, false);
           } else {
             localP = comp->getPortCenter(connection.source.channelIndex, false);
           }
@@ -107,11 +51,10 @@ void GraphEditor::paint(juce::Graphics &g) {
           found1 = true;
         }
         if (node2 && node2->getProcessor() == module) {
-          // connection.destination is an Input to node2
           juce::Point<int> localP;
           if (connection.destination.channelIndex ==
               juce::AudioProcessorGraph::midiChannelIndex) {
-            localP = juce::Point<int>(10, 30); // Midi In
+            localP = juce::Point<int>(10, 30);
           } else {
             localP =
                 comp->getPortCenter(connection.destination.channelIndex, true);
@@ -128,29 +71,32 @@ void GraphEditor::paint(juce::Graphics &g) {
   }
 
   // Draw Line being dragged
-  if (isDraggingConnection) {
+  if (editor.isDraggingConnection) {
     g.setColour(juce::Colours::white);
-
-    if (dragSourceModule) {
+    if (editor.dragSourceModule) {
       juce::Point<int> p;
-      if (dragSourceIsMidi) {
-        // Midi port pos hardcoded or dynamic?
-        // DragSourceModule logic for Midi Out (Sequencer) is at port 0, false.
-        // DragSourceModule logic for Midi In (Osc) is at 10, 30.
-        if (dragSourceIsInput)
-          p = juce::Point<int>(10, 30); // In
+      if (editor.dragSourceIsMidi) {
+        if (editor.dragSourceIsInput)
+          p = juce::Point<int>(10, 30);
         else
-          p = dragSourceModule->getPortCenter(0, false); // Out
+          p = editor.dragSourceModule->getPortCenter(0, false);
       } else {
-        p = dragSourceModule->getPortCenter(dragSourceChannel,
-                                            dragSourceIsInput);
+        p = editor.dragSourceModule->getPortCenter(editor.dragSourceChannel,
+                                                   editor.dragSourceIsInput);
       }
 
-      auto screenP = dragSourceModule->localPointToGlobal(p);
-      auto localP = getLocalPoint(nullptr, screenP);
-      auto mouseLocal = getLocalPoint(nullptr, dragCurrentPos);
-      g.drawLine(localP.toFloat().x, localP.toFloat().y, mouseLocal.toFloat().x,
-                 mouseLocal.toFloat().y, 3.0f);
+      auto posInContent =
+          editor.dragSourceModule->getBounds().getPosition() + p;
+      auto mouseInContent = getLocalPoint(&(editor), editor.dragCurrentPos);
+
+      // Since 'content' is transformed, we need to handle coordinates
+      // carefully. But if this 'paint' is called on content, and we use
+      // getLocalPoint(editor, ...) it should be transformed back. Actually,
+      // easier: editor.dragCurrentPos is screen pos.
+      auto mouseLocal = getLocalPoint(nullptr, editor.dragCurrentPos);
+
+      g.drawLine(posInContent.toFloat().x, posInContent.toFloat().y,
+                 mouseLocal.toFloat().x, mouseLocal.toFloat().y, 3.0f);
     }
   }
 
@@ -159,6 +105,8 @@ void GraphEditor::paint(juce::Graphics &g) {
              getLocalBounds().removeFromTop(20), juce::Justification::centred,
              true);
 }
+
+void GraphEditor::GraphContentComponent::resized() {}
 
 void GraphEditor::beginConnectionDrag(ModuleComponent *sourceModule,
                                       int channelIndex, bool isInput,
@@ -169,50 +117,35 @@ void GraphEditor::beginConnectionDrag(ModuleComponent *sourceModule,
   dragSourceIsInput = isInput;
   dragSourceIsMidi = isMidi;
   dragCurrentPos = screenPos;
-  repaint();
+  content.repaint();
 }
 
 void GraphEditor::dragConnection(juce::Point<int> screenPos) {
   if (!isDraggingConnection)
     return;
   dragCurrentPos = screenPos;
-  repaint();
+  content.repaint();
 }
 
 void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
   if (!isDraggingConnection)
     return;
 
-  // Hit test for target
-  // We need to find which module/port is under screenPos.
-  // Iterate modules.
+  // Hit test for target in content space
+  auto contentPos = content.getLocalPoint(nullptr, screenPos);
 
-  for (auto *comp : moduleComponents) {
+  for (auto *comp : content.getModules()) {
     auto localPos = comp->getLocalPoint(nullptr, screenPos);
     auto port = comp->getPortForPoint(localPos);
 
     if (port) {
-      // Valid drop?
-      // Prevent same module
       if (comp == dragSourceModule)
         continue;
-
-      // Prevent Input->Input or Output->Output
       if (port->isInput == dragSourceIsInput)
         continue;
-
-      // Prevent Mismatched Types (Audio->Midi or Midi->Audio)
       if (port->isMidi != dragSourceIsMidi)
         continue;
 
-      // Connect!
-      // Source is DragSource, Dest is Comp (or vice versa)
-      juce::AudioProcessorGraph::NodeID srcNodeId, dstNodeId;
-      int srcCh, dstCh;
-
-      // Graph needs NodeIDs.
-      // We need to find NodeIDs via Processor pointer match.
-      // Helper needed.
       auto &graph = audioEngine.getGraph();
       juce::AudioProcessorGraph::Node *srcNode = nullptr;
       juce::AudioProcessorGraph::Node *dstNode = nullptr;
@@ -225,30 +158,15 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
       }
 
       if (srcNode && dstNode) {
-
         if (dragSourceIsMidi) {
-          // MIDI Connection
-          // Direction: Output(Src) -> Input(Dst) always?
-          // Sequencer (Out) -> Oscillator (In)
-          // If dragging from IN (if we allowed Midi In dragging? No), logic
-          // follows.
-
-          // Assuming standard flow: Out -> In.
-          // Midi Channel Indices in JUCE Graph are special constants usually.
-          // But addConnection just wants channel indices.
-          // wait, AudioProcessorGraph::midiChannelIndex is the constant.
-
           graph.addConnection(
               {{srcNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                {dstNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
         } else {
-          // AUDIO Connection
           if (dragSourceIsInput) {
-            // Dragged from Input -> Dropped on Output
             graph.addConnection({{dstNode->nodeID, port->index},
                                  {srcNode->nodeID, dragSourceChannel}});
           } else {
-            // Dragged from Output -> Dropped on Input
             graph.addConnection({{srcNode->nodeID, dragSourceChannel},
                                  {dstNode->nodeID, port->index}});
           }
@@ -259,10 +177,99 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
 
   isDraggingConnection = false;
   dragSourceModule = nullptr;
+  content.repaint();
+}
+
+void GraphEditor::updateComponents() {
+  content.getModules().clear();
+  content.removeAllChildren();
+
+  auto &graph = audioEngine.getGraph();
+
+  for (auto *node : graph.getNodes()) {
+    auto *processor = node->getProcessor();
+    if (processor) {
+      auto *comp =
+          content.getModules().add(new ModuleComponent(processor, *this));
+      content.addAndMakeVisible(comp);
+
+      auto x = node->properties.getWithDefault("x", -1);
+      auto y = node->properties.getWithDefault("y", -1);
+
+      if (static_cast<int>(x) != -1 && static_cast<int>(y) != -1) {
+        comp->setTopLeftPosition(static_cast<int>(x), static_cast<int>(y));
+      } else {
+        // Robust fallback for missing positions
+        juce::String name = processor->getName();
+        if (name == "Sequencer")
+          comp->setTopLeftPosition(10, 80);
+        else if (name == "Oscillator")
+          comp->setTopLeftPosition(540, 50);
+        else if (name == "Amp Env")
+          comp->setTopLeftPosition(540, 450);
+        else if (name == "Filter")
+          comp->setTopLeftPosition(830, 50);
+        else if (name == "Filter Env")
+          comp->setTopLeftPosition(830, 450);
+        else if (name == "LFO")
+          comp->setTopLeftPosition(10, 500);
+        else if (name == "VCA")
+          comp->setTopLeftPosition(1120, 50);
+        else if (name.containsIgnoreCase("Output"))
+          comp->setTopLeftPosition(2250, 300);
+        else if (name.containsIgnoreCase("Input"))
+          comp->setTopLeftPosition(10, 10);
+        else
+          comp->setTopLeftPosition(100 + (content.getModules().size() * 30),
+                                   400);
+      }
+    }
+  }
   repaint();
 }
 
-void GraphEditor::resized() {}
+void GraphEditor::paint(juce::Graphics &g) {
+  // GraphEditor itself can draw a background or overlay if needed
+  // But content handles it now.
+}
+
+void GraphEditor::resized() { updateTransform(); }
+
+void GraphEditor::updateTransform() {
+  juce::AffineTransform t;
+  t = t.translated(panOffset);
+  t = t.scaled(zoomLevel, zoomLevel, getWidth() / 2.0f, getHeight() / 2.0f);
+
+  content.setBounds(0, 0, 10000, 10000);
+  content.setTransform(t);
+  repaint();
+}
+
+void GraphEditor::mouseWheelMove(const juce::MouseEvent &e,
+                                 const juce::MouseWheelDetails &wheel) {
+  float oldZoom = zoomLevel;
+  zoomLevel += wheel.deltaY * 0.1f * zoomLevel;
+  zoomLevel = juce::jlimit(0.1f, 2.0f, zoomLevel);
+
+  // Adjust pan to zoom around mouse position?
+  // For simplicity just zoom around center for now.
+  updateTransform();
+}
+
+void GraphEditor::mouseDown(const juce::MouseEvent &e) {
+  if (e.mods.isLeftButtonDown()) {
+    lastMousePos = e.getPosition();
+  }
+}
+
+void GraphEditor::mouseDrag(const juce::MouseEvent &e) {
+  if (e.mods.isLeftButtonDown() && !isDraggingConnection) {
+    auto delta = e.getPosition() - lastMousePos;
+    panOffset += delta.toFloat();
+    lastMousePos = e.getPosition();
+    updateTransform();
+  }
+}
 
 void GraphEditor::updateModulePosition(ModuleComponent *module) {
   if (!module)
@@ -320,13 +327,11 @@ void GraphEditor::disconnectPort(ModuleComponent *module, int portIndex,
 
   for (auto &c : graph.getConnections()) {
     if (isInput) {
-      // Disconnect INPUT: Check destination
       if (c.destination.nodeID == nodeId &&
           c.destination.channelIndex == targetChannel) {
         toRemove.push_back(c);
       }
     } else {
-      // Disconnect OUTPUT: Check source
       if (c.source.nodeID == nodeId && c.source.channelIndex == targetChannel) {
         toRemove.push_back(c);
       }
@@ -365,11 +370,19 @@ void GraphEditor::itemDropped(const SourceDetails &dragSourceDetails) {
     newProcessor = std::make_unique<SequencerModule>();
   else if (name == "LFO")
     newProcessor = std::make_unique<LFOModule>();
+  else if (name == "Distortion")
+    newProcessor = std::make_unique<DistortionModule>();
+  else if (name == "Delay")
+    newProcessor = std::make_unique<DelayModule>();
+  else if (name == "Reverb")
+    newProcessor = std::make_unique<ReverbModule>();
 
   if (newProcessor) {
     auto node = audioEngine.getGraph().addNode(std::move(newProcessor));
     if (node) {
-      auto dropPos = dragSourceDetails.localPosition;
+      // Convert drop position to content space
+      auto dropPos =
+          content.getLocalPoint(this, dragSourceDetails.localPosition);
       node->properties.set("x", dropPos.x);
       node->properties.set("y", dropPos.y);
 
@@ -456,6 +469,12 @@ void GraphEditor::loadPreset(juce::File file) {
         newProcessor = std::make_unique<SequencerModule>();
       } else if (type == "LFO") {
         newProcessor = std::make_unique<LFOModule>();
+      } else if (type == "Distortion") {
+        newProcessor = std::make_unique<DistortionModule>();
+      } else if (type == "Delay") {
+        newProcessor = std::make_unique<DelayModule>();
+      } else if (type == "Reverb") {
+        newProcessor = std::make_unique<ReverbModule>();
       }
 
       if (newProcessor) {
