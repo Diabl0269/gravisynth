@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ScopeComponent.h"
 #include <JuceHeader.h>
 
 class GraphEditor; // Forward declaration
@@ -49,7 +50,11 @@ private:
   juce::OwnedArray<juce::ComboBoxParameterAttachment> comboAttachments;
   juce::OwnedArray<juce::ButtonParameterAttachment> buttonAttachments;
 
+  std::unique_ptr<ScopeComponent> scopeComponent;
+  std::unique_ptr<juce::ToggleButton> scopeToggle;
+
   void createControls();
+  void updateLayout();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModuleComponent)
 };

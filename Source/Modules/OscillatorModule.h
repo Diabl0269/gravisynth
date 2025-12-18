@@ -13,6 +13,8 @@ public:
             "waveform", "Waveform", {"Sine", "Square", "Saw", "Triangle"}, 0));
     addParameter(frequencyParam = new juce::AudioParameterFloat(
                      "frequency", "Frequency", 20.0f, 20000.0f, 440.0f));
+
+    enableVisualBuffer(true);
   }
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override {
@@ -46,6 +48,14 @@ public:
     juce::dsp::AudioBlock<float> audioBlock(buffer);
     juce::dsp::ProcessContextReplacing<float> context(audioBlock);
     oscillator.process(context);
+
+    // Push to visual buffer
+    if (auto *vb = getVisualBuffer()) {
+      auto *ch = buffer.getReadPointer(0);
+      for (int i = 0; i < buffer.getNumSamples(); ++i) {
+        vb->pushSample(ch[i]);
+      }
+    }
   }
 
 private:

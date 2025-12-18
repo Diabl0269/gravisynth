@@ -22,8 +22,6 @@ public:
     // Pitches
     // Pitches (F Phrygian Dominant: F, Gb, A, Bb, C, Db, Eb)
     // Notes around C3 (48) - C4 (60)
-    int scale[] = {53, 54, 57, 58, 60, 61, 63, 65, 66, 69};
-    int numNotes = 10;
 
     // Seed random (basic) - actually just deterministic pseudo-random for now
     // or manually pick interesting defaults.

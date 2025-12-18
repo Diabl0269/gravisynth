@@ -1,5 +1,6 @@
 #pragma once
 
+#include "VisualBuffer.h"
 #include <JuceHeader.h>
 
 class ModuleBase : public juce::AudioProcessor {
@@ -70,8 +71,17 @@ public:
     }
   }
 
+  VisualBuffer *getVisualBuffer() { return visualBuffer.get(); }
+  void enableVisualBuffer(bool enable) {
+    if (enable && !visualBuffer)
+      visualBuffer = std::make_unique<VisualBuffer>();
+    else if (!enable)
+      visualBuffer = nullptr;
+  }
+
 private:
   juce::String moduleName;
+  std::unique_ptr<VisualBuffer> visualBuffer;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModuleBase)
 };

@@ -4,6 +4,22 @@
 
 ModuleComponent::ModuleComponent(juce::AudioProcessor *m, GraphEditor &owner)
     : module(m), owner(owner) {
+
+  if (auto *modBase = dynamic_cast<ModuleBase *>(module)) {
+    if (auto *vb = modBase->getVisualBuffer()) {
+      scopeComponent = std::make_unique<ScopeComponent>(*vb);
+      addAndMakeVisible(scopeComponent.get());
+
+      scopeToggle = std::make_unique<juce::ToggleButton>("Show Scope");
+      scopeToggle->setToggleState(true, juce::dontSendNotification);
+      scopeToggle->onClick = [this] {
+        scopeComponent->setVisible(scopeToggle->getToggleState());
+        updateLayout();
+      };
+      addAndMakeVisible(scopeToggle.get());
+    }
+  }
+
   createControls();
   startTimerHz(30); // 30 FPS for step visualization
 }
@@ -82,16 +98,36 @@ void ModuleComponent::createControls() {
     return;
   }
 
+  updateLayout();
+}
+
+void ModuleComponent::updateLayout() {
+  if (module->getName() == "Sequencer") {
+    setSize(510, 380);
+    return;
+  }
+
+  if (module->getName().contains("ADSR") || module->getName().contains("Env")) {
+    setSize(220 + 60, 180); // 180 is height from ADSR Layout
+    return;
+  }
+
   int contentHeight = 40; // Header
   contentHeight += comboBoxes.size() * 50;
   contentHeight += toggles.size() * 30;
 
-  // Grid for sliders (2 columns)
+  if (scopeToggle)
+    contentHeight += 30;
+
   int numSliders = sliders.size();
   int rows = (numSliders + 1) / 2;
   contentHeight += rows * 80;
 
-  setSize(280, std::max(100, contentHeight + 20)); // Increased width
+  if (scopeComponent && scopeComponent->isVisible())
+    contentHeight += 110;
+
+  setSize(280, std::max(100, contentHeight + 20));
+  resized();
 }
 
 void ModuleComponent::paint(juce::Graphics &g) {
@@ -353,6 +389,19 @@ void ModuleComponent::resized() {
 
     sliderLabels[i]->setBounds(x, localY, sliderWidth, 20);
     sliders[i]->setBounds(x, localY + 20, sliderWidth, sliderHeight);
+  }
+
+  // Update y to the end of sliders for scope toggle/scope
+  int finalSlidersRow = (sliders.size() + 1) / 2;
+  y += finalSlidersRow * (sliderHeight + 20);
+
+  if (scopeToggle) {
+    scopeToggle->setBounds(margin, y, contentWidth, 24);
+    y += 30;
+  }
+
+  if (scopeComponent && scopeComponent->isVisible()) {
+    scopeComponent->setBounds(10, y, getWidth() - 20, 100);
   }
 }
 
