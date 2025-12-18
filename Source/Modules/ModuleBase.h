@@ -43,10 +43,31 @@ public:
     juce::ignoreUnused(index, newName);
   }
   void getStateInformation(juce::MemoryBlock &destData) override {
-    juce::ignoreUnused(destData);
+    juce::ValueTree state("ModuleState");
+    for (auto *param : getParameters()) {
+      if (auto *p =
+              dynamic_cast<juce::AudioProcessorParameterWithID *>(param)) {
+        state.setProperty(p->paramID, p->getValue(), nullptr);
+      }
+    }
+    copyXmlToBinary(*state.createXml(), destData);
   }
+
   void setStateInformation(const void *data, int sizeInBytes) override {
-    juce::ignoreUnused(data, sizeInBytes);
+    auto xmlState = getXmlFromBinary(data, sizeInBytes);
+    if (xmlState != nullptr) {
+      if (xmlState->hasTagName("ModuleState")) {
+        juce::ValueTree state = juce::ValueTree::fromXml(*xmlState);
+        for (auto *param : getParameters()) {
+          if (auto *p =
+                  dynamic_cast<juce::AudioProcessorParameterWithID *>(param)) {
+            if (state.hasProperty(p->paramID)) {
+              p->setValue((float)state.getProperty(p->paramID));
+            }
+          }
+        }
+      }
+    }
   }
 
 private:

@@ -29,6 +29,10 @@ public:
   void deleteModule(ModuleComponent *module);
   void updateModulePosition(ModuleComponent *module);
 
+  // Preset Management
+  void savePreset(juce::File file);
+  void loadPreset(juce::File file);
+
   // DragAndDropTarget overrides
   bool
   isInterestedInDragSource(const SourceDetails &dragSourceDetails) override;

@@ -377,3 +377,134 @@ void GraphEditor::itemDropped(const SourceDetails &dragSourceDetails) {
     }
   }
 }
+
+void GraphEditor::savePreset(juce::File file) {
+  auto &graph = audioEngine.getGraph();
+  juce::XmlElement xml("GRAVISYNTH_PATCH");
+
+  // 1. Nodes
+  auto *nodesElement = xml.createNewChildElement("NODES");
+  for (auto node : graph.getNodes()) {
+    auto *nodeElement = nodesElement->createNewChildElement("NODE");
+    nodeElement->setAttribute("id", (int)node->nodeID.uid);
+    nodeElement->setAttribute("type", node->getProcessor()->getName());
+    nodeElement->setAttribute("x", node->properties["x"].toString());
+    nodeElement->setAttribute("y", node->properties["y"].toString());
+
+    juce::MemoryBlock stateData;
+    node->getProcessor()->getStateInformation(stateData);
+    nodeElement->setAttribute("state", stateData.toBase64Encoding());
+  }
+
+  // 2. Connections
+  auto *connectionsElement = xml.createNewChildElement("CONNECTIONS");
+  for (auto connection : graph.getConnections()) {
+    auto *connElement = connectionsElement->createNewChildElement("CONNECTION");
+    connElement->setAttribute("srcNode", (int)connection.source.nodeID.uid);
+    connElement->setAttribute("srcCh", connection.source.channelIndex);
+    connElement->setAttribute("dstNode",
+                              (int)connection.destination.nodeID.uid);
+    connElement->setAttribute("dstCh", connection.destination.channelIndex);
+    connElement->setAttribute("isMidi", connection.source.isMIDI());
+  }
+
+  xml.writeTo(file);
+}
+
+void GraphEditor::loadPreset(juce::File file) {
+  auto xml = juce::XmlDocument::parse(file);
+  if (!xml || !xml->hasTagName("GRAVISYNTH_PATCH")) {
+    juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                                           "Load Failed",
+                                           "Could not load patch file.");
+    return;
+  }
+
+  auto &graph = audioEngine.getGraph();
+  graph.clear(); // Remove everything
+
+  // 1. Nodes
+  if (auto *nodesElement = xml->getChildByName("NODES")) {
+    for (auto *nodeElement : nodesElement->getChildIterator()) {
+      juce::String type = nodeElement->getStringAttribute("type");
+      int x = nodeElement->getIntAttribute("x");
+      int y = nodeElement->getIntAttribute("y");
+
+      std::unique_ptr<juce::AudioProcessor> newProcessor;
+
+      if (type == "Audio Input") {
+        newProcessor = std::make_unique<
+            juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+            juce::AudioProcessorGraph::AudioGraphIOProcessor::audioInputNode);
+      } else if (type == "Audio Output") {
+        newProcessor = std::make_unique<
+            juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+            juce::AudioProcessorGraph::AudioGraphIOProcessor::audioOutputNode);
+      } else if (type == "Midi Input") {
+        newProcessor = std::make_unique<
+            juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+            juce::AudioProcessorGraph::AudioGraphIOProcessor::midiInputNode);
+      } else if (type == "Oscillator") {
+        newProcessor = std::make_unique<OscillatorModule>();
+      } else if (type == "Filter") {
+        newProcessor = std::make_unique<FilterModule>();
+      } else if (type == "VCA") {
+        newProcessor = std::make_unique<VCAModule>();
+      } else if (type == "ADSR") {
+        newProcessor = std::make_unique<ADSRModule>();
+      } else if (type == "Sequencer") {
+        newProcessor = std::make_unique<SequencerModule>();
+      } else if (type == "LFO") {
+        newProcessor = std::make_unique<LFOModule>();
+      }
+
+      if (newProcessor) {
+        juce::MemoryBlock stateData;
+        if (stateData.fromBase64Encoding(
+                nodeElement->getStringAttribute("state"))) {
+          newProcessor->setStateInformation(stateData.getData(),
+                                            (int)stateData.getSize());
+        }
+
+        auto node = graph.addNode(std::move(newProcessor));
+        if (node) {
+          node->properties.set("x", x);
+          node->properties.set("y", y);
+          nodeElement->setAttribute("newId", (int)node->nodeID.uid);
+        }
+      }
+    }
+  }
+
+  // 2. Connections
+  if (auto *connElementBase = xml->getChildByName("CONNECTIONS")) {
+    for (auto *connElement : connElementBase->getChildIterator()) {
+      int oldSrcNodeId = connElement->getIntAttribute("srcNode");
+      int srcCh = connElement->getIntAttribute("srcCh");
+      int oldDstNodeId = connElement->getIntAttribute("dstNode");
+      int dstCh = connElement->getIntAttribute("dstCh");
+      bool isMidi = connElement->getBoolAttribute("isMidi");
+
+      juce::AudioProcessorGraph::NodeID newSrcID, newDstID;
+
+      if (auto *nodesElement = xml->getChildByName("NODES")) {
+        for (auto *nodeElement : nodesElement->getChildIterator()) {
+          if (nodeElement->getIntAttribute("id") == oldSrcNodeId)
+            newSrcID = juce::AudioProcessorGraph::NodeID(
+                (juce::uint32)nodeElement->getIntAttribute("newId"));
+          if (nodeElement->getIntAttribute("id") == oldDstNodeId)
+            newDstID = juce::AudioProcessorGraph::NodeID(
+                (juce::uint32)nodeElement->getIntAttribute("newId"));
+        }
+      }
+
+      if (isMidi) {
+        graph.addConnection({{newSrcID, srcCh}, {newDstID, dstCh}});
+      } else {
+        graph.addConnection({{newSrcID, srcCh}, {newDstID, dstCh}});
+      }
+    }
+  }
+
+  updateComponents();
+}

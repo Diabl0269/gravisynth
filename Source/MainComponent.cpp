@@ -1,9 +1,44 @@
 #include "MainComponent.h"
 
 MainComponent::MainComponent() : graphEditor(audioEngine) {
-  setSize(800, 600);
+  setSize(1600, 900);
   addAndMakeVisible(graphEditor);
   addAndMakeVisible(moduleLibrary);
+
+  // Buttons
+  addAndMakeVisible(saveButton);
+  saveButton.setButtonText("Save Preset");
+  saveButton.onClick = [this] {
+    fileChooser = std::make_unique<juce::FileChooser>(
+        "Save Preset",
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+        "*.xml");
+    auto flags = juce::FileBrowserComponent::saveMode |
+                 juce::FileBrowserComponent::canSelectFiles;
+    fileChooser->launchAsync(flags, [this](const juce::FileChooser &fc) {
+      auto file = fc.getResult();
+      if (file != juce::File{}) {
+        graphEditor.savePreset(file);
+      }
+    });
+  };
+
+  addAndMakeVisible(loadButton);
+  loadButton.setButtonText("Load Preset");
+  loadButton.onClick = [this] {
+    fileChooser = std::make_unique<juce::FileChooser>(
+        "Load Preset",
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+        "*.xml");
+    auto flags = juce::FileBrowserComponent::openMode |
+                 juce::FileBrowserComponent::canSelectFiles;
+    fileChooser->launchAsync(flags, [this](const juce::FileChooser &fc) {
+      auto file = fc.getResult();
+      if (file != juce::File{}) {
+        graphEditor.loadPreset(file);
+      }
+    });
+  };
 
   if (juce::RuntimePermissions::isRequired(
           juce::RuntimePermissions::recordAudio) &&
@@ -34,6 +69,11 @@ void MainComponent::paint(juce::Graphics &g) {
 
 void MainComponent::resized() {
   auto bounds = getLocalBounds();
+  auto header = bounds.removeFromTop(30);
+
+  saveButton.setBounds(header.removeFromLeft(100).reduced(2));
+  loadButton.setBounds(header.removeFromLeft(100).reduced(2));
+
   moduleLibrary.setBounds(bounds.removeFromLeft(200));
   graphEditor.setBounds(bounds);
 }
