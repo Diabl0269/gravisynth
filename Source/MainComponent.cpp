@@ -40,6 +40,26 @@ MainComponent::MainComponent() : graphEditor(audioEngine) {
     });
   };
 
+  addAndMakeVisible(settingsButton);
+  settingsButton.setButtonText("Settings");
+  settingsButton.onClick = [this] {
+    auto *selector = new juce::AudioDeviceSelectorComponent(
+        audioEngine.getDeviceManager(), 0, 2, // min/max inputs
+        0, 2,                                 // min/max outputs
+        false, false,                         // midis
+        false, false                          // bit depths
+    );
+    selector->setSize(400, 400);
+
+    juce::DialogWindow::LaunchOptions options;
+    options.content.setOwned(selector);
+    options.dialogTitle = "Audio Settings";
+    options.componentToCentreAround = this;
+    options.useNativeTitleBar = true;
+    options.resizable = false;
+    options.launchAsync();
+  };
+
   if (juce::RuntimePermissions::isRequired(
           juce::RuntimePermissions::recordAudio) &&
       !juce::RuntimePermissions::isGranted(
@@ -73,6 +93,7 @@ void MainComponent::resized() {
 
   saveButton.setBounds(header.removeFromLeft(100).reduced(2));
   loadButton.setBounds(header.removeFromLeft(100).reduced(2));
+  settingsButton.setBounds(header.removeFromLeft(100).reduced(2));
 
   moduleLibrary.setBounds(bounds.removeFromLeft(200));
   graphEditor.setBounds(bounds);

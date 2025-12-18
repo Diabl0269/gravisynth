@@ -21,6 +21,7 @@ private:
 
   juce::TextButton saveButton;
   juce::TextButton loadButton;
+  juce::TextButton settingsButton;
   std::unique_ptr<juce::FileChooser> fileChooser;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

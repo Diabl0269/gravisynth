@@ -19,6 +19,7 @@ public:
   void audioDeviceStopped() override;
 
   juce::AudioProcessorGraph &getGraph() { return mainProcessorGraph; }
+  juce::AudioDeviceManager &getDeviceManager() { return deviceManager; }
 
 private:
   juce::AudioDeviceManager deviceManager;

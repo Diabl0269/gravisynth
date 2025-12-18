@@ -450,8 +450,8 @@ void GraphEditor::loadPreset(juce::File file) {
         newProcessor = std::make_unique<FilterModule>();
       } else if (type == "VCA") {
         newProcessor = std::make_unique<VCAModule>();
-      } else if (type == "ADSR") {
-        newProcessor = std::make_unique<ADSRModule>();
+      } else if (type == "ADSR" || type.contains("Env")) {
+        newProcessor = std::make_unique<ADSRModule>(type);
       } else if (type == "Sequencer") {
         newProcessor = std::make_unique<SequencerModule>();
       } else if (type == "LFO") {
@@ -498,9 +498,8 @@ void GraphEditor::loadPreset(juce::File file) {
         }
       }
 
-      if (isMidi) {
-        graph.addConnection({{newSrcID, srcCh}, {newDstID, dstCh}});
-      } else {
+      if (newSrcID != juce::AudioProcessorGraph::NodeID() &&
+          newDstID != juce::AudioProcessorGraph::NodeID()) {
         graph.addConnection({{newSrcID, srcCh}, {newDstID, dstCh}});
       }
     }
