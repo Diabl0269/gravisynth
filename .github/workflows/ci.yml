@@ -1,0 +1,77 @@
+name: Gravisynth CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build, Test, and Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          ninja-build \
+          libasound2-dev \
+          libx11-dev \
+          libxinerama-dev \
+          libxext-dev \
+          libfreetype6-dev \
+          libwebkit2gtk-4.0-dev \
+          libglu1-mesa-dev \
+          llvm \
+          clang \
+          clang-format
+
+    - name: Lint Check
+      run: |
+        find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run --Werror
+
+    - name: Configure CMake
+      run: |
+        # Use clang for consistent coverage flags
+        export CC=clang
+        export CXX=clang++
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+
+    - name: Build
+      run: cmake --build build
+
+    - name: Run Tests
+      working-directory: ./build/Tests
+      run: |
+        # Set profile file for coverage
+        export LLVM_PROFILE_FILE="default.profraw"
+        ./GravisynthTests
+
+    - name: Check Coverage
+      run: |
+        # Must match the script logic but adapted for CI environment if needed
+        # Or just run the script if it's portable. 
+        # The script assumes 'Default' profdata naming and paths.
+        # Let's ensure the script is executable and run it.
+        chmod +x scripts/coverage.sh
+        # Override paths in script or rely on it running from root? 
+        # The script runs build steps again, which is redundant but safe.
+        # Ideally we skip build in script if already built.
+        # But let's just run the coverage check part manually to avoid rebuilding or assume script handles it.
+        # Actually, let's use the script but maybe optimize it later. For now, running it is easiest.
+        # Wait, the script *builds* too. That's fine for now.
+        bash scripts/coverage.sh
+        
+    - name: Upload Coverage Artifact (Optional)
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: |
+          default.profdata
+          default.profraw

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <JuceHeader.h>
 #include <atomic>
+#include <juce_core/juce_core.h>
 
 /**
  * A simple thread-safe circular buffer for visualization.

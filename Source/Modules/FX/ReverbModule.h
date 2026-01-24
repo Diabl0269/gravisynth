@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ModuleBase.h"
+#include <juce_audio_basics/juce_audio_basics.h>
 
 class ReverbModule : public ModuleBase {
 public:

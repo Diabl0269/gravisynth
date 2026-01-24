@@ -44,7 +44,25 @@ Gravisynth features a node-based audio processing graph where users can connect 
 - `Source/`: Main source code
     - `Modules/`: Audio processing modules
     - `UI/`: User interface components
-- `Tests/`: Unit and integration tests (Coming Soon)
+- `Tests/`: Unit and integration tests
+- `GEMINI.md`: **Developer Guide & Contribution Standards**
+
+### Testing & CI
+This project uses GoogleTest for unit testing and enforced 90% code coverage.
+
+**Run Tests:**
+```bash
+cmake --build build --target GravisynthTests
+./build/Tests/GravisynthTests
+```
+
+**Check Coverage:**
+```bash
+bash scripts/coverage.sh
+```
+
+**CI/CD:**
+GitHub Actions enforces linting and coverage on every push. See `GEMINI.md` for details.
 
 ### Dependencies
 - **JUCE**: Handled automatically via CMake FetchContent (v8.0.3)

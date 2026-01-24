@@ -21,3 +21,9 @@ CMakeUserPresets.json
 
 # OS
 .DS_Store
+
+# Coverage
+*.profraw
+*.profdata
+*.gcov
+coverage/

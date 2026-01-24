@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ModuleBase.h"
+#include <juce_dsp/juce_dsp.h>
 
 class OscillatorModule : public ModuleBase {
 public:

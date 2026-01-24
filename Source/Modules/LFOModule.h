@@ -1,7 +1,7 @@
 #pragma once
 
 #include "ModuleBase.h"
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
 #include <random>
 
 class LFOModule : public ModuleBase {

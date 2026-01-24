@@ -1,7 +1,8 @@
 #pragma once
 
 #include "ModuleBase.h"
-#include <JuceHeader.h> // Ensure we have attributes
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_core/juce_core.h>
 
 class SequencerModule : public ModuleBase {
 public:

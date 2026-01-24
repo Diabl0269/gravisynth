@@ -11,20 +11,20 @@ FetchContent_MakeAvailable(googletest)
 
 add_executable(GravisynthTests
     TestMain.cpp
+    OscillatorTests.cpp
+    FilterTests.cpp
+    ADSRTests.cpp
+    ModuleBaseTests.cpp
+    VisualBufferTests.cpp
 )
 
 target_link_libraries(GravisynthTests PRIVATE
     GTest::gtest_main
-    # Gravisynth - Cannot link executable
+    GravisynthCore
 )
 
-# For now, if Gravisynth is an executable, we can't link to it easily without object libraries.
-# Alternative: Add source files again
-# Note: AudioEngine depends on all modules, so we'd need to add them all or create a lib.
-# For this first pass, let's just make sure GTest runs.
-# target_sources(GravisynthTests PRIVATE
-#     ../Source/AudioEngine.cpp
-# )
+# Sources are now in GravisynthCore, so we don't need to add them here manually
+# except for the test files themselves.
 
 target_include_directories(GravisynthTests PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
