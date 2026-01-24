@@ -37,6 +37,9 @@ public:
     ladder.setResonance(res);
     ladder.setDrive(drive);
 
+    if (buffer.getNumChannels() == 0)
+      return;
+
     bool hasCV = buffer.getNumChannels() > 1;
     auto *audioCh = buffer.getWritePointer(0);
     const float *cvCh = hasCV ? buffer.getReadPointer(1) : nullptr;

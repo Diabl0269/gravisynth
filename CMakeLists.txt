@@ -66,3 +66,6 @@ if(MSVC)
 else()
     target_compile_options(Gravisynth PRIVATE -Wall -Wextra)
 endif()
+
+add_subdirectory(Tests)
+

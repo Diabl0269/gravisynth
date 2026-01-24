@@ -44,6 +44,10 @@ public:
     updateWaveform();
     oscillator.setFrequency(*frequencyParam);
 
+    // Safe channel access
+    if (buffer.getNumChannels() == 0)
+      return;
+
     // Render
     juce::dsp::AudioBlock<float> audioBlock(buffer);
     juce::dsp::ProcessContextReplacing<float> context(audioBlock);

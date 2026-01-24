@@ -39,9 +39,14 @@ public:
     // Filter:0 -> VCA:0 (Audio)
     // ADSR:0   -> VCA:1 (CV)   <-- This connects to channel 1 of VCA input bus.
 
-    auto *audioData = buffer.getWritePointer(0);
+    // Safe channel access
+    auto *audioData =
+        (totalNumInputChannels > 0) ? buffer.getWritePointer(0) : nullptr;
     const float *cvData =
         (totalNumInputChannels > 1) ? buffer.getReadPointer(1) : nullptr;
+
+    if (audioData == nullptr)
+      return; // Nothing to process
 
     for (int sample = 0; sample < buffer.getNumSamples(); ++sample) {
       float cv = 1.0f;
