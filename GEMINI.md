@@ -34,6 +34,41 @@ This document is intended for AI agents and developers working on `Gravisynth`.
 - GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push to `main`.
 - Checks: Linting, Build, Unit Tests, Coverage >90%.
 
+## Module Architecture
+
+All audio modules inherit from `ModuleBase`, which extends `juce::AudioProcessor`:
+
+```cpp
+class MyModule : public ModuleBase {
+public:
+    MyModule() : ModuleBase("MyModule", numInputs, numOutputs) { }
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
+};
+```
+
+Key patterns:
+- **Parameters**: Use `addParameter()` with `juce::AudioParameterFloat`, `AudioParameterChoice`, etc.
+- **VisualBuffer**: Call `enableVisualBuffer(true)` for waveform visualization support.
+- **State**: Override `getStateInformation()` / `setStateInformation()` for preset save/load.
+
+## Platform Notes
+
+### Coverage Tooling
+| Platform | Command |
+|----------|---------|
+| macOS | `xcrun llvm-cov` / `xcrun llvm-profdata` |
+| Linux (CI) | `llvm-cov` / `llvm-profdata` |
+
+The `scripts/coverage.sh` uses `xcrun` for macOS. On Linux CI, we use the raw `llvm-*` commands.
+
+### Include Paths
+Tests use paths relative to `Source/`:
+```cpp
+#include "Modules/OscillatorModule.h"  // Correct
+#include "OscillatorModule.h"          // Won't work
+```
+
 ## Common Tasks
 - **Adding a new module**:
     1.  Create `Source/Modules/NewModule.h`.

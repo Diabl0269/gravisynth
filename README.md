@@ -1,17 +1,26 @@
 # Gravisynth
 
-Gravisynth is a modular synthesizer application built with JUCE and C++20.
+A **modular synthesizer** application built with JUCE and C++20, featuring a node-based graph editor for sound design.
 
 ## Overview
 
-Gravisynth features a node-based audio processing graph where users can connect various modules to create complex sounds.
+Gravisynth provides a visual patching environment where audio modules can be freely connected to create complex sounds. Each module processes audio and/or control signals, enabling everything from simple subtractive synthesis to elaborate modulation chains.
+
+### Module Graph
+Modules connect via inputs and outputs:
+```
+[Sequencer] ──▶ [Oscillator] ──▶ [Filter] ──▶ [VCA] ──▶ [Output]
+                    ▲               ▲           ▲
+                 [LFO]          [ADSR]       [ADSR]
+```
 
 ### Core Modules
-- **Oscillator**: Basic waveform generator (Sine, Saw, Square, Triangle)
-- **Filter**: Resonant low-pass filter
-- **VCA**: Voltage Controlled Amplifier
-- **ADSR**: Envelope generators
-- **Sequencer**: Step sequencer for melody generation
+- **Oscillator**: Waveform generator (Sine, Saw, Square, Triangle)
+- **Filter**: Resonant low-pass filter with cutoff/resonance control
+- **VCA**: Voltage Controlled Amplifier for dynamic control
+- **ADSR**: Envelope generator for amplitude/filter modulation
+- **LFO**: Low Frequency Oscillator for modulation
+- **Sequencer**: Step sequencer with per-step pitch control
 
 ## Building
 
@@ -66,6 +75,19 @@ GitHub Actions enforces linting and coverage on every push. See `GEMINI.md` for 
 
 ### Dependencies
 - **JUCE**: Handled automatically via CMake FetchContent (v8.0.3)
+
+## Roadmap
+
+### Planned Features
+- **Polyphonic Support**: Multi-voice synthesis with voice allocation and unison modes
+- **Enhanced UI/UX**: Improved visual design, keyboard shortcuts, and workflow optimizations
+- **Sound Quality**: Anti-aliased oscillators, oversampling, and additional filter types
+
+### Vision: AI-Powered Sound Design
+The flagship feature on our roadmap is an **AI Sound Designer** interface:
+- Describe a sound in natural language (e.g., *"warm bass with slow attack"*)
+- AI generates the complete patch: selects modules, configures parameters, and creates connections
+- Iterate with conversational refinements
 
 ## License
 MIT
