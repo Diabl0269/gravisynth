@@ -7,6 +7,9 @@
 class LFOModule : public ModuleBase {
 public:
   LFOModule() : ModuleBase("LFO", 0, 2) { // 0 Audio Inputs, 2 Control Outputs
+    // Enable visual buffer for scope display
+    enableVisualBuffer(true);
+
     // Shape
     juce::StringArray shapes({"Sine", "Triangle", "Sawtooth", "Square", "S&H"});
     addParameter(shapeParam = new juce::AudioParameterChoice("shape", "Shape",
@@ -38,10 +41,15 @@ public:
     // Output Level
     addParameter(levelParam = new juce::AudioParameterFloat("level", "Level",
                                                             0.0f, 1.0f, 1.0f));
+
+    // Glide (S&H only)
+    addParameter(glideParam = new juce::AudioParameterFloat("glide", "Glide",
+                                                            0.0f, 1.0f, 0.0f));
   }
 
   void prepareToPlay(double sampleRate, int samplesPerBlock) override {
     currentSampleRate = sampleRate;
+    shSmoother.reset(sampleRate, 0.05); // 50ms default ramp for smooth glide
   }
 
   void releaseResources() override {}
@@ -139,10 +147,8 @@ public:
         currentSample = (phase < 0.5f) ? 1.0f : -1.0f;
         break;
       case 4: // S&H
-        // Only update sample on cycle start
-        // Current logic: continuously output held value.
-        // Update held value when phase wraps.
-        currentSample = lastRandomSample; // Output current held value
+        // The value is managed by shSmoother
+        currentSample = shSmoother.getNextValue();
         break;
       }
 
@@ -156,6 +162,17 @@ public:
         if (shape == 4) {
           // Trigger new random value
           lastRandomSample = (random.nextFloat() * 2.0f) - 1.0f;
+
+          float glideValue = glideParam->get();
+          if (glideValue <= 0.0f) {
+            shSmoother.setCurrentAndTargetValue(lastRandomSample);
+          } else {
+            // Map 0..1 to 0..0.5s glide time? Or just let it be linear.
+            // Adjust smoother time based on glide param
+            shSmoother.reset(currentSampleRate,
+                             juce::jmax(0.001f, glideValue * 0.5f));
+            shSmoother.setTargetValue(lastRandomSample);
+          }
         }
       }
 
@@ -167,8 +184,13 @@ public:
         currentSample = (currentSample + 1.0f) * 0.5f;
       }
 
-      channelData0[sample] = currentSample * level;
-      channelData1[sample] = currentSample * level;
+      float outputSample = currentSample * level;
+      channelData0[sample] = outputSample;
+      channelData1[sample] = outputSample;
+
+      // Push to visual buffer for scope display
+      if (auto *vb = getVisualBuffer())
+        vb->pushSample(outputSample);
     }
   }
 
@@ -183,10 +205,12 @@ private:
   juce::AudioParameterBool *bipolarParam;
   juce::AudioParameterBool *retrigParam;
   juce::AudioParameterFloat *levelParam;
+  juce::AudioParameterFloat *glideParam;
 
   float phase = 0.0f;
   double currentSampleRate = 44100.0;
 
   float lastRandomSample = 0.0f;
   juce::Random random;
+  juce::LinearSmoothedValue<float> shSmoother;
 };

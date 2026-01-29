@@ -25,9 +25,6 @@ public:
     auto height = bounds.getHeight();
     auto width = bounds.getWidth();
 
-    g.setColour(juce::Colours::darkgreen);
-    g.drawHorizontalLine((int)midY, bounds.getX(), bounds.getRight());
-
     g.setColour(juce::Colours::limegreen);
     juce::Path p;
 
