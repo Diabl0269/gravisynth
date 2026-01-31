@@ -37,6 +37,7 @@ jobs:
           libjack-jackd2-dev \
           freeglut3-dev \
           libsoup-3.0-dev \
+          libcurl4-openssl-dev \
           pkg-config \
           llvm \
           clang \

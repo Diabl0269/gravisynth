@@ -66,8 +66,10 @@ if(UNIX AND NOT APPLE)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
     pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.1)
     
+    find_package(CURL REQUIRED)
+
     # Link to Core so JUCE modules compiled within it find the headers
-    target_link_libraries(GravisynthCore PUBLIC ${GTK3_LIBRARIES} ${WEBKIT_LIBRARIES})
+    target_link_libraries(GravisynthCore PUBLIC ${GTK3_LIBRARIES} ${WEBKIT_LIBRARIES} CURL::libcurl)
     target_include_directories(GravisynthCore PUBLIC ${GTK3_INCLUDE_DIRS} ${WEBKIT_INCLUDE_DIRS})
 endif()
 
