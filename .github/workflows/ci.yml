@@ -36,6 +36,7 @@ jobs:
           libgtk-3-dev \
           libjack-jackd2-dev \
           freeglut3-dev \
+          libsoup-3.0-dev \
           pkg-config \
           llvm \
           clang \
@@ -43,9 +44,10 @@ jobs:
 
     - name: Debug Dependencies
       run: |
-        pkg-config --cflags gtk+-3.0 || true
-        pkg-config --libs gtk+-3.0 || true
-        find /usr/include -name "gtk.h" || true
+        pkg-config --cflags gtk+-3.0
+        pkg-config --libs gtk+-3.0
+        pkg-config --cflags webkit2gtk-4.1
+        find /usr/include -name "gtk.h" | head -n 5
 
     - name: Lint Check
       run: |

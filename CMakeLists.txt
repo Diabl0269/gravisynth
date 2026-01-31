@@ -107,6 +107,16 @@ target_link_libraries(Gravisynth PRIVATE
     juce::juce_dsp
 )
 
+if(UNIX AND NOT APPLE)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    target_link_libraries(Gravisynth PRIVATE ${GTK3_LIBRARIES})
+    target_include_directories(Gravisynth PRIVATE ${GTK3_INCLUDE_DIRS})
+    pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.1)
+    target_link_libraries(Gravisynth PRIVATE ${WEBKIT_LIBRARIES})
+    target_include_directories(Gravisynth PRIVATE ${WEBKIT_INCLUDE_DIRS})
+endif()
+
 # Enable strict warnings to catch issues early
 if(MSVC)
     target_compile_options(Gravisynth PRIVATE /W4)
