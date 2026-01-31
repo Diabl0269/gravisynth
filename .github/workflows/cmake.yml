@@ -35,7 +35,8 @@ jobs:
           libwebkit2gtk-4.1-dev \
           libglu1-mesa-dev \
           libcurl4-openssl-dev \
-          libgtk-3-dev
+          libgtk-3-dev \
+          pkg-config
 
     - name: Configure CMake
       run: cmake -S . -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
