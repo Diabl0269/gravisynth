@@ -25,7 +25,7 @@ jobs:
           libxinerama-dev \
           libxext-dev \
           libfreetype6-dev \
-          libwebkit2gtk-4.0-dev \
+          libwebkit2gtk-4.1-dev \
           libglu1-mesa-dev \
           llvm \
           clang \
