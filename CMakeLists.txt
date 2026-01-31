@@ -57,8 +57,19 @@ target_link_libraries(GravisynthCore PUBLIC
     juce::juce_audio_formats
     juce::juce_audio_processors
     juce::juce_audio_utils
+    juce::juce_gui_extra
     juce::juce_dsp
 )
+
+if(UNIX AND NOT APPLE)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.1)
+    
+    # Link to Core so JUCE modules compiled within it find the headers
+    target_link_libraries(GravisynthCore PUBLIC ${GTK3_LIBRARIES} ${WEBKIT_LIBRARIES})
+    target_include_directories(GravisynthCore PUBLIC ${GTK3_INCLUDE_DIRS} ${WEBKIT_INCLUDE_DIRS})
+endif()
 
 target_include_directories(GravisynthCore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Source
@@ -108,13 +119,8 @@ target_link_libraries(Gravisynth PRIVATE
 )
 
 if(UNIX AND NOT APPLE)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-    target_link_libraries(Gravisynth PRIVATE ${GTK3_LIBRARIES})
-    target_include_directories(Gravisynth PRIVATE ${GTK3_INCLUDE_DIRS})
-    pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.1)
-    target_link_libraries(Gravisynth PRIVATE ${WEBKIT_LIBRARIES})
-    target_include_directories(Gravisynth PRIVATE ${WEBKIT_INCLUDE_DIRS})
+    target_link_libraries(Gravisynth PRIVATE ${GTK3_LIBRARIES} ${WEBKIT_LIBRARIES})
+    target_include_directories(Gravisynth PRIVATE ${GTK3_INCLUDE_DIRS} ${WEBKIT_INCLUDE_DIRS})
 endif()
 
 # Enable strict warnings to catch issues early

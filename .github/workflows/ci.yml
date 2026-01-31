@@ -42,16 +42,9 @@ jobs:
           clang \
           clang-format
 
-    - name: Debug Dependencies
-      run: |
-        pkg-config --cflags gtk+-3.0
-        pkg-config --libs gtk+-3.0
-        pkg-config --cflags webkit2gtk-4.1
-        find /usr/include -name "gtk.h" | head -n 5
-
     - name: Lint Check
       run: |
-        find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run
+        find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run --Werror
 
     - name: Configure CMake
       run: |
