@@ -24,9 +24,15 @@ jobs:
           libx11-dev \
           libxinerama-dev \
           libxext-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxrandr-dev \
+          libxrender-dev \
+          libfontconfig1-dev \
           libfreetype6-dev \
           libwebkit2gtk-4.1-dev \
           libglu1-mesa-dev \
+          libcurl4-openssl-dev \
           llvm \
           clang \
           clang-format
