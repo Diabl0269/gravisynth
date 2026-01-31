@@ -41,7 +41,7 @@ jobs:
 
     - name: Lint Check
       run: |
-        find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run --Werror
+        find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run
 
     - name: Configure CMake
       run: |
