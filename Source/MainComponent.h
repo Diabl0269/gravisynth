@@ -5,24 +5,25 @@
 #include "UI/ModuleLibraryComponent.h"
 #include <JuceHeader.h>
 
-class MainComponent : public juce::Component,
-                      public juce::DragAndDropContainer {
+class MainComponent
+    : public juce::Component
+    , public juce::DragAndDropContainer {
 public:
-  MainComponent();
-  ~MainComponent() override;
+    MainComponent();
+    ~MainComponent() override;
 
-  void paint(juce::Graphics &) override;
-  void resized() override;
+    void paint(juce::Graphics&) override;
+    void resized() override;
 
 private:
-  AudioEngine audioEngine;
-  GraphEditor graphEditor;
-  ModuleLibraryComponent moduleLibrary;
+    AudioEngine audioEngine;
+    GraphEditor graphEditor;
+    ModuleLibraryComponent moduleLibrary;
 
-  juce::TextButton saveButton;
-  juce::TextButton loadButton;
-  juce::TextButton settingsButton;
-  std::unique_ptr<juce::FileChooser> fileChooser;
+    juce::TextButton saveButton;
+    juce::TextButton loadButton;
+    juce::TextButton settingsButton;
+    std::unique_ptr<juce::FileChooser> fileChooser;
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
