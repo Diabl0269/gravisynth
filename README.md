@@ -57,7 +57,7 @@ Modules connect via inputs and outputs:
 - `GEMINI.md`: **Developer Guide & Contribution Standards**
 
 ### Testing & CI
-This project uses GoogleTest for unit testing and enforced 90% code coverage.
+This project uses GoogleTest for unit testing with code coverage enforcement.
 
 **Run Tests:**
 ```bash
@@ -70,8 +70,10 @@ cmake --build build --target GravisynthTests
 bash scripts/coverage.sh
 ```
 
+> **Note:** Current coverage threshold is set to **38.28%** (temporary). The goal is to incrementally improve this to **90%** by adding comprehensive unit tests for all modules. See [GEMINI.md](GEMINI.md) for testing standards.
+
 **CI/CD:**
-GitHub Actions enforces linting and coverage on every push. See `GEMINI.md` for details.
+GitHub Actions enforces linting, building, testing, and coverage on every push. See `GEMINI.md` for details.
 
 ### Dependencies
 - **JUCE**: Handled automatically via CMake FetchContent (v8.0.3)
