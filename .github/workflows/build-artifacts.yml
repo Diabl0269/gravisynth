@@ -1,0 +1,122 @@
+name: Build Artifacts
+
+on:
+  # Manual trigger
+  workflow_dispatch:
+  # Automatic trigger on push to main (after PR merge)
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x64
+          - os: ubuntu-latest
+            platform: Linux
+            arch: x64
+            artifact_name: Gravisynth-Linux-x64
+          
+          # macOS x64 (Intel)
+          - os: macos-13
+            platform: macOS
+            arch: x64
+            artifact_name: Gravisynth-macOS-x64
+          
+          # macOS arm64 (Apple Silicon)
+          - os: macos-latest
+            platform: macOS
+            arch: arm64
+            artifact_name: Gravisynth-macOS-arm64
+          
+          # Windows x64
+          - os: windows-latest
+            platform: Windows
+            arch: x64
+            artifact_name: Gravisynth-Windows-x64
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Linux Dependencies
+    - name: Install Linux Dependencies
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          ninja-build \
+          libasound2-dev \
+          libx11-dev \
+          libxinerama-dev \
+          libxext-dev \
+          libxcomposite-dev \
+          libxcursor-dev \
+          libxrandr-dev \
+          libxrender-dev \
+          libfontconfig1-dev \
+          libfreetype6-dev \
+          libwebkit2gtk-4.1-dev \
+          libglu1-mesa-dev \
+          libcurl4-openssl-dev \
+          libgtk-3-dev \
+          libjack-jackd2-dev \
+          freeglut3-dev \
+          libsoup-3.0-dev \
+          pkg-config
+
+    # macOS Dependencies
+    - name: Install macOS Dependencies
+      if: runner.os == 'macOS'
+      run: |
+        brew install cmake ninja
+
+    # Windows Dependencies
+    - name: Install Windows Dependencies
+      if: runner.os == 'Windows'
+      run: |
+        choco install cmake ninja -y
+
+    # Configure CMake
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+    # Build
+    - name: Build
+      run: cmake --build build --config Release
+
+    # Package Linux
+    - name: Package Linux Artifact
+      if: runner.os == 'Linux'
+      run: |
+        mkdir -p artifact
+        cp build/Gravisynth_artefacts/Release/Gravisynth artifact/
+        chmod +x artifact/Gravisynth
+
+    # Package macOS
+    - name: Package macOS Artifact
+      if: runner.os == 'macOS'
+      run: |
+        mkdir -p artifact
+        cp -r build/Gravisynth_artefacts/Release/Gravisynth.app artifact/
+
+    # Package Windows
+    - name: Package Windows Artifact
+      if: runner.os == 'Windows'
+      run: |
+        mkdir artifact
+        copy build\Gravisynth_artefacts\Release\Gravisynth.exe artifact\
+      shell: cmd
+
+    # Upload Artifact
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: artifact/
+        retention-days: 90
