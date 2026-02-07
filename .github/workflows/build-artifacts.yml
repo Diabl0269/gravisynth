@@ -75,16 +75,18 @@ jobs:
       run: |
         brew install cmake ninja
 
-    # Windows Dependencies
-    - name: Install Windows Dependencies
-      if: runner.os == 'Windows'
-      run: |
-        choco install cmake ninja -y
+    # Windows Dependencies (cmake is pre-installed)
+    # No extra dependencies needed for MSVC build
 
     # Configure CMake
     - name: Configure CMake
+      shell: bash
       run: |
-        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          cmake -B build -DCMAKE_BUILD_TYPE=Release
+        else
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        fi
 
     # Build
     - name: Build
@@ -95,7 +97,12 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         mkdir -p artifact
-        cp build/Gravisynth_artefacts/Release/Gravisynth artifact/
+        # Find the executable, ignoring intermediates
+        find build -name Gravisynth -type f -perm /111 -exec cp {} artifact/ \; || true
+        # Fallback if permission check fails or distinct structure
+        if [ ! -f artifact/Gravisynth ]; then
+            find build -name Gravisynth -type f -exec cp {} artifact/ \;
+        fi
         chmod +x artifact/Gravisynth
 
     # Package macOS
@@ -103,15 +110,15 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         mkdir -p artifact
-        cp -r build/Gravisynth_artefacts/Release/Gravisynth.app artifact/
+        find build -name Gravisynth.app -type d -exec cp -r {} artifact/ \;
 
     # Package Windows
     - name: Package Windows Artifact
       if: runner.os == 'Windows'
+      shell: pwsh
       run: |
-        mkdir artifact
-        copy build\Gravisynth_artefacts\Release\Gravisynth.exe artifact\
-      shell: cmd
+        New-Item -ItemType Directory -Force -Path artifact
+        Get-ChildItem -Path build -Recurse -Filter Gravisynth.exe | Copy-Item -Destination artifact\
 
     # Upload Artifact
     - name: Upload Artifact
