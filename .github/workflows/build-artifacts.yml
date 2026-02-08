@@ -1,16 +1,40 @@
-name: Build Artifacts
+name: Build and Release
 
 on:
   # Manual trigger
   workflow_dispatch:
-  # Automatic trigger on push to main (after PR merge)
+  # Automatic trigger on push to main
   push:
     branches: [ "main" ]
-    tags: [ "v*" ]
+
+permissions:
+  contents: write
 
 jobs:
+  tag:
+    name: Tag Version
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.tag_version.outputs.new_tag }}
+      changelog: ${{ steps.tag_version.outputs.changelog }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for tag calculation
+      
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: minor # Bump minor version by default (0.1 -> 0.2)
+          custom_tag: "0.1" # Fallback/Initial version
+          tag_prefix: "v"
+          fetch_all_tags: true
+
   build:
     name: Build ${{ matrix.os }}
+    needs: tag
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -42,6 +66,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ needs.tag.outputs.new_tag }} # Build the specific tag
 
     # Linux Dependencies
     - name: Install Linux Dependencies
@@ -141,11 +167,8 @@ jobs:
 
   release:
     name: Create Release
-    needs: build
+    needs: [tag, build]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
     steps:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -155,8 +178,10 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: ${{ needs.tag.outputs.new_tag }}
+          name: Release ${{ needs.tag.outputs.new_tag }}
+          body: ${{ needs.tag.outputs.changelog }}
           files: |
             artifacts/**/*
-          generate_release_notes: true
           draft: false
           prerelease: true
