@@ -1,15 +1,40 @@
-name: Build Artifacts
+name: Build and Release
 
 on:
   # Manual trigger
   workflow_dispatch:
-  # Automatic trigger on push to main (after PR merge)
+  # Automatic trigger on push to main
   push:
     branches: [ "main" ]
 
+permissions:
+  contents: write
+
 jobs:
+  tag:
+    name: Tag Version
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.tag_version.outputs.new_tag }}
+      changelog: ${{ steps.tag_version.outputs.changelog }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for tag calculation
+      
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: minor # Bump minor version by default (0.1 -> 0.2)
+          custom_tag: "0.1" # Fallback/Initial version
+          tag_prefix: "v"
+          fetch_all_tags: true
+
   build:
     name: Build ${{ matrix.os }}
+    needs: tag
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -41,6 +66,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ needs.tag.outputs.new_tag }} # Build the specific tag
 
     # Linux Dependencies
     - name: Install Linux Dependencies
@@ -110,7 +137,17 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         mkdir -p artifact
-        find build -name Gravisynth.app -type d -exec cp -r {} artifact/ \;
+        # Find .app bundle
+        APP_PATH=$(find build -name Gravisynth.app -type d -maxdepth 3 | head -n 1)
+        if [ -z "$APP_PATH" ]; then
+          echo "Gravisynth.app not found!"
+          exit 1
+        fi
+        echo "Found app at: $APP_PATH"
+        
+        # Create zip to preserve permissions and extended attributes (fixes "damaged" app)
+        # Using ditto is standard mechanism on macOS for archiving apps
+        ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" artifact/${{ matrix.artifact_name }}.zip
 
     # Package Windows
     - name: Package Windows Artifact
@@ -127,3 +164,24 @@ jobs:
         name: ${{ matrix.artifact_name }}
         path: artifact/
         retention-days: 90
+
+  release:
+    name: Create Release
+    needs: [tag, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.tag.outputs.new_tag }}
+          name: Release ${{ needs.tag.outputs.new_tag }}
+          body: ${{ needs.tag.outputs.changelog }}
+          files: |
+            artifacts/**/*
+          draft: false
+          prerelease: true
