@@ -1,0 +1,1 @@
+failed to get run log: creating cache entry: open /Users/talefronny/.cache/gh/run-log-21543790945-1769858917.zip: operation not permitted

@@ -6,6 +6,7 @@ on:
   # Automatic trigger on push to main (after PR merge)
   push:
     branches: [ "main" ]
+    tags: [ "v*" ]
 
 jobs:
   build:
@@ -110,7 +111,17 @@ jobs:
       if: runner.os == 'macOS'
       run: |
         mkdir -p artifact
-        find build -name Gravisynth.app -type d -exec cp -r {} artifact/ \;
+        # Find .app bundle
+        APP_PATH=$(find build -name Gravisynth.app -type d -maxdepth 3 | head -n 1)
+        if [ -z "$APP_PATH" ]; then
+          echo "Gravisynth.app not found!"
+          exit 1
+        fi
+        echo "Found app at: $APP_PATH"
+        
+        # Create zip to preserve permissions and extended attributes (fixes "damaged" app)
+        # Using ditto is standard mechanism on macOS for archiving apps
+        ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" artifact/${{ matrix.artifact_name }}.zip
 
     # Package Windows
     - name: Package Windows Artifact
@@ -127,3 +138,25 @@ jobs:
         name: ${{ matrix.artifact_name }}
         path: artifact/
         retention-days: 90
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/**/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
