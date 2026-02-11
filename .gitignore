@@ -27,3 +27,9 @@ CMakeUserPresets.json
 *.profdata
 *.gcov
 coverage/
+
+# Logs and artifacts
+*.log
+*.zip
+*.txt
+.claudignore
