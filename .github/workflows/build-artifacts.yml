@@ -28,7 +28,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           default_bump: minor # Bump minor version by default (0.1 -> 0.2)
-          custom_tag: "0.1" # Fallback/Initial version
           tag_prefix: "v"
           fetch_all_tags: true
 
