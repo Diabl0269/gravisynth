@@ -78,6 +78,15 @@ GitHub Actions enforces linting, building, testing, and coverage on every push. 
 ### Dependencies
 - **JUCE**: Handled automatically via CMake FetchContent (v8.0.3)
 
+## Releases
+
+Automated builds are available for Linux, macOS (Intel & Apple Silicon), and Windows.
+- **Latest Release**: Check the [Releases page](https://github.com/Diabl0269/gravisynth/releases) for the latest version.
+- **Assets include**:
+  - `Gravisynth-Linux-x64` (Executable)
+  - `Gravisynth-macOS-x64.zip` / `Gravisynth-macOS-arm64.zip` (App Bundles)
+  - `Gravisynth-Windows-x64.exe` (Executable)
+
 ## Roadmap
 
 ### Planned Features
