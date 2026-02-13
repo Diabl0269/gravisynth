@@ -3,6 +3,7 @@
 
 MainComponent::MainComponent()
     : graphEditor(audioEngine)
+    , aiService(audioEngine.getGraph())
     , aiChatComponent(aiService) {
     setSize(1600, 900);
     addAndMakeVisible(graphEditor);

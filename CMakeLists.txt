@@ -49,6 +49,8 @@ add_library(GravisynthCore STATIC
     Source/AI/OllamaProvider.h
     Source/AI/AIIntegrationService.cpp
     Source/AI/AIIntegrationService.h
+    Source/AI/AIStateMapper.cpp
+    Source/AI/AIStateMapper.h
 )
 
 # Link Core against JUCE
