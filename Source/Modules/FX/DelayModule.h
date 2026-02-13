@@ -17,16 +17,23 @@ public:
         delayBuffer.setSize(2, maxDelaySamples + samplesPerBlock);
         delayBuffer.clear();
         writePos = 0;
+
+        smoothedTime.reset(sampleRate, 0.05);   // 50ms ramp for time
+        smoothedFeedback.reset(sampleRate, 0.005); // 5ms ramp
+        smoothedMix.reset(sampleRate, 0.005);      // 5ms ramp
+
+        smoothedTime.setCurrentAndTargetValue(*timeParam);
+        smoothedFeedback.setCurrentAndTargetValue(*feedbackParam);
+        smoothedMix.setCurrentAndTargetValue(*mixParam);
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
         juce::ignoreUnused(midiMessages);
 
-        float delayTimeMs = *timeParam;
-        float feedback = *feedbackParam;
-        float mix = *mixParam;
+        smoothedTime.setTargetValue(*timeParam);
+        smoothedFeedback.setTargetValue(*feedbackParam);
+        smoothedMix.setTargetValue(*mixParam);
 
-        int delaySamples = (int)(delayTimeMs * 0.001f * sampleRate);
         int bufferSize = buffer.getNumSamples();
         int delayBufferSize = delayBuffer.getNumSamples();
 
@@ -37,17 +44,20 @@ public:
             int localWritePos = writePos;
 
             for (int i = 0; i < bufferSize; ++i) {
+                bool isFirstChannel = (ch == 0);
+                float delayTimeMs = isFirstChannel ? smoothedTime.getNextValue() : smoothedTime.getCurrentValue();
+                float feedback = isFirstChannel ? smoothedFeedback.getNextValue() : smoothedFeedback.getCurrentValue();
+                float mix = isFirstChannel ? smoothedMix.getNextValue() : smoothedMix.getCurrentValue();
+
                 float input = data[i];
 
-                int readPos = (localWritePos - delaySamples + delayBufferSize) % delayBufferSize;
-                float delayedSample = delayData[readPos];
+                float delaySamplesF = delayTimeMs * 0.001f * static_cast<float>(sampleRate);
+                float readPosF = static_cast<float>(localWritePos) - delaySamplesF + static_cast<float>(delayBufferSize);
+                float delayedSample = linearInterpolate(delayData, delayBufferSize, readPosF);
 
-                // Update delay buffer with feedback
                 delayData[localWritePos] = input + (delayedSample * feedback);
-
                 localWritePos = (localWritePos + 1) % delayBufferSize;
 
-                // Output mix
                 data[i] = (delayedSample * mix) + (input * (1.0f - mix));
             }
 
@@ -57,9 +67,24 @@ public:
     }
 
 private:
+    static float linearInterpolate(const float* buffer, int bufferSize, float fractionalPos) {
+        while (fractionalPos < 0.0f)
+            fractionalPos += static_cast<float>(bufferSize);
+
+        int pos0 = static_cast<int>(fractionalPos) % bufferSize;
+        int pos1 = (pos0 + 1) % bufferSize;
+        float frac = fractionalPos - std::floor(fractionalPos);
+
+        return buffer[pos0] * (1.0f - frac) + buffer[pos1] * frac;
+    }
+
     juce::AudioBuffer<float> delayBuffer;
     int writePos = 0;
     double sampleRate = 44100.0;
+
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedTime;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedFeedback;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedMix;
 
     juce::AudioParameterFloat* timeParam;
     juce::AudioParameterFloat* feedbackParam;

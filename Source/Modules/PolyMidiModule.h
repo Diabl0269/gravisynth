@@ -23,53 +23,31 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
-        buffer.clear(); // Clear all 16 channels (8 Pitch, 8 Gate)
-
-        // DEBUG: FORCE DRONE
-        voices[0].active = true;
-        voices[0].currentFreq = 220.0f;
+        buffer.clear();
 
         int numSamples = buffer.getNumSamples();
-
-        // DEBUG: FORCE DRONE
-        voices[0].active = true;
-        voices[0].currentFreq = 220.0f;
-        voices[0].lastUsedTime = juce::Time::getMillisecondCounter();
-
         int currentSample = 0;
 
-        // Sort MIDI messages? They usually come sorted.
-        // We treat the block as a timeline.
         for (const auto metadata : midiMessages) {
             auto msg = metadata.getMessage();
             int triggerSample = msg.getTimeStamp();
 
-            // Ensure trigger is within bounds (defensive)
-            if (triggerSample < 0)
-                triggerSample = 0;
-            if (triggerSample >= numSamples)
-                triggerSample = numSamples - 1;
+            triggerSample = juce::jlimit(0, numSamples - 1, triggerSample);
 
-            // Render audio UP TO this event
             if (triggerSample > currentSample) {
                 renderChunk(buffer, currentSample, triggerSample);
                 currentSample = triggerSample;
             }
 
-            // Process Event
             if (msg.isNoteOn()) {
                 handleNoteOn(msg.getNoteNumber(), msg.getFloatVelocity());
             } else if (msg.isNoteOff()) {
                 handleNoteOff(msg.getNoteNumber());
             } else if (msg.isAllNotesOff()) {
-                for (auto& v : voices) {
-                    v.active = false;
-                    v.note = -1;
-                }
+                allNotesOff();
             }
         }
 
-        // Render remaining audio
         if (currentSample < numSamples) {
             renderChunk(buffer, currentSample, numSamples);
         }
@@ -95,6 +73,8 @@ public:
     }
 
 private:
+    static constexpr int MAX_VOICES = 8;
+
     struct Voice {
         int note = -1;
         bool active = false;
@@ -112,12 +92,7 @@ private:
             float* pitchCh = buffer.getWritePointer(i);
             float* gateCh = buffer.getWritePointer(i + 8);
 
-            float freq = voices[i].currentFreq; // Use stored freq (holds during release)
-            // If voice is inactive, we probably should HOLD the last pitch or go to
-            // 0. Going to 0 might cause envelopes to slew down if they have release?
-            // Usually CV holds last pitch. Let's try to hold last valid pitch if
-            // possible? For now 0 is what we had. Let's keep 0 but note this.
-
+            float freq = voices[i].currentFreq;
             float gate = voices[i].active ? 1.0f : 0.0f;
 
             for (int s = startSample; s < endSample; ++s) {
@@ -128,33 +103,54 @@ private:
     }
 
     void handleNoteOn(int note, float velocity) {
+        juce::ignoreUnused(velocity);
         juce::int64 now = juce::Time::getMillisecondCounter();
+        float freq = juce::MidiMessage::getMidiNoteInHertz(note);
 
-        // 1. Try to find same note (re-trigger)
+        // Try to find existing note to re-trigger
         for (int i = 0; i < MAX_VOICES; ++i) {
             if (voices[i].active && voices[i].note == note) {
                 voices[i].lastUsedTime = now;
-                voices[i].currentFreq =
-                    juce::MidiMessage::getMidiNoteInHertz(note); // Update freq in case of pitch bend
-                // Retrigger? If we want multi-trigger we might need to toggle gate.
-                // But ADSR usually handles non-zero gate.
-                // For now, just update semantics.
+                voices[i].currentFreq = freq;
                 return;
             }
         }
 
-        // 2. Find empty voice
+        // Find empty voice
         for (int i = 0; i < MAX_VOICES; ++i) {
             if (!voices[i].active) {
                 voices[i].note = note;
                 voices[i].active = true;
                 voices[i].lastUsedTime = now;
-                voices[i].currentFreq = juce::MidiMessage::getMidiNoteInHertz(note);
+                voices[i].currentFreq = freq;
                 return;
             }
         }
 
-        // 3. Steal LRU (Oldest)
+        // Steal least recently used voice
+        int oldestIdx = findOldestVoiceIndex();
+        voices[oldestIdx].note = note;
+        voices[oldestIdx].active = true;
+        voices[oldestIdx].lastUsedTime = now;
+        voices[oldestIdx].currentFreq = freq;
+    }
+
+    void handleNoteOff(int note) {
+        for (int i = 0; i < MAX_VOICES; ++i) {
+            if (voices[i].active && voices[i].note == note) {
+                voices[i].active = false;
+            }
+        }
+    }
+
+    void allNotesOff() {
+        for (int i = 0; i < MAX_VOICES; ++i) {
+            voices[i].active = false;
+            voices[i].note = -1;
+        }
+    }
+
+    int findOldestVoiceIndex() const {
         int oldestIdx = 0;
         juce::int64 oldestTime = voices[0].lastUsedTime;
 
@@ -165,20 +161,7 @@ private:
             }
         }
 
-        voices[oldestIdx].note = note;
-        voices[oldestIdx].active = true;
-        voices[oldestIdx].lastUsedTime = now;
-        voices[oldestIdx].currentFreq = juce::MidiMessage::getMidiNoteInHertz(note);
-    }
-
-    void handleNoteOff(int note) {
-        for (int i = 0; i < MAX_VOICES; ++i) {
-            if (voices[i].active && voices[i].note == note) {
-                voices[i].active = false;
-                // Don't reset lastUsedTime, so we know it was used recently?
-                // Or doesn't matter since it's now inactive.
-            }
-        }
+        return oldestIdx;
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PolyMidiModule)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ModuleBase.h"
+#include <juce_dsp/juce_dsp.h>
 
 class DistortionModule : public ModuleBase {
 public:
@@ -12,30 +13,48 @@ public:
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
-        juce::ignoreUnused(sampleRate, samplesPerBlock);
+        // 2x oversampling with polyphase IIR half-band filter
+        oversampling = std::make_unique<juce::dsp::Oversampling<float>>(
+            2, // numChannels
+            1, // oversampling order (2x)
+            juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
+
+        oversampling->initProcessing(static_cast<size_t>(samplesPerBlock));
+
+        smoothedMix.reset(sampleRate, 0.005); // 5ms ramp
+        smoothedMix.setCurrentAndTargetValue(*mixParam);
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
         juce::ignoreUnused(midiMessages);
 
         float drive = *driveParam;
-        float mix = *mixParam;
+        smoothedMix.setTargetValue(*mixParam);
 
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-            auto* data = buffer.getWritePointer(ch);
-            for (int i = 0; i < buffer.getNumSamples(); ++i) {
-                float input = data[i];
+        int numChannels = buffer.getNumChannels();
+        int numSamples = buffer.getNumSamples();
 
-                // Soft clipping using tanh-like function: x / (1 + |x|)
-                float distorted = (input * drive) / (1.0f + std::abs(input * drive));
+        // Save dry signal
+        juce::AudioBuffer<float> dryBuffer;
+        dryBuffer.makeCopyOf(buffer);
 
-                // Mix
-                data[i] = (distorted * mix) + (input * (1.0f - mix));
-            }
-        }
+        // Upsample
+        juce::dsp::AudioBlock<float> inputBlock(buffer);
+        auto oversampledBlock = oversampling->processSamplesUp(inputBlock);
+
+        applyDistortion(oversampledBlock, drive);
+        oversampling->processSamplesDown(inputBlock);
+        blendWetDry(buffer, dryBuffer, numChannels, numSamples);
+    }
+
+    double getLatencyInSamples() const {
+        return oversampling ? oversampling->getLatencyInSamples() : 0.0;
     }
 
 private:
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversampling;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedMix;
+
     juce::AudioParameterFloat* driveParam;
     juce::AudioParameterFloat* mixParam;
 };

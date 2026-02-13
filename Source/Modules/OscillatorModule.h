@@ -1,14 +1,13 @@
 #pragma once
 
 #include "ModuleBase.h"
-#include <juce_dsp/juce_dsp.h>
+#include <cmath>
 
 class OscillatorModule : public ModuleBase {
 public:
     OscillatorModule()
         : ModuleBase("Oscillator", 1, 1) // 1 input (freq/pitch mod), 1 output
     {
-        // Default params
         addParameter(waveformParam = new juce::AudioParameterChoice("waveform", "Waveform",
                                                                     {"Sine", "Square", "Saw", "Triangle"}, 0));
         addParameter(frequencyParam = new juce::AudioParameterFloat("frequency", "Frequency", 20.0f, 20000.0f, 440.0f));
@@ -17,74 +16,105 @@ public:
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
-        juce::dsp::ProcessSpec spec = {sampleRate, static_cast<juce::uint32>(samplesPerBlock), 2};
-        oscillator.prepare(spec);
+        juce::ignoreUnused(samplesPerBlock);
+        currentSampleRate = sampleRate;
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
-
         // Process MIDI for Pitch
         for (const auto metadata : midiMessages) {
             auto msg = metadata.getMessage();
             if (msg.isNoteOn()) {
                 float frequency = juce::MidiMessage::getMidiNoteInHertz(msg.getNoteNumber());
-                // Update param so UI reflects it? Or just internal?
-                // Parameter is float, let's just use internal or set param.
-                // Setting param notifies listeners.
                 *frequencyParam = frequency;
-                oscillator.reset(); // Reset phase to 0 to avoid clicks
+                phase = 0.0f; // Reset phase on note-on
             }
         }
 
-        // Update params
-        updateWaveform();
-        oscillator.setFrequency(*frequencyParam);
-
-        // Safe channel access
         if (buffer.getNumChannels() == 0)
             return;
 
-        // Render
-        juce::dsp::AudioBlock<float> audioBlock(buffer);
-        juce::dsp::ProcessContextReplacing<float> context(audioBlock);
-        oscillator.process(context);
+        float freq = *frequencyParam;
+        float dt = static_cast<float>(freq / currentSampleRate); // phase increment per sample
+        int waveform = waveformParam->getIndex();
+        int numSamples = buffer.getNumSamples();
+        auto* ch0 = buffer.getWritePointer(0);
+
+        for (int i = 0; i < numSamples; ++i) {
+            float sample = generateSample(waveform, phase, dt);
+            ch0[i] = sample;
+
+            phase += dt;
+            if (phase >= 1.0f)
+                phase -= 1.0f;
+        }
+
+        // Copy channel 0 to other channels
+        for (int ch = 1; ch < buffer.getNumChannels(); ++ch)
+            buffer.copyFrom(ch, 0, buffer, 0, 0, numSamples);
 
         // Push to visual buffer
         if (auto* vb = getVisualBuffer()) {
-            auto* ch = buffer.getReadPointer(0);
-            for (int i = 0; i < buffer.getNumSamples(); ++i) {
-                vb->pushSample(ch[i]);
+            for (int i = 0; i < numSamples; ++i) {
+                vb->pushSample(ch0[i]);
             }
         }
     }
 
 private:
-    void updateWaveform() {
-        switch (waveformParam->getIndex()) {
+    float generateSample(int waveform, float phase, float dt) const {
+        switch (waveform) {
         case 0:
-            oscillator.initialise([](float x) { return std::sin(x); });
-            break;
+            return generateSine(phase);
         case 1:
-            oscillator.initialise([](float x) { return x < 0.0f ? -1.0f : 1.0f; });
-            break;
+            return generateSquare(phase, dt);
         case 2:
-            // Naive saw: x is 0..2pi (usually) or -pi..pi in JUCE dsp::Oscillator?
-            // Actually dsp::Oscillator implementation guarantees 0..2pi or something
-            // specific. Wait, juce::dsp::Oscillator uses a phase incrementer. The
-            // argument x to the lambda is the phase (0 to 2*PI). Let's verify
-            // standard behaviour. Usually 0 to 2PI. If 0..2PI: x / PI -> 0..2. Minus
-            // 1 -> -1..1.
-            oscillator.initialise([](float x) { return (x / juce::MathConstants<float>::pi) - 1.0f; });
-            break;
+            return generateSaw(phase, dt);
         case 3:
-            oscillator.initialise([](float x) { return 2.0f * std::abs(x / juce::MathConstants<float>::pi) - 1.0f; });
-            break; // Naive triangle
-                   // Better to use juce::dsp::Oscillator lookup tables for anti-aliasing but
-                   // this is simple start
+            return generateTriangle(phase);
+        default:
+            return 0.0f;
         }
     }
 
-    juce::dsp::Oscillator<float> oscillator;
+    static float generateSine(float phase) {
+        return std::sin(phase * juce::MathConstants<float>::twoPi);
+    }
+
+    static float generateSquare(float phase, float dt) {
+        float sample = phase < 0.5f ? 1.0f : -1.0f;
+        sample += polyBlep(phase, dt);
+        sample -= polyBlep(std::fmod(phase + 0.5f, 1.0f), dt);
+        return sample;
+    }
+
+    static float generateSaw(float phase, float dt) {
+        float sample = 2.0f * phase - 1.0f;
+        sample -= polyBlep(phase, dt);
+        return sample;
+    }
+
+    static float generateTriangle(float phase) {
+        return 4.0f * std::abs(phase - 0.5f) - 1.0f;
+    }
+
+    static float polyBlep(float t, float dt) {
+        if (t < dt) {
+            float n = t / dt;
+            return n + n - n * n - 1.0f;
+        }
+        if (t > 1.0f - dt) {
+            float n = (t - 1.0f) / dt;
+            return n * n + n + n + 1.0f;
+        }
+        return 0.0f;
+    }
+
+    float phase = 0.0f;
+    double currentSampleRate = 44100.0;
+
     juce::AudioParameterChoice* waveformParam;
     juce::AudioParameterFloat* frequencyParam;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorModule)
 };
