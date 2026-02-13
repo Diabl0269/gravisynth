@@ -105,8 +105,9 @@ public:
                 midiMessages.addEvent(cc, 0);
 
                 // Note On
+                int noteOnOffset = std::min(1, numSamples - 1);
                 auto note = juce::MidiMessage::noteOn(1, noteVal, (juce::uint8)100);
-                midiMessages.addEvent(note, 0);
+                midiMessages.addEvent(note, noteOnOffset);
 
                 // Update state
                 lastNote = noteVal;

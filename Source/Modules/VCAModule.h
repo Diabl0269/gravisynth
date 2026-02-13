@@ -12,7 +12,7 @@ public:
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
         juce::ignoreUnused(samplesPerBlock);
-        smoothedGain.reset(sampleRate, 0.005);
+        smoothedGain.reset(sampleRate, 0.01); // Increased smoothing for anti-click
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {

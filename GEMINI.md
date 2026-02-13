@@ -34,6 +34,9 @@ This document is intended for AI agents and developers working on `Gravisynth`.
 - GitHub Actions workflow (`.github/workflows/ci.yml`) runs on every push to `main`.
 - Checks: Linting, Build, Unit Tests, Coverage >90%.
 
+### Documentation & Contribution
+- **Consider Updates**: Before every commit/PR, consider if any relevant documentation (`README.md`, `GEMINI.md`, or the `docs/` folder) needs to be updated to reflect your changes.
+
 ## Module Architecture
 
 All audio modules inherit from `ModuleBase`, which extends `juce::AudioProcessor`:

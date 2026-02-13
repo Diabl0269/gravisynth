@@ -18,6 +18,7 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
         juce::ignoreUnused(samplesPerBlock);
         currentSampleRate = sampleRate;
+        smoothedFreq.reset(sampleRate, 0.005); // 5ms glide
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
@@ -27,20 +28,20 @@ public:
             if (msg.isNoteOn()) {
                 float frequency = juce::MidiMessage::getMidiNoteInHertz(msg.getNoteNumber());
                 *frequencyParam = frequency;
-                phase = 0.0f; // Reset phase on note-on
             }
         }
 
         if (buffer.getNumChannels() == 0)
             return;
 
-        float freq = *frequencyParam;
-        float dt = static_cast<float>(freq / currentSampleRate); // phase increment per sample
+        smoothedFreq.setTargetValue(*frequencyParam);
         int waveform = waveformParam->getIndex();
         int numSamples = buffer.getNumSamples();
         auto* ch0 = buffer.getWritePointer(0);
 
         for (int i = 0; i < numSamples; ++i) {
+            float freq = smoothedFreq.getNextValue();
+            float dt = static_cast<float>(freq / currentSampleRate);
             float sample = generateSample(waveform, phase, dt);
             ch0[i] = sample;
 
@@ -109,6 +110,7 @@ private:
     float phase = 0.0f;
     double currentSampleRate = 44100.0;
 
+    juce::SmoothedValue<float> smoothedFreq;
     juce::AudioParameterChoice* waveformParam;
     juce::AudioParameterFloat* frequencyParam;
 

@@ -16,6 +16,7 @@ add_executable(GravisynthTests
     ADSRTests.cpp
     ModuleBaseTests.cpp
     VisualBufferTests.cpp
+    AntiClickTests.cpp
 )
 
 target_link_libraries(GravisynthTests PRIVATE

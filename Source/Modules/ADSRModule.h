@@ -20,20 +20,28 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        float a = std::max(static_cast<float>(*attackParam), 0.002f);
+        float d = *decayParam;
+        float s = *sustainParam;
+        float r = std::max(static_cast<float>(*releaseParam), 0.005f);
+
+        if (a != adsrParams.attack || d != adsrParams.decay || s != adsrParams.sustain || r != adsrParams.release) {
+            adsrParams.attack = a;
+            adsrParams.decay = d;
+            adsrParams.sustain = s;
+            adsrParams.release = r;
+            adsr.setParameters(adsrParams);
+        }
+
         // Simple MIDI gate handling
         for (const auto metadata : midiMessages) {
             auto message = metadata.getMessage();
-            if (message.isNoteOn())
+            if (message.isNoteOn()) {
                 adsr.noteOn();
-            else if (message.isNoteOff())
+            } else if (message.isNoteOff()) {
                 adsr.noteOff();
+            }
         }
-
-        adsrParams.attack = *attackParam;
-        adsrParams.decay = *decayParam;
-        adsrParams.sustain = *sustainParam;
-        adsrParams.release = *releaseParam;
-        adsr.setParameters(adsrParams);
 
         // Generate valid control signal by filling buffer with 1.0f
         for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
