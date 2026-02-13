@@ -31,6 +31,10 @@ Modules connect via inputs and outputs:
 - **Poly MIDI**: 8-voice voice management with LRU allocation.
 - **Poly Sequencer**: Multi-voice pattern sequencing.
 
+### AI Integration [NEW]
+- **AI Sound Designer**: Describe a sound in natural language and the AI generates the complete patch (modules, parameters, and connections).
+- **One-Click Apply**: Instantly apply AI-generated patches to the graph editor.
+
 ## Building
 ... (Build instructions remain same) ...
 
@@ -59,11 +63,10 @@ Modules connect via inputs and outputs:
 - **Advanced Modulation**: Matrix-style routing for complex sounds.
 
 ### Vision: AI-Powered Sound Design
-... (AI section) ...
-The flagship feature on our roadmap is an **AI Sound Designer** interface:
-- Describe a sound in natural language (e.g., *"warm bass with slow attack"*)
-- AI generates the complete patch: selects modules, configures parameters, and creates connections
-- Iterate with conversational refinements
+- [x] **Local AI Integration**: Support for Ollama and local models.
+- [x] **Natural Language Patching**: Text-to-patch generation.
+- [ ] **Conversational Refinement**: Iterate on patches via chat.
+- [ ] **Parameter Learning**: Train models on user sound preferences.
 
 ## License
 MIT

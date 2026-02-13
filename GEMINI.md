@@ -80,6 +80,18 @@ Key patterns:
 - **DistortionModule**: Oversampled soft-clipping distortion.
 - **ReverbModule**: Stereo algorithmic reverb.
 
+## AI Integration
+
+Gravisynth features an AI-powered sound design assistant that can generate and modify patches using natural language.
+
+### Components
+- **`AIProvider`**: Abstract interface for AI backends (Ollama, etc.).
+- **`AIIntegrationService`**: Orchestrates AI communication, maintains chat history, and bridges the AI with the audio engine.
+- **`AIStateMapper`**: Handles the mapping between AI-friendly JSON and the internal synthesizer graph.
+
+### Communication Pattern
+The AI communicates using a simplified JSON schema describing nodes (id, type, params) and connections (src, dst, ports).
+
 ## Platform Notes
 ... (rest of the file)
 
