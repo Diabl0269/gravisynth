@@ -87,6 +87,7 @@ endif()
 juce_add_gui_app(Gravisynth
     PRODUCT_NAME "Gravisynth"
     VERSION "0.0.1"
+    BUNDLE_ID "com.gravisynth.app"
 )
 
 juce_generate_juce_header(Gravisynth)
