@@ -44,6 +44,11 @@ add_library(GravisynthCore STATIC
     Source/Modules/FX/DelayModule.h
     Source/Modules/FX/DistortionModule.h
     Source/Modules/FX/ReverbModule.h
+    # AI
+    Source/AI/AIProvider.h
+    Source/AI/OllamaProvider.h
+    Source/AI/AIIntegrationService.cpp
+    Source/AI/AIIntegrationService.h
 )
 
 # Link Core against JUCE

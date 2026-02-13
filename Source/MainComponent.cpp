@@ -1,10 +1,16 @@
 #include "MainComponent.h"
+#include "AI/OllamaProvider.h"
 
 MainComponent::MainComponent()
-    : graphEditor(audioEngine) {
+    : graphEditor(audioEngine)
+    , aiChatComponent(aiService) {
     setSize(1600, 900);
     addAndMakeVisible(graphEditor);
     addAndMakeVisible(moduleLibrary);
+    addAndMakeVisible(aiChatComponent);
+
+    // Initialise AI with Ollama
+    aiService.setProvider(std::make_unique<gsynth::OllamaProvider>());
 
     // Buttons
     addAndMakeVisible(saveButton);
@@ -85,6 +91,7 @@ void MainComponent::resized() {
     loadButton.setBounds(header.removeFromLeft(100).reduced(2));
     settingsButton.setBounds(header.removeFromLeft(100).reduced(2));
 
+    aiChatComponent.setBounds(bounds.removeFromRight((int)aiPaneWidth));
     moduleLibrary.setBounds(bounds.removeFromLeft(200));
     graphEditor.setBounds(bounds);
 }
