@@ -19,6 +19,19 @@ public:
     AIIntegrationService(juce::AudioProcessorGraph& graph);
     ~AIIntegrationService();
 
+    /**
+     * @class Listener
+     * @brief Interface for observing AI-driven changes to the synthesizer state.
+     */
+    class Listener {
+    public:
+        virtual ~Listener() = default;
+        virtual void aiPatchApplied() = 0;
+    };
+
+    void addListener(Listener* l) { listeners.add(l); }
+    void removeListener(Listener* l) { listeners.remove(l); }
+
     void setProvider(std::unique_ptr<AIProvider> newProvider);
 
     /**
@@ -50,6 +63,7 @@ private:
     std::unique_ptr<AIProvider> provider;
     std::vector<AIProvider::Message> chatHistory;
     juce::AudioProcessorGraph& audioGraph;
+    juce::ListenerList<Listener> listeners;
 
     void initSystemPrompt();
 

@@ -9,7 +9,8 @@
 
 class MainComponent
     : public juce::Component
-    , public juce::DragAndDropContainer {
+    , public juce::DragAndDropContainer
+    , private gsynth::AIIntegrationService::Listener {
 public:
     MainComponent();
     ~MainComponent() override;
@@ -18,6 +19,9 @@ public:
     void resized() override;
 
 private:
+    // AIIntegrationService::Listener
+    void aiPatchApplied() override;
+
     AudioEngine audioEngine;
     GraphEditor graphEditor;
     ModuleLibraryComponent moduleLibrary;

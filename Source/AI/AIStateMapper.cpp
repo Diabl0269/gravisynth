@@ -64,6 +64,7 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
     if (!rootObj)
         return false;
 
+    const juce::ScopedLock sl(graph.getCallbackLock());
     graph.clear(); // For now, we rebuild. Future: partial updates.
 
     std::map<int, juce::AudioProcessorGraph::NodeID> idMap;
