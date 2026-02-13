@@ -18,7 +18,7 @@ public:
         delayBuffer.clear();
         writePos = 0;
 
-        smoothedTime.reset(sampleRate, 0.05);   // 50ms ramp for time
+        smoothedTime.reset(sampleRate, 0.05);      // 50ms ramp for time
         smoothedFeedback.reset(sampleRate, 0.005); // 5ms ramp
         smoothedMix.reset(sampleRate, 0.005);      // 5ms ramp
 
@@ -52,7 +52,8 @@ public:
                 float input = data[i];
 
                 float delaySamplesF = delayTimeMs * 0.001f * static_cast<float>(sampleRate);
-                float readPosF = static_cast<float>(localWritePos) - delaySamplesF + static_cast<float>(delayBufferSize);
+                float readPosF =
+                    static_cast<float>(localWritePos) - delaySamplesF + static_cast<float>(delayBufferSize);
                 float delayedSample = linearInterpolate(delayData, delayBufferSize, readPosF);
 
                 delayData[localWritePos] = input + (delayedSample * feedback);

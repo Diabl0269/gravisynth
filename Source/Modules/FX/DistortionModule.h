@@ -47,11 +47,32 @@ public:
         blendWetDry(buffer, dryBuffer, numChannels, numSamples);
     }
 
-    double getLatencyInSamples() const {
-        return oversampling ? oversampling->getLatencyInSamples() : 0.0;
-    }
+    double getLatencyInSamples() const { return oversampling ? oversampling->getLatencyInSamples() : 0.0; }
 
 private:
+    void applyDistortion(juce::dsp::AudioBlock<float>& block, float drive) {
+        for (size_t ch = 0; ch < block.getNumChannels(); ++ch) {
+            auto* data = block.getChannelPointer(ch);
+            for (size_t i = 0; i < block.getNumSamples(); ++i) {
+                float input = data[i];
+                // Soft clipping using tanh-like function: x / (1 + |x|)
+                data[i] = (input * drive) / (1.0f + std::abs(input * drive));
+            }
+        }
+    }
+
+    void blendWetDry(juce::AudioBuffer<float>& wet, const juce::AudioBuffer<float>& dry, int numChannels,
+                     int numSamples) {
+        for (int ch = 0; ch < numChannels; ++ch) {
+            auto* wetData = wet.getWritePointer(ch);
+            const auto* dryData = dry.getReadPointer(ch);
+            for (int i = 0; i < numSamples; ++i) {
+                float mix = smoothedMix.getNextValue();
+                wetData[i] = (wetData[i] * mix) + (dryData[i] * (1.0f - mix));
+            }
+        }
+    }
+
     std::unique_ptr<juce::dsp::Oversampling<float>> oversampling;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedMix;
 

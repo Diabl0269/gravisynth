@@ -35,7 +35,6 @@ public:
         }
 
         if (buffer.getNumChannels() > 1) {
-            auto* rightData = buffer.getWritePointer(1);
             buffer.copyFrom(1, 0, buffer, 0, 0, numSamples);
         }
     }

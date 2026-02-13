@@ -77,9 +77,7 @@ private:
         }
     }
 
-    static float generateSine(float phase) {
-        return std::sin(phase * juce::MathConstants<float>::twoPi);
-    }
+    static float generateSine(float phase) { return std::sin(phase * juce::MathConstants<float>::twoPi); }
 
     static float generateSquare(float phase, float dt) {
         float sample = phase < 0.5f ? 1.0f : -1.0f;
@@ -94,9 +92,7 @@ private:
         return sample;
     }
 
-    static float generateTriangle(float phase) {
-        return 4.0f * std::abs(phase - 0.5f) - 1.0f;
-    }
+    static float generateTriangle(float phase) { return 4.0f * std::abs(phase - 0.5f) - 1.0f; }
 
     static float polyBlep(float t, float dt) {
         if (t < dt) {
