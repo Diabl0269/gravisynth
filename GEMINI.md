@@ -47,12 +47,38 @@ public:
 };
 ```
 
+### DSP Standards (PR #6+)
+To ensure professional sound quality, all modules must implement:
+- **Parameter Smoothing**: Use `juce::SmoothedValue` for all continuous parameters (Gain, Cutoff, etc.) to prevent clicking during automation.
+- **Anti-Aliased Oscillators**: Use PolyBLEP or similar techniques for waveforms with Sharp edges (Square, Saw) to reduce aliasing artifacts.
+- **Oversampling**: Use `juce::dsp::Oversampling` for non-linear modules (Distortion) to mitigate harmonic folding.
+
 Key patterns:
 - **Parameters**: Use `addParameter()` with `juce::AudioParameterFloat`, `AudioParameterChoice`, etc.
 - **VisualBuffer**: Call `enableVisualBuffer(true)` for waveform visualization support.
 - **State**: Override `getStateInformation()` / `setStateInformation()` for preset save/load.
 
+## Registered Modules
+
+### Core Modules
+- **OscillatorModule**: Anti-aliased multi-waveform generator.
+- **FilterModule**: Resonant low-pass filter.
+- **ADSRModule**: Envelope generator.
+- **LFOModule**: Modulation oscillator with sync/glide.
+- **VCAModule**: Smoothed gain stage with CV control.
+- **SequencerModule**: Mono step sequencer.
+
+### Polyphonic Modules
+- **PolyMidiModule**: 8-voice MIDI manager with LRU allocation.
+- **PolySequencerModule**: Polyphonic step sequencer.
+
+### FX Modules
+- **DelayModule**: Interpolated feedback delay.
+- **DistortionModule**: Oversampled soft-clipping distortion.
+- **ReverbModule**: Stereo algorithmic reverb.
+
 ## Platform Notes
+... (rest of the file)
 
 ### Coverage Tooling
 | Platform | Command |
