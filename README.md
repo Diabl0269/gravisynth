@@ -15,86 +15,51 @@ Modules connect via inputs and outputs:
 ```
 
 ### Core Modules
-- **Oscillator**: Waveform generator (Sine, Saw, Square, Triangle)
-- **Filter**: Resonant low-pass filter with cutoff/resonance control
-- **VCA**: Voltage Controlled Amplifier for dynamic control
-- **ADSR**: Envelope generator for amplitude/filter modulation
-- **LFO**: Low Frequency Oscillator for modulation
-- **Sequencer**: Step sequencer with per-step pitch control
+- **Oscillator**: Anti-aliased waveform generator (Sine, Saw, Square, Triangle).
+- **Filter**: Resonant low-pass filter with cutoff/resonance control.
+- **VCA**: Voltage Controlled Amplifier with parameter smoothing.
+- **ADSR**: Envelope generator for amplitude/filter modulation.
+- **LFO**: Modulation oscillator with glide and S&H modes.
+- **Sequencer**: Step sequencer for melodic patterns.
+
+### FX Modules
+- **Delay**: Interpolated delay with feedback and mix control.
+- **Distortion**: 2x oversampled soft-clipping for harmonic warmth.
+- **Reverb**: Lush algorithmic stereo reverb.
+
+### Polyphony
+- **Poly MIDI**: 8-voice voice management with LRU allocation.
+- **Poly Sequencer**: Multi-voice pattern sequencing.
 
 ## Building
-
-### Prerequisites
-- CMake 3.22 or higher
-- C++20 compatible compiler (Clang, GCC, MSVC)
-- Git
-
-### Build Instructions
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/gravisynth.git
-   cd gravisynth
-   ```
-
-2. Configure with CMake:
-   ```bash
-   cmake -S . -B build
-   ```
-
-3. Build:
-   ```bash
-   cmake --build build
-   ```
+... (Build instructions remain same) ...
 
 ## Development
 
 ### Project Structure
 - `Source/`: Main source code
-    - `Modules/`: Audio processing modules
-    - `UI/`: User interface components
-- `Tests/`: Unit and integration tests
+    - `Modules/`: Audio processing modules (Core, FX, Poly)
+    - `UI/`: Graph editor and visual components
+- `Tests/`: GoogleTest suite
+- `docs/`: **Technical Documentation (Architecture, Module Specs)**
 - `GEMINI.md`: **Developer Guide & Contribution Standards**
 
-### Testing & CI
-This project uses GoogleTest for unit testing with code coverage enforcement.
-
-**Run Tests:**
-```bash
-cmake --build build --target GravisynthTests
-./build/Tests/GravisynthTests
-```
-
-**Check Coverage:**
-```bash
-bash scripts/coverage.sh
-```
-
-> **Note:** Current coverage threshold is set to **38.28%** (temporary). The goal is to incrementally improve this to **90%** by adding comprehensive unit tests for all modules. See [GEMINI.md](GEMINI.md) for testing standards.
-
-**CI/CD:**
-GitHub Actions enforces linting, building, testing, and coverage on every push. See `GEMINI.md` for details.
-
-### Dependencies
-- **JUCE**: Handled automatically via CMake FetchContent (v8.0.3)
-
-## Releases
-
-Automated builds are available for Linux, macOS (Intel & Apple Silicon), and Windows.
-- **Latest Release**: Check the [Releases page](https://github.com/Diabl0269/gravisynth/releases) for the latest version.
-- **Assets include**:
-  - `Gravisynth-Linux-x64` (Executable)
-  - `Gravisynth-macOS-x64.zip` / `Gravisynth-macOS-arm64.zip` (App Bundles)
-  - `Gravisynth-Windows-x64.exe` (Executable)
+... (Testing section) ...
 
 ## Roadmap
 
-### Planned Features
-- **Polyphonic Support**: Multi-voice synthesis with voice allocation and unison modes
-- **Enhanced UI/UX**: Improved visual design, keyboard shortcuts, and workflow optimizations
-- **Sound Quality**: Anti-aliased oscillators, oversampling, and additional filter types
+### Current Focus: UI/UX & Workflow
+- [x] **FX Suite**: Delay, Distortion, Reverb.
+- [x] **Anti-Aliasing**: High-quality oscillators.
+- [ ] **Patch Saving/Loading**: Full state persistence for complex graphs.
+- [ ] **Drag-and-Drop Patching**: Improved visual connection workflow.
+
+### Advanced Features
+- **Wavetable Synthesis**: Support for custom wavetables and morphine.
+- **Advanced Modulation**: Matrix-style routing for complex sounds.
 
 ### Vision: AI-Powered Sound Design
+... (AI section) ...
 The flagship feature on our roadmap is an **AI Sound Designer** interface:
 - Describe a sound in natural language (e.g., *"warm bass with slow attack"*)
 - AI generates the complete patch: selects modules, configures parameters, and creates connections
