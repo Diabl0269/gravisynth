@@ -19,6 +19,9 @@ public:
             v.note = -1;
             v.active = false;
             v.lastUsedTime = 0;
+            v.currentFreq = 0.0f;
+            v.smoothedGate.reset(sampleRate, 0.005); // 5ms smoothing for gates
+            v.smoothedFreq.reset(sampleRate, 0.005); // 5ms smoothing for pitch
         }
     }
 
@@ -80,6 +83,8 @@ private:
         bool active = false;
         juce::int64 lastUsedTime = 0;
         float currentFreq = 0.0f; // Store freq to hold it on NoteOff
+        juce::SmoothedValue<float> smoothedGate;
+        juce::SmoothedValue<float> smoothedFreq;
     };
     Voice voices[MAX_VOICES];
 
@@ -92,12 +97,12 @@ private:
             float* pitchCh = buffer.getWritePointer(i);
             float* gateCh = buffer.getWritePointer(i + 8);
 
-            float freq = voices[i].currentFreq;
-            float gate = voices[i].active ? 1.0f : 0.0f;
+            voices[i].smoothedFreq.setTargetValue(voices[i].currentFreq);
+            voices[i].smoothedGate.setTargetValue(voices[i].active ? 1.0f : 0.0f);
 
             for (int s = startSample; s < endSample; ++s) {
-                pitchCh[s] = freq;
-                gateCh[s] = gate;
+                pitchCh[s] = voices[i].smoothedFreq.getNextValue();
+                gateCh[s] = voices[i].smoothedGate.getNextValue();
             }
         }
     }

@@ -21,11 +21,11 @@ public:
         ladder.prepare(spec);
         ladder.setMode(juce::dsp::LadderFilterMode::LPF24);
         ladder.setEnabled(true);
+        smoothedCutoff.reset(sampleRate, 0.005); // 5ms smoothing
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/) override {
-
-        float baseCutoff = *cutoffParam;
+        smoothedCutoff.setTargetValue(*cutoffParam);
         float res = *resonanceParam;
         float drive = *driveParam;
         float modAmt = *modAmountParam;
@@ -44,6 +44,7 @@ public:
         auto singleChannelBlock = block.getSingleChannelBlock(0);
 
         for (int i = 0; i < numSamples; ++i) {
+            float baseCutoff = smoothedCutoff.getNextValue();
             float mod = 1.0f;
             if (cvCh) {
                 float octaves = 4.0f;
@@ -72,6 +73,7 @@ public:
 
 private:
     juce::dsp::LadderFilter<float> ladder;
+    juce::SmoothedValue<float> smoothedCutoff;
     juce::AudioParameterFloat* cutoffParam;
     juce::AudioParameterFloat* resonanceParam;
     juce::AudioParameterFloat* driveParam;

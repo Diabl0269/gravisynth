@@ -138,10 +138,11 @@ public:
             }
 
             // Send Note Ons
+            int noteOnOffset = std::min(1, numSamples - 1);
             for (int note : notesToPlay) {
                 if (note >= 0 && note <= 127) {
                     auto msg = juce::MidiMessage::noteOn(1, note, (juce::uint8)100);
-                    midiMessages.addEvent(msg, 0);
+                    midiMessages.addEvent(msg, noteOnOffset);
                     activeNotes.push_back(note);
                 }
             }
