@@ -34,6 +34,12 @@ public:
         sendButton.setButtonText("Send");
         sendButton.onClick = [this]() { sendButtonClicked(); };
 
+        addAndMakeVisible(applyButton);
+        applyButton.setButtonText("Apply Suggested Patch");
+        applyButton.onClick = [this]() { applyButtonClicked(); };
+        applyButton.setVisible(false);
+        applyButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgreen);
+
         updateChatDisplay();
     }
 
@@ -44,6 +50,10 @@ public:
         sendButton.setBounds(bottomArea.removeFromRight(60));
         bottomArea.removeFromRight(10);
         inputField.setBounds(bottomArea);
+
+        b.removeFromBottom(10);
+        auto applyArea = b.removeFromBottom(30);
+        applyButton.setBounds(applyArea.reduced(20, 0));
 
         b.removeFromBottom(10);
         chatDisplay.setBounds(b);
@@ -65,6 +75,8 @@ private:
     juce::TextEditor chatDisplay;
     juce::TextEditor inputField;
     juce::TextButton sendButton;
+    juce::TextButton applyButton;
+    juce::String lastSuggestedJson;
 
     void sendButtonClicked() {
         auto text = inputField.getText().trim();
@@ -78,13 +90,55 @@ private:
         inputField.setReadOnly(true);
 
         aiService.sendMessage(text, [this](const juce::String& response, bool success) {
-            juce::MessageManager::callAsync([this, success]() {
+            juce::MessageManager::callAsync([this, response, success]() {
                 sendButton.setEnabled(true);
                 inputField.setReadOnly(false);
+
+                if (success) {
+                    checkForJson(response);
+                }
+
                 updateChatDisplay();
                 inputField.grabKeyboardFocus();
             });
         });
+    }
+
+    void applyButtonClicked() {
+        if (lastSuggestedJson.isNotEmpty()) {
+            if (aiService.applyPatch(lastSuggestedJson)) {
+                applyButton.setVisible(false);
+                resized();
+            }
+        }
+    }
+
+    void checkForJson(const juce::String& text) {
+        int start = text.indexOf("```json");
+        if (start != -1) {
+            start += 7;
+            int end = text.indexOf(start, "```");
+            if (end != -1) {
+                lastSuggestedJson = text.substring(start, end).trim();
+                applyButton.setVisible(true);
+                resized();
+                return;
+            }
+        }
+
+        // Fallback: search for { ... } if no backticks
+        start = text.indexOf("{");
+        if (start != -1) {
+            int end = text.lastIndexOf("}");
+            if (end != -1 && end > start) {
+                lastSuggestedJson = text.substring(start, end + 1).trim();
+                // Basic validation
+                if (lastSuggestedJson.contains("\"nodes\"")) {
+                    applyButton.setVisible(true);
+                    resized();
+                }
+            }
+        }
     }
 
     void updateChatDisplay() {

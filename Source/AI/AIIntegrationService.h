@@ -1,7 +1,9 @@
 #pragma once
 
 #include "AIProvider.h"
+#include "AIStateMapper.h"
 #include <functional>
+#include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 #include <memory>
 #include <vector>
@@ -14,7 +16,7 @@ namespace gsynth {
  */
 class AIIntegrationService {
 public:
-    AIIntegrationService();
+    AIIntegrationService(juce::AudioProcessorGraph& graph);
     ~AIIntegrationService();
 
     void setProvider(std::unique_ptr<AIProvider> newProvider);
@@ -23,6 +25,16 @@ public:
      * @brief Sends a user message and gets a response.
      */
     void sendMessage(const juce::String& text, AIProvider::CompletionCallback callback);
+
+    /**
+     * @brief Applies a JSON patch to the graph.
+     */
+    bool applyPatch(const juce::String& jsonString);
+
+    /**
+     * @brief Returns the current graph state as a JSON string for context.
+     */
+    juce::String getPatchContext();
 
     /**
      * @brief Returns the chat history.
@@ -37,6 +49,7 @@ public:
 private:
     std::unique_ptr<AIProvider> provider;
     std::vector<AIProvider::Message> chatHistory;
+    juce::AudioProcessorGraph& audioGraph;
 
     void initSystemPrompt();
 
