@@ -131,6 +131,11 @@ jobs:
           exit 1
         fi
         echo "Found app at: $APP_PATH"
+        
+        # Ad-hoc code sign the app bundle
+        codesign --force --deep -s - "$APP_PATH"
+        codesign --verify --verbose "$APP_PATH"
+        
         ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" artifact/${{ matrix.artifact_name }}.zip
 
     # Package Windows
