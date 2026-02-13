@@ -5,6 +5,7 @@ MainComponent::MainComponent()
     : graphEditor(audioEngine)
     , aiService(audioEngine.getGraph())
     , aiChatComponent(aiService) {
+    aiService.addListener(this);
     setSize(1600, 900);
     addAndMakeVisible(graphEditor);
     addAndMakeVisible(moduleLibrary);
@@ -75,7 +76,14 @@ MainComponent::MainComponent()
     }
 }
 
-MainComponent::~MainComponent() { audioEngine.shutdown(); }
+MainComponent::~MainComponent() {
+    aiService.removeListener(this);
+    audioEngine.shutdown();
+}
+
+void MainComponent::aiPatchApplied() {
+    juce::MessageManager::callAsync([this]() { graphEditor.updateComponents(); });
+}
 
 //==============================================================================
 void MainComponent::paint(juce::Graphics& g) {

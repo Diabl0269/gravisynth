@@ -35,6 +35,7 @@ void AIIntegrationService::sendMessage(const juce::String& text, AIProvider::Com
 bool AIIntegrationService::applyPatch(const juce::String& jsonString) {
     juce::var json = juce::JSON::parse(jsonString);
     if (AIStateMapper::applyJSONToGraph(json, audioGraph)) {
+        listeners.call([](Listener& l) { l.aiPatchApplied(); });
         return true;
     }
     return false;
