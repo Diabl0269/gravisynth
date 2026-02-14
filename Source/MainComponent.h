@@ -35,6 +35,9 @@ private:
     gsynth::AIIntegrationService aiService;
     gsynth::AIChatComponent aiChatComponent;
 
+    juce::ApplicationProperties appProperties;
+    juce::PropertiesFile::Options propertiesOptions;
+
     float aiPaneWidth = 300.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)

@@ -17,9 +17,14 @@ void AIIntegrationService::sendMessage(const juce::String& text, AIProvider::Com
     chatHistory.push_back({"user", text});
 
     if (provider) {
-        provider->sendPrompt(chatHistory, [this, callback](const juce::String& response, bool success) {
+        auto weakThis = juce::WeakReference<AIIntegrationService>(this);
+        provider->sendPrompt(chatHistory, [weakThis, callback](const juce::String& response, bool success) {
+            if (weakThis.get() == nullptr)
+                return; // Service was destroyed
+
+            auto* self = weakThis.get();
             if (success) {
-                chatHistory.push_back({"assistant", response});
+                self->chatHistory.push_back({"assistant", response});
             }
             if (callback) {
                 callback(response, success);

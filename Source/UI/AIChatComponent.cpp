@@ -2,6 +2,27 @@
 
 namespace gsynth {
 
+// Helper function to extract JSON blocks
+juce::StringArray extractJSONBlocks(const juce::String& text) {
+    juce::StringArray blocks;
+    int searchFrom = 0;
+
+    while (true) {
+        int start = text.indexOf(searchFrom, "```json");
+        if (start == -1)
+            break;
+
+        int end = text.indexOf(start + 7, "```");
+        if (end == -1)
+            break;
+
+        blocks.add(text.substring(start + 7, end).trim());
+        searchFrom = end + 3;
+    }
+
+    return blocks;
+}
+
 //==============================================================================
 class AIChatComponent::PatchCard : public juce::Component {
 public:
@@ -194,6 +215,17 @@ AIChatComponent::AIChatComponent(AIIntegrationService& service)
 
 AIChatComponent::~AIChatComponent() {}
 
+void AIChatComponent::timerCallback() {
+    // If the timer fires, the request has timed out
+    stopTimer();
+    sendButton.setEnabled(true);
+    inputField.setReadOnly(false);
+    isWaitingForResponse = false;
+    messages.push_back({"assistant", "Error: Request timed out after 30 seconds.", ""});
+    updateChatDisplay();
+    inputField.grabKeyboardFocus();
+}
+
 void AIChatComponent::resized() {
     auto b = getLocalBounds().reduced(10);
 
@@ -249,22 +281,31 @@ void AIChatComponent::sendButtonClicked() {
     sendButton.setEnabled(false);
     inputField.setReadOnly(true);
 
+    // Start timeout timer (30 seconds)
+    startTimer(30000);
+
     aiService.sendMessage(text, [this](const juce::String& response, bool success) {
         juce::MessageManager::callAsync([this, response, success]() {
+            stopTimer(); // Cancel timeout
             isWaitingForResponse = false;
             sendButton.setEnabled(true);
             inputField.setReadOnly(false);
 
             if (success) {
-                // Parse for JSON
+                // Parse for JSON using robust helper
                 juce::String json;
                 juce::String cleanText = response;
-                int start = response.indexOf("```json");
-                if (start != -1) {
-                    int end = response.indexOf(start + 7, "```");
-                    if (end != -1) {
-                        json = response.substring(start + 7, end).trim();
-                        cleanText = response.substring(0, start) + response.substring(end + 3);
+
+                juce::StringArray jsonBlocks = extractJSONBlocks(response);
+                if (!jsonBlocks.isEmpty()) {
+                    json = jsonBlocks[0]; // Use the first block found
+                    // Attempt to remove the JSON block from the cleanText if it was extracted
+                    int start = response.indexOf("```json");
+                    if (start != -1) {
+                        int end = response.indexOf(start + 7, "```");
+                        if (end != -1) {
+                            cleanText = response.substring(0, start) + response.substring(end + 3);
+                        }
                     }
                 }
                 messages.push_back({"assistant", cleanText.trim(), json});
