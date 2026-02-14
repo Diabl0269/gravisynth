@@ -12,7 +12,8 @@ namespace gsynth {
  */
 class AIChatComponent
     : public juce::Component
-    , private juce::TextEditor::Listener {
+    , private juce::TextEditor::Listener
+    , public juce::Timer {
 public:
     AIChatComponent(AIIntegrationService& service)
         : aiService(service) {
@@ -70,6 +71,9 @@ public:
     }
 
 private:
+    void timerCallback() override;
+    class MessageBubble;
+    class PatchCard;
     AIIntegrationService& aiService;
 
     juce::TextEditor chatDisplay;
