@@ -8,9 +8,76 @@
 #include "../Modules/OscillatorModule.h"
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
+#include <functional> // For std::function
 #include <map>
+#include <unordered_map> // For the factory map
 
 namespace gsynth {
+
+typedef juce::AudioProcessorGraph::AudioGraphIOProcessor AudioGraphIOProcessor;
+
+using ModuleFactoryFunc = std::function<std::unique_ptr<juce::AudioProcessor>()>;
+
+// Factory map for module creation
+static const std::unordered_map<juce::String, ModuleFactoryFunc> moduleFactory = {
+    {"Audio Input", []() { return std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioInputNode); }},
+    {"Audio Output", []() { return std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioOutputNode); }},
+    {"Midi Input", []() { return std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::midiInputNode); }},
+    {"Oscillator", []() { return std::make_unique<OscillatorModule>(); }},
+    {"Filter", []() { return std::make_unique<FilterModule>(); }},
+    {"VCA", []() { return std::make_unique<VCAModule>(); }},
+    {"ADSR", []() { return std::make_unique<ADSRModule>(); }}, // ADSR constructor for generic case
+    {"Sequencer", []() { return std::make_unique<SequencerModule>(); }},
+    {"LFO", []() { return std::make_unique<LFOModule>(); }},
+    {"Distortion", []() { return std::make_unique<DistortionModule>(); }},
+    {"Delay", []() { return std::make_unique<DelayModule>(); }},
+    {"Reverb", []() { return std::make_unique<ReverbModule>(); }}};
+
+bool AIStateMapper::validatePatchJSON(const juce::var& json) {
+    if (!json.isObject()) {
+        juce::Logger::writeToLog("validatePatchJSON: Root is not an object.");
+        return false;
+    }
+    auto* rootObj = json.getDynamicObject();
+    if (!rootObj) {
+        juce::Logger::writeToLog("validatePatchJSON: Root dynamic object is null.");
+        return false;
+    }
+
+    // Check for "nodes" array
+    if (rootObj->hasProperty("nodes")) {
+        auto* nodesList = rootObj->getProperty("nodes").getArray();
+        if (nodesList == nullptr) {
+            juce::Logger::writeToLog("validatePatchJSON: 'nodes' property is not an array.");
+            return false;
+        }
+        // Further validation of each node could go here (e.g., checking for id and type)
+    } else {
+        juce::Logger::writeToLog("validatePatchJSON: 'nodes' property is missing.");
+        return false;
+    }
+
+    // Check for "connections" array (optional, a patch can exist without connections)
+    if (rootObj->hasProperty("connections")) {
+        auto* connList = rootObj->getProperty("connections").getArray();
+        if (connList == nullptr) {
+            juce::Logger::writeToLog("validatePatchJSON: 'connections' property is not an array.");
+            return false;
+        }
+        // Further validation of each connection could go here
+    }
+
+    return true;
+}
+
+std::unique_ptr<juce::AudioProcessor> AIStateMapper::createModule(const juce::String& type) {
+    auto it = moduleFactory.find(type);
+    if (it != moduleFactory.end()) {
+        return it->second();
+    }
+    juce::Logger::writeToLog("AIStateMapper: Unknown module type: " + type);
+    return nullptr;
+}
 
 juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
     juce::DynamicObject::Ptr root = new juce::DynamicObject();
@@ -57,15 +124,28 @@ juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
     return juce::var(root.get());
 }
 
-bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph) {
-    if (!json.isObject())
+bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting) {
+    if (!json.isObject()) {
+        juce::Logger::writeToLog("applyJSONToGraph: JSON is not an object.");
         return false;
+    }
     auto* rootObj = json.getDynamicObject();
-    if (!rootObj)
+    if (!rootObj) {
+        juce::Logger::writeToLog("applyJSONToGraph: JSON dynamic object is null.");
         return false;
+    }
+
+    // Validate JSON structure before making any changes
+    if (!validatePatchJSON(json)) {
+        juce::Logger::writeToLog("applyJSONToGraph: JSON patch validation failed.");
+        return false;
+    }
 
     const juce::ScopedLock sl(graph.getCallbackLock());
-    graph.clear(); // For now, we rebuild. Future: partial updates.
+
+    if (clearExisting) {
+        graph.clear(); // Clear existing graph as requested
+    }
 
     std::map<int, juce::AudioProcessorGraph::NodeID> idMap;
 
@@ -86,7 +166,13 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                                 for (auto* param : processor->getParameters()) {
                                     if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
                                         if (pObj->hasProperty(p->paramID)) {
-                                            p->setValue((float)pObj->getProperty(p->paramID));
+                                            float value = (float)pObj->getProperty(p->paramID);
+                                            // Clamp value to the parameter's normalized range
+                                            value = juce::jlimit(0.0f, 1.0f, value);
+                                            p->setValue(value);
+                                        } else {
+                                            juce::Logger::writeToLog("AIStateMapper: Parameter '" + p->paramID +
+                                                                     "' not found in JSON for module '" + type + "'");
                                         }
                                     }
                                 }
@@ -129,38 +215,6 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
     }
 
     return true;
-}
-
-std::unique_ptr<juce::AudioProcessor> AIStateMapper::createModule(const juce::String& type) {
-    using AudioGraphIOProcessor = juce::AudioProcessorGraph::AudioGraphIOProcessor;
-
-    if (type == "Audio Input")
-        return std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioInputNode);
-    if (type == "Audio Output")
-        return std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioOutputNode);
-    if (type == "Midi Input")
-        return std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::midiInputNode);
-
-    if (type == "Oscillator")
-        return std::make_unique<OscillatorModule>();
-    if (type == "Filter")
-        return std::make_unique<FilterModule>();
-    if (type == "VCA")
-        return std::make_unique<VCAModule>();
-    if (type == "ADSR" || type.contains("Env"))
-        return std::make_unique<ADSRModule>(type);
-    if (type == "Sequencer")
-        return std::make_unique<SequencerModule>();
-    if (type == "LFO")
-        return std::make_unique<LFOModule>();
-    if (type == "Distortion")
-        return std::make_unique<DistortionModule>();
-    if (type == "Delay")
-        return std::make_unique<DelayModule>();
-    if (type == "Reverb")
-        return std::make_unique<ReverbModule>();
-
-    return nullptr;
 }
 
 } // namespace gsynth

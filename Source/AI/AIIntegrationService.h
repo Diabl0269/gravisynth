@@ -67,6 +67,7 @@ private:
 
     void initSystemPrompt();
 
+    JUCE_DECLARE_WEAK_REFERENCEABLE(AIIntegrationService)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AIIntegrationService)
 };
 
