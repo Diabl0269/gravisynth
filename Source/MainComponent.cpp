@@ -5,14 +5,15 @@ MainComponent::MainComponent()
     : graphEditor(audioEngine)
     , aiService(audioEngine.getGraph())
     , aiChatComponent(aiService) {
+    // Initialise AI with Ollama
+    aiService.setProvider(std::make_unique<gsynth::OllamaProvider>());
+    aiChatComponent.refreshModels();
+
     aiService.addListener(this);
     setSize(1600, 900);
     addAndMakeVisible(graphEditor);
     addAndMakeVisible(moduleLibrary);
     addAndMakeVisible(aiChatComponent);
-
-    // Initialise AI with Ollama
-    aiService.setProvider(std::make_unique<gsynth::OllamaProvider>());
 
     // Buttons
     addAndMakeVisible(saveButton);

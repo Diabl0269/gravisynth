@@ -33,8 +33,13 @@ public:
 
     juce::String getProviderName() const override { return "Ollama"; }
 
+    void setModel(const juce::String& name) override;
+    juce::String getCurrentModel() const override;
+    void fetchAvailableModels(std::function<void(const juce::StringArray& models, bool success)> callback) override;
+
 private:
     juce::String ollamaHost;
+    juce::String currentModel = "qwen3-coder-next:latest";
 
     struct Request {
         std::vector<Message> conversation;

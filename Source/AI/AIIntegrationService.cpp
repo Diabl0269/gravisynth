@@ -75,4 +75,19 @@ void AIIntegrationService::initSystemPrompt() {
                    "Keep your explanations concise."});
 }
 
+void AIIntegrationService::setModel(const juce::String& name) {
+    if (provider)
+        provider->setModel(name);
+}
+
+juce::String AIIntegrationService::getCurrentModel() const { return provider ? provider->getCurrentModel() : ""; }
+
+void AIIntegrationService::fetchAvailableModels(
+    std::function<void(const juce::StringArray& models, bool success)> callback) {
+    if (provider)
+        provider->fetchAvailableModels(callback);
+    else if (callback)
+        callback({}, false);
+}
+
 } // namespace gsynth
