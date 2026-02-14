@@ -19,18 +19,23 @@ void OllamaProvider::fetchAvailableModels(std::function<void(const juce::StringA
             juce::Logger::writeToLog("AI Discovery Response: " + responseText);
             juce::var jsonResponse = juce::JSON::parse(responseText);
 
-            juce::Logger::writeToLog("AI Discovery Debug: jsonResponse.isObject() = " + juce::String(jsonResponse.isObject() ? "true" : "false"));
+            juce::Logger::writeToLog("AI Discovery Debug: jsonResponse.isObject() = " +
+                                     juce::String(jsonResponse.isObject() ? "true" : "false"));
             if (jsonResponse.isObject()) {
-                juce::Logger::writeToLog("AI Discovery Debug: hasProperty(\"models\") = " + juce::String(jsonResponse.getDynamicObject()->hasProperty("models") ? "true" : "false"));
+                juce::Logger::writeToLog(
+                    "AI Discovery Debug: hasProperty(\"models\") = " +
+                    juce::String(jsonResponse.getDynamicObject()->hasProperty("models") ? "true" : "false"));
                 if (jsonResponse.getDynamicObject()->hasProperty("models")) {
                     auto modelsArray = jsonResponse["models"];
-                    juce::Logger::writeToLog("AI Discovery Debug: modelsArray.isArray() = " + juce::String(modelsArray.isArray() ? "true" : "false"));
+                    juce::Logger::writeToLog("AI Discovery Debug: modelsArray.isArray() = " +
+                                             juce::String(modelsArray.isArray() ? "true" : "false"));
                     if (modelsArray.isArray()) {
                         for (int i = 0; i < modelsArray.size(); ++i) {
                             models.add(modelsArray[i]["name"].toString());
                         }
                         success = true;
-                        juce::Logger::writeToLog("AI Discovery: Found " + juce::String(models.size()) + " " + (models.size() == 1 ? "model" : "models"));
+                        juce::Logger::writeToLog("AI Discovery: Found " + juce::String(models.size()) + " " +
+                                                 (models.size() == 1 ? "model" : "models"));
                     } else {
                         juce::Logger::writeToLog("AI Discovery Error: 'models' property is not an array");
                     }
