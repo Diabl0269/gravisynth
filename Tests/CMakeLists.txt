@@ -16,6 +16,9 @@ add_executable(GravisynthTests
     ADSRTests.cpp
     ModuleBaseTests.cpp
     VisualBufferTests.cpp
+    VCAModuleTests.cpp
+    LFOModuleTests.cpp
+    SequencerModuleTests.cpp
     AIStateMapperTests.cpp
     OllamaProviderTests.cpp
 )

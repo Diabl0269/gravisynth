@@ -48,7 +48,6 @@ private:
         bool isExpanded = false;
     };
     std::vector<MessageData> messages;
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AIChatComponent)
 };
 

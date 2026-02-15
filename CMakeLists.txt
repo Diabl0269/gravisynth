@@ -48,7 +48,7 @@ add_library(GravisynthCore STATIC
     Source/AI/AIProvider.h
     Source/AI/OllamaProvider.h
     Source/AI/AIIntegrationService.cpp
-        Source/AI/OllamaProvider.cpp
+    Source/AI/OllamaProvider.cpp
     Source/AI/AIIntegrationService.h
     Source/AI/AIStateMapper.cpp
     Source/AI/AIStateMapper.h

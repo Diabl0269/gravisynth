@@ -116,6 +116,8 @@ Tests use paths relative to `Source/`:
 ```
 
 ## Common Tasks
+- **Viewing GitHub Issues**:
+    - Use the `gh` CLI tool to view issues. For example, `gh issue view <issue_number>` to see details of a specific issue.
 - **Adding a new module**:
     1.  Create `Source/Modules/NewModule.h`.
     2.  Add to `GravisynthCore` in `CMakeLists.txt`.
