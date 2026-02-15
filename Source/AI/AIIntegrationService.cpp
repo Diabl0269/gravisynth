@@ -77,7 +77,8 @@ void AIIntegrationService::initSystemPrompt() {
                    "```\n"
                    "Available modules: Oscillator, Filter, LFO, ADSR, VCA, Sequencer, Distortion, Delay, Reverb. "
                    "IO nodes: Audio Input, Audio Output, Midi Input. "
-                   "Keep your explanations concise."});
+                   "Keep your explanations concise, but *always* provide a brief textual summary of the changes "
+                   "you made *before* the JSON block."});
 }
 
 void AIIntegrationService::setModel(const juce::String& name) {
