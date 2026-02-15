@@ -31,8 +31,56 @@ Modules connect via inputs and outputs:
 - **Poly MIDI**: 8-voice voice management with LRU allocation.
 - **Poly Sequencer**: Multi-voice pattern sequencing.
 
+### AI Integration [NEW]
+- **AI Sound Designer**: Describe a sound in natural language and the AI generates the complete patch (modules, parameters, and connections).
+- **One-Click Apply**: Instantly apply AI-generated patches to the graph editor.
+
 ## Building
-... (Build instructions remain same) ...
+
+Gravisynth uses CMake for its build system.
+
+### Prerequisites
+-   A C++20 compatible compiler (e.g., Clang, GCC, MSVC)
+-   CMake (version 3.15 or newer)
+-   JUCE (handled by CMake's FetchContent, no manual download needed)
+
+### Steps
+
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/Diabl0269/gravisynth.git
+    cd gravisynth
+    ```
+
+2.  **Configure CMake:**
+    Create a build directory and configure CMake. You can choose `Debug` or `Release` build types.
+
+    *   **Debug Build (for development):**
+        ```bash
+        cmake -Bbuild -S. -DCMAKE_BUILD_TYPE=Debug
+        ```
+    *   **Release Build (for deployment):**
+        ```bash
+        cmake -Bbuild -S. -DCMAKE_BUILD_TYPE=Release
+        ```
+
+3.  **Build the application:**
+    ```bash
+    cmake --build build --target Gravisynth
+    ```
+    This will compile the application. On macOS, the executable will be found at `build/Gravisynth_artefacts/<BuildType>/Gravisynth.app`. On other platforms, the path might vary (e.g., `build/<BuildType>/Gravisynth`).
+
+4.  **Run the application:**
+    *   **macOS:**
+        ```bash
+        open build/Gravisynth_artefacts/Release/Gravisynth.app
+        # or
+        open build/Gravisynth_artefacts/Debug/Gravisynth.app
+        ```
+    *   **Linux/Windows (example for Release):**
+        ```bash
+        ./build/Release/Gravisynth
+        ```
 
 ## Development
 
@@ -44,7 +92,30 @@ Modules connect via inputs and outputs:
 - `docs/`: **Technical Documentation (Architecture, Module Specs)**
 - `GEMINI.md`: **Developer Guide & Contribution Standards**
 
-... (Testing section) ...
+## Testing
+
+Gravisynth uses GoogleTest for unit testing.
+
+### Running Unit Tests
+
+1.  **Build the test suite:**
+    ```bash
+    cmake --build build --target GravisynthTests
+    ```
+
+2.  **Execute the tests:**
+    ```bash
+    ./build/Tests/GravisynthTests
+    ```
+
+### Code Coverage
+
+To generate a code coverage report (requires `llvm-cov` and `llvm-profdata`):
+
+```bash
+bash scripts/coverage.sh
+```
+This script will build the project with coverage flags, run the tests, and generate a detailed coverage report.
 
 ## Roadmap
 
@@ -59,11 +130,10 @@ Modules connect via inputs and outputs:
 - **Advanced Modulation**: Matrix-style routing for complex sounds.
 
 ### Vision: AI-Powered Sound Design
-... (AI section) ...
-The flagship feature on our roadmap is an **AI Sound Designer** interface:
-- Describe a sound in natural language (e.g., *"warm bass with slow attack"*)
-- AI generates the complete patch: selects modules, configures parameters, and creates connections
-- Iterate with conversational refinements
+- [x] **Local AI Integration**: Support for Ollama and local models.
+- [x] **Natural Language Patching**: Text-to-patch generation.
+- [ ] **Conversational Refinement**: Iterate on patches via chat.
+- [ ] **Parameter Learning**: Train models on user sound preferences.
 
 ## License
 MIT
