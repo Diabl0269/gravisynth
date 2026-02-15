@@ -31,10 +31,6 @@ MainComponent::MainComponent()
     addAndMakeVisible(moduleLibrary);
     addAndMakeVisible(aiChatComponent);
 
-
-
-
-
     // Buttons
     addAndMakeVisible(saveButton);
     saveButton.setButtonText("Save Preset");

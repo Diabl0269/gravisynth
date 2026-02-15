@@ -65,6 +65,7 @@ public:
     void setModel(const juce::String& name);
     juce::String getCurrentModel() const;
     void fetchAvailableModels(std::function<void(const juce::StringArray& models, bool success)> callback);
+
 private:
     std::unique_ptr<AIProvider> provider;
     std::vector<AIProvider::Message> chatHistory;

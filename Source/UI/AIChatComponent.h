@@ -29,27 +29,27 @@ private:
     class MessageBubble;
     class PatchCard;
 <<<<<<< HEAD
-    
-        AIIntegrationService& aiService;
-        bool isWaitingForResponse = false;
-    
-        juce::Viewport viewport;
-        juce::Component messageList;
-        juce::TextEditor inputField;
-        juce::TextButton sendButton;
-        juce::ComboBox modelPicker;
-    
-        void sendButtonClicked();
-        void updateChatDisplay();
-        void scrollToBottom();
-    
-        struct MessageData {
-            juce::String role;
-            juce::String text;
-            juce::String jsonPatch;
-            bool isExpanded = false;
-        };
-        std::vector<MessageData> messages;
+
+    AIIntegrationService& aiService;
+    bool isWaitingForResponse = false;
+
+    juce::Viewport viewport;
+    juce::Component messageList;
+    juce::TextEditor inputField;
+    juce::TextButton sendButton;
+    juce::ComboBox modelPicker;
+
+    void sendButtonClicked();
+    void updateChatDisplay();
+    void scrollToBottom();
+
+    struct MessageData {
+        juce::String role;
+        juce::String text;
+        juce::String jsonPatch;
+        bool isExpanded = false;
+    };
+    std::vector<MessageData> messages;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AIChatComponent)
 };
 
