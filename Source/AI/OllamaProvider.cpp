@@ -2,6 +2,14 @@
 
 namespace gsynth {
 
+// Default constructor implementation
+OllamaProvider::OllamaProvider(const juce::String& host)
+    : Thread("OllamaProviderThread")
+    , ollamaHost(host)
+    , createStream([](const juce::URL& url, const juce::URL::InputStreamOptions& options) {
+        return url.createInputStream(options);
+    }) {}
+
 void OllamaProvider::setModel(const juce::String& name) { currentModel = name; }
 juce::String OllamaProvider::getCurrentModel() const { return currentModel; }
 
@@ -13,11 +21,12 @@ void OllamaProvider::fetchAvailableModels(std::function<void(const juce::StringA
         juce::StringArray models;
         bool success = false;
 
-        if (auto stream = std::unique_ptr<juce::InputStream>(
-                url.createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                                          .withConnectionTimeoutMs(10000)))) {
+        if (auto stream = createStream(url, juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                                                .withConnectionTimeoutMs(60000))) {
             juce::String responseText = stream->readEntireStreamAsString();
-            DBG("AI Discovery Response: " + responseText);
+            // DBG("AI Discovery Response (before JSON parse): [" + responseText + "]"); // Potentially expensive
+            // DBG("AI Discovery Response: " + responseText); // Redundant
+
             juce::var jsonResponse = juce::JSON::parse(responseText);
 
             DBG("AI Discovery Debug: jsonResponse.isObject() = " +
@@ -49,10 +58,15 @@ void OllamaProvider::fetchAvailableModels(std::function<void(const juce::StringA
             DBG("AI Discovery Error: Failed to open input stream for " + url.toString(true));
         }
 
-        juce::MessageManager::callAsync([callback, models, success]() {
+        if (isTestMode) {
             if (callback)
                 callback(models, success);
-        });
+        } else {
+            juce::MessageManager::callAsync([callback, models, success]() {
+                if (callback)
+                    callback(models, success);
+            });
+        }
     });
 }
 
@@ -95,11 +109,11 @@ void OllamaProvider::processRequest(const Request& req) {
     juce::String responseText;
     bool success = false;
 
-    if (auto stream = std::unique_ptr<juce::InputStream>(
-            url.withPOSTData(jsonString)
-                .createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-                                       .withConnectionTimeoutMs(10000)))) {
+    if (auto stream = createStream(
+            url.withPOSTData(jsonString),
+            juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData).withConnectionTimeoutMs(60000))) {
         responseText = stream->readEntireStreamAsString();
+        // DBG("AI Chat Response (before JSON parse): [" + responseText + "]"); // Potentially expensive
 
         juce::var jsonResponse = juce::JSON::parse(responseText);
         if (jsonResponse.isObject()) {
@@ -117,10 +131,15 @@ void OllamaProvider::processRequest(const Request& req) {
         responseText = "Error: Could not connect to Ollama at " + ollamaHost;
     }
 
-    juce::MessageManager::callAsync([req, responseText, success]() {
+    if (isTestMode) {
         if (req.callback)
             req.callback(responseText, success);
-    });
+    } else {
+        juce::MessageManager::callAsync([req, responseText, success]() {
+            if (req.callback)
+                req.callback(responseText, success);
+        });
+    }
 }
 
 } // namespace gsynth

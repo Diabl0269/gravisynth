@@ -15,9 +15,16 @@ class OllamaProvider
     : public AIProvider
     , protected juce::Thread {
 public:
-    OllamaProvider(const juce::String& host = "http://localhost:11434")
+    using InputStreamFactory =
+        std::function<std::unique_ptr<juce::InputStream>(const juce::URL&, const juce::URL::InputStreamOptions&)>;
+
+    OllamaProvider(const juce::String& host = "http://localhost:11434");
+
+    // Test-specific constructor to inject a mock input stream factory
+    OllamaProvider(const juce::String& host, InputStreamFactory streamFactory)
         : Thread("OllamaProviderThread")
-        , ollamaHost(host) {}
+        , ollamaHost(host)
+        , createStream(std::move(streamFactory)) {}
 
     ~OllamaProvider() override { stopThread(2000); }
 
@@ -39,9 +46,13 @@ public:
     juce::String getCurrentModel() const override;
     void fetchAvailableModels(std::function<void(const juce::StringArray& models, bool success)> callback) override;
 
+    void setTestMode(bool testMode) { isTestMode = testMode; }
+
 private:
     juce::String ollamaHost;
     juce::String currentModel = "qwen3-coder-next:latest";
+    InputStreamFactory createStream; // Member variable for the stream factory
+    bool isTestMode = false;
 
     struct Request {
         std::vector<Message> conversation;
