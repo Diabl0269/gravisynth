@@ -15,7 +15,6 @@ class AIChatComponent
     , private juce::TextEditor::Listener
     , public juce::Timer {
 public:
-<<<<<<< HEAD
     AIChatComponent(AIIntegrationService& service);
     ~AIChatComponent() override;
 
@@ -28,7 +27,6 @@ private:
     void timerCallback() override;
     class MessageBubble;
     class PatchCard;
-<<<<<<< HEAD
 
     AIIntegrationService& aiService;
     bool isWaitingForResponse = false;
