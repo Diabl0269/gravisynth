@@ -24,11 +24,14 @@ MainComponent::MainComponent()
     // else if (savedProviderName == "OtherProvider") { ... }
 
     aiChatComponent.refreshModels();
+
     aiService.addListener(this);
     setSize(1600, 900);
     addAndMakeVisible(graphEditor);
     addAndMakeVisible(moduleLibrary);
     addAndMakeVisible(aiChatComponent);
+
+
 
 
 

@@ -5,7 +5,8 @@
 #include "UI/AIChatComponent.h"
 #include "UI/GraphEditor.h"
 #include "UI/ModuleLibraryComponent.h"
-#include <JuceHeader.h>
+#include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 class MainComponent
     : public juce::Component

@@ -48,6 +48,7 @@ add_library(GravisynthCore STATIC
     Source/AI/AIProvider.h
     Source/AI/OllamaProvider.h
     Source/AI/AIIntegrationService.cpp
+    Source/AI/OllamaProvider.cpp
     Source/AI/AIIntegrationService.h
     Source/AI/AIStateMapper.cpp
     Source/AI/AIStateMapper.h
@@ -105,6 +106,7 @@ target_sources(Gravisynth PRIVATE
     Source/MainComponent.cpp
     Source/MainComponent.h
     # UI (UI depends on Core, but technically could be in App for now)
+    Source/UI/AIChatComponent.cpp
     Source/UI/GraphEditor.cpp
     Source/UI/GraphEditor.h
     Source/UI/ModuleComponent.cpp

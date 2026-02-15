@@ -16,14 +16,11 @@ add_executable(GravisynthTests
     ADSRTests.cpp
     ModuleBaseTests.cpp
     VisualBufferTests.cpp
-<<<<<<< HEAD
     VCAModuleTests.cpp
     LFOModuleTests.cpp
     SequencerModuleTests.cpp
-=======
     AIStateMapperTests.cpp
     OllamaProviderTests.cpp
->>>>>>> 00ae061 (feat: Address PR review comments for AI integration)
 )
 
 target_link_libraries(GravisynthTests PRIVATE

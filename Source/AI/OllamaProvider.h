@@ -45,6 +45,7 @@ public:
     void setModel(const juce::String& name) override;
     juce::String getCurrentModel() const override;
     void fetchAvailableModels(std::function<void(const juce::StringArray& models, bool success)> callback) override;
+
     void setTestMode(bool testMode) { isTestMode = testMode; }
 
 private:
