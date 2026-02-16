@@ -5,6 +5,7 @@
 #include "../Modules/FX/ReverbModule.h"
 #include "../Modules/FilterModule.h"
 #include "../Modules/LFOModule.h"
+#include "../Modules/MidiKeyboardModule.h"
 #include "../Modules/OscillatorModule.h"
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
@@ -151,6 +152,8 @@ std::unique_ptr<juce::AudioProcessor> AIStateMapper::createModule(const juce::St
         return std::make_unique<ADSRModule>(type);
     if (type == "Sequencer")
         return std::make_unique<SequencerModule>();
+    if (type == "Keyboard" || type == "MIDI Keyboard")
+        return std::make_unique<MidiKeyboardModule>();
     if (type == "LFO")
         return std::make_unique<LFOModule>();
     if (type == "Distortion")

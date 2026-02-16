@@ -17,6 +17,7 @@ add_executable(GravisynthTests
     ModuleBaseTests.cpp
     VisualBufferTests.cpp
     AntiClickTests.cpp
+    MidiKeyboardModuleTests.cpp
 )
 
 target_link_libraries(GravisynthTests PRIVATE

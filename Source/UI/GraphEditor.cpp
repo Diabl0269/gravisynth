@@ -5,6 +5,7 @@
 #include "../Modules/FX/ReverbModule.h"
 #include "../Modules/FilterModule.h"
 #include "../Modules/LFOModule.h"
+#include "../Modules/MidiKeyboardModule.h"
 #include "../Modules/OscillatorModule.h"
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
@@ -357,6 +358,8 @@ void GraphEditor::itemDropped(const SourceDetails& dragSourceDetails) {
         newProcessor = std::make_unique<DelayModule>();
     else if (name == "Reverb")
         newProcessor = std::make_unique<ReverbModule>();
+    else if (name == "MidiKeyboard")
+        newProcessor = std::make_unique<MidiKeyboardModule>();
 
     if (newProcessor) {
         auto node = audioEngine.getGraph().addNode(std::move(newProcessor));
