@@ -155,18 +155,14 @@ void ModuleComponent::paint(juce::Graphics& g) {
     // --- PORTS ---
     int numIns = module->getTotalNumInputChannels();
     int numOuts = module->getTotalNumOutputChannels();
-
-    // Flag to track if MIDI out has been drawn to adjust y position for audio ports
-    bool midiOutDrawn = false;
-
-    if (module->producesMidi()) { // General check for MIDI producing modules
+    bool midiOutDrawn = false; // Reintroduced
+                               // MIDI Output (Top Right if produces midi)
+    if (module->producesMidi()) {
         g.setColour(juce::Colours::white);
-        auto p = getPortCenter(0, false); // Assuming MIDI Out is always port 0
+        auto p = juce::Point<int>(getWidth() - 10, 30); // Top right, below header
         g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
         g.drawText("Midi Out", p.x - 65, p.y - 5, 60, 10, juce::Justification::right, false);
-        midiOutDrawn = true;
     }
-
     // MIDI Input (Top Left if accepts midi components)
     if (module->acceptsMidi()) {
         g.setColour(juce::Colours::white);
@@ -218,15 +214,17 @@ juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
     int yStep = 20;
     int headerHeight = 30;
 
-    int midiOffset = 0;
-    if (!isInput && module->producesMidi()) {
-        midiOffset = 1; // Shift audio outputs down by one slot if MIDI out is present
+    int portOffset = 0;
+    if (module->producesMidi()) {
+        portOffset = 20; // Additional offset for all ports if MIDI out is present, to avoid collision with MIDI Out at
+                         // (getWidth() - 10, 30)
     }
 
     if (isInput) {
-        return {10, headerHeight + index * yStep + 20}; // Left side
+        return {10, headerHeight + portOffset + index * yStep + 20}; // Left side, apply offset
     } else {
-        return {getWidth() - 10, headerHeight + (index + midiOffset) * yStep + 20}; // Right side, apply offset
+        // No additional midiOffset for outputs here, as MIDI out is now fixed.
+        return {getWidth() - 10, headerHeight + portOffset + index * yStep + 20}; // Right side, apply offset
     }
 }
 
@@ -234,9 +232,9 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
     int numIns = module->getTotalNumInputChannels();
     int numOuts = module->getTotalNumOutputChannels();
 
-    // Check for MIDI Output
+    // Check for MIDI Output at fixed top-right position
     if (module->producesMidi()) {
-        auto p = getPortCenter(0, false); // MIDI Out is always index 0, on the right
+        auto p = juce::Point<int>(getWidth() - 10, 30); // Matches paint()
         if (localPoint.getDistanceFrom(p) < 10) {
             return Port{{p.x - 5, p.y - 5, 10, 10},
                         juce::AudioProcessorGraph::midiChannelIndex,
@@ -245,14 +243,12 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
         }
     }
 
-    // MIDI Input detection
+    // MIDI Input detection (Top Left)
     if (module->acceptsMidi()) {
         auto p = juce::Point<int>(10, 30); // Top left near header
         if (localPoint.getDistanceFrom(p) < 10) {
-            return Port{{p.x - 5, p.y - 5, 10, 10},
-                        juce::AudioProcessorGraph::midiChannelIndex,
-                        true,
-                        true}; // MIDI Input, index -1 (or special index)
+            return Port{
+                {p.x - 5, p.y - 5, 10, 10}, juce::AudioProcessorGraph::midiChannelIndex, true, true}; // MIDI Input
         }
     }
 
@@ -264,10 +260,9 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
         }
     }
 
-    // Outputs (audio outputs, shifted if MIDI out is present)
-    int audioOutOffset = module->producesMidi() ? 1 : 0;
+    // Outputs (audio outputs)
     for (int i = 0; i < numOuts; ++i) {
-        auto p = getPortCenter(i, false); // getPortCenter already accounts for midiOffset
+        auto p = getPortCenter(i, false);
         if (localPoint.getDistanceFrom(p) < 10) {
             return Port{{p.x - 5, p.y - 5, 10, 10}, i, false, false};
         }
