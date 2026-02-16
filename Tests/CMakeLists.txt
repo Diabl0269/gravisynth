@@ -18,6 +18,11 @@ add_executable(GravisynthTests
     VisualBufferTests.cpp
     AntiClickTests.cpp
     MidiKeyboardModuleTests.cpp
+    VCAModuleTests.cpp
+    LFOModuleTests.cpp
+    SequencerModuleTests.cpp
+    AIStateMapperTests.cpp
+    OllamaProviderTests.cpp
 )
 
 target_link_libraries(GravisynthTests PRIVATE

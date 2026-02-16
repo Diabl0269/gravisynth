@@ -21,10 +21,12 @@ public:
      * @brief Applies a JSON-compatible juce::var to the graph.
      * @return true if the patch was applied successfully.
      */
-    static bool applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph);
+    static bool applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting = true);
+
+    static std::unique_ptr<juce::AudioProcessor> createModule(const juce::String& type);
 
 private:
-    static std::unique_ptr<juce::AudioProcessor> createModule(const juce::String& type);
+    static bool validatePatchJSON(const juce::var& json);
 };
 
 } // namespace gsynth

@@ -17,9 +17,14 @@ void AIIntegrationService::sendMessage(const juce::String& text, AIProvider::Com
     chatHistory.push_back({"user", text});
 
     if (provider) {
-        provider->sendPrompt(chatHistory, [this, callback](const juce::String& response, bool success) {
+        auto weakThis = juce::WeakReference<AIIntegrationService>(this);
+        provider->sendPrompt(chatHistory, [weakThis, callback](const juce::String& response, bool success) {
+            if (weakThis.get() == nullptr)
+                return; // Service was destroyed
+
+            auto* self = weakThis.get();
             if (success) {
-                chatHistory.push_back({"assistant", response});
+                self->chatHistory.push_back({"assistant", response});
             }
             if (callback) {
                 callback(response, success);
@@ -72,7 +77,22 @@ void AIIntegrationService::initSystemPrompt() {
                    "```\n"
                    "Available modules: Oscillator, Filter, LFO, ADSR, VCA, Sequencer, Distortion, Delay, Reverb. "
                    "IO nodes: Audio Input, Audio Output, Midi Input. "
-                   "Keep your explanations concise."});
+                   "Keep your explanations concise, but *always* provide a brief textual summary of the changes "
+                   "you made *before* the JSON block."});
 }
 
+void AIIntegrationService::setModel(const juce::String& name) {
+    if (provider)
+        provider->setModel(name);
+}
+
+juce::String AIIntegrationService::getCurrentModel() const { return provider ? provider->getCurrentModel() : ""; }
+
+void AIIntegrationService::fetchAvailableModels(
+    std::function<void(const juce::StringArray& models, bool success)> callback) {
+    if (provider)
+        provider->fetchAvailableModels(callback);
+    else if (callback)
+        callback({}, false);
+}
 } // namespace gsynth

@@ -35,19 +35,18 @@ REPORT=$($COV report \
 echo "$REPORT"
 
 # Parse total line coverage
-# The line looks like: TOTAL ... 96.51% ...
 # Column 10 corresponds to Line Coverage percentage in the standard report format.
 TOTAL_COVERAGE=$(echo "$REPORT" | grep "TOTAL" | awk '{print $10}' | sed 's/%//')
 
 echo "Total Line Coverage: $TOTAL_COVERAGE%"
 
 # Threshold check (awk for float comparison to avoid installing bc)
-PASS=$(awk -v cov="$TOTAL_COVERAGE" 'BEGIN {print (cov >= 38.28) ? 1 : 0}')
+PASS=$(awk -v cov="$TOTAL_COVERAGE" 'BEGIN {print (cov >= 55.0) ? 1 : 0}')
 
 if [ "$PASS" -eq 1 ]; then
   echo "Coverage check passed."
   exit 0
 else
-  echo "Error: Coverage ($TOTAL_COVERAGE%) is below threshold (38.28%)"
+  echo "Error: Coverage ($TOTAL_COVERAGE%) is below threshold (55.0%)"
   exit 1
 fi

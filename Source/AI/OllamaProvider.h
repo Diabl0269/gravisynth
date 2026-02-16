@@ -13,11 +13,18 @@ namespace gsynth {
  */
 class OllamaProvider
     : public AIProvider
-    , private juce::Thread {
+    , protected juce::Thread {
 public:
-    OllamaProvider(const juce::String& host = "http://localhost:11434")
+    using InputStreamFactory =
+        std::function<std::unique_ptr<juce::InputStream>(const juce::URL&, const juce::URL::InputStreamOptions&)>;
+
+    OllamaProvider(const juce::String& host = "http://localhost:11434");
+
+    // Test-specific constructor to inject a mock input stream factory
+    OllamaProvider(const juce::String& host, InputStreamFactory streamFactory)
         : Thread("OllamaProviderThread")
-        , ollamaHost(host) {}
+        , ollamaHost(host)
+        , createStream(std::move(streamFactory)) {}
 
     ~OllamaProvider() override { stopThread(2000); }
 
@@ -33,8 +40,19 @@ public:
 
     juce::String getProviderName() const override { return "Ollama"; }
 
+    using juce::Thread::stopThread; // Make stopThread public for testing purposes
+
+    void setModel(const juce::String& name) override;
+    juce::String getCurrentModel() const override;
+    void fetchAvailableModels(std::function<void(const juce::StringArray& models, bool success)> callback) override;
+
+    void setTestMode(bool testMode) { isTestMode = testMode; }
+
 private:
     juce::String ollamaHost;
+    juce::String currentModel = "qwen3-coder-next:latest";
+    InputStreamFactory createStream; // Member variable for the stream factory
+    bool isTestMode = false;
 
     struct Request {
         std::vector<Message> conversation;
@@ -44,73 +62,8 @@ private:
     juce::CriticalSection queueLock;
     std::vector<Request> pendingRequests;
 
-    void run() override {
-        while (!threadShouldExit()) {
-            Request currentRequest;
-
-            {
-                const juce::ScopedLock sl(queueLock);
-                if (pendingRequests.empty()) {
-                    // Note: We don't stop the thread here if we want it to stay alive,
-                    // but for this implementation we'll exit when idle.
-                    break;
-                }
-                currentRequest = pendingRequests.front();
-                pendingRequests.erase(pendingRequests.begin());
-            }
-
-            processRequest(currentRequest);
-        }
-    }
-
-    void processRequest(const Request& req) {
-        juce::URL url(ollamaHost + "/api/chat");
-
-        // Build JSON body
-        juce::DynamicObject::Ptr body = new juce::DynamicObject();
-        body->setProperty("model", "qwen3-coder-next:latest"); // Default model
-        body->setProperty("stream", false);
-
-        juce::Array<juce::var> messages;
-        for (const auto& msg : req.conversation) {
-            juce::DynamicObject::Ptr m = new juce::DynamicObject();
-            m->setProperty("role", msg.role);
-            m->setProperty("content", msg.content);
-            messages.add(juce::var(m.get()));
-        }
-        body->setProperty("messages", messages);
-
-        juce::String jsonString = juce::JSON::toString(juce::var(body.get()));
-
-        juce::String responseText;
-        bool success = false;
-
-        if (auto stream = std::unique_ptr<juce::InputStream>(
-                url.withPOSTData(jsonString)
-                    .createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)))) {
-            responseText = stream->readEntireStreamAsString();
-
-            juce::var jsonResponse = juce::JSON::parse(responseText);
-            if (jsonResponse.isObject()) {
-                if (auto* obj = jsonResponse.getDynamicObject()) {
-                    if (obj->hasProperty("message")) {
-                        auto msgObj = obj->getProperty("message");
-                        if (msgObj.getDynamicObject()) {
-                            responseText = msgObj.getDynamicObject()->getProperty("content").toString();
-                            success = true;
-                        }
-                    }
-                }
-            }
-        } else {
-            responseText = "Error: Could not connect to Ollama at " + ollamaHost;
-        }
-
-        juce::MessageManager::callAsync([req, responseText, success]() {
-            if (req.callback)
-                req.callback(responseText, success);
-        });
-    }
+    void run() override;                     // Declaration for inherited method
+    void processRequest(const Request& req); // Declaration for private method
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OllamaProvider)
 };

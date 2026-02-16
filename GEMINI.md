@@ -6,6 +6,7 @@ This document is intended for AI agents and developers working on `Gravisynth`.
 - **GravisynthCore**: A static library containing all audio modules and logic. This is linked by both the main application and the test suite to ensure testability.
 - **Gravisynth**: The standalone JUCE application (GUI + Audio).
 - **Tests**: GoogleTest-based unit test suite.
+- **docs**: Comprehensive documentation, including the AI Engine.
 
 ## Development Standards
 
@@ -23,7 +24,7 @@ This document is intended for AI agents and developers working on `Gravisynth`.
     ```
 
 ### Code Coverage
-- **Threshold**: 90% Line Coverage is enforced.
+- **Threshold**: 90% Line Coverage is enforced. (Currently a target we are working towards.)
 - Run the coverage script to verify standard compliance locally:
     ```bash
     bash scripts/coverage.sh
@@ -36,6 +37,9 @@ This document is intended for AI agents and developers working on `Gravisynth`.
 
 ### Documentation & Contribution
 - **Consider Updates**: Before every commit/PR, consider if any relevant documentation (`README.md`, `GEMINI.md`, or the `docs/` folder) needs to be updated to reflect your changes.
+- **AI Engine**: Detailed documentation on the AI Engine's architecture, components, and functionality is available in `docs/AI_Engine.md`.
+- **AI Usage Guide**: A user-centric guide on how to effectively use the AI Sound Designer is available in `docs/AI_Usage_Guide.md`.
+- **Module Development Guide**: Detailed guidance for creating new audio modules is available in `docs/Module_Development_Guide.md`.
 
 ## Module Architecture
 
@@ -82,10 +86,11 @@ Key patterns:
 
 ## AI Integration
 
-Gravisynth features an AI-powered sound design assistant that can generate and modify patches using natural language.
+Gravisynth features an AI-powered sound design assistant that can generate and modify patches using natural language. This "AI Engine" is primarily managed by the `AIIntegrationService`, which acts as the central orchestrator between the AI models and the core synthesizer audio graph. It handles sending user prompts to selected AI providers, interpreting AI-generated patch data (JSON), and applying these changes to the live audio processing graph. Furthermore, it manages chat history and can provide the current synth state as context to the AI for more intelligent patch generation.
 
 ### Components
 - **`AIProvider`**: Abstract interface for AI backends (Ollama, etc.).
+- **`OllamaProvider`**: Concrete implementation of `AIProvider` for local Ollama instances.
 - **`AIIntegrationService`**: Orchestrates AI communication, maintains chat history, and bridges the AI with the audio engine.
 - **`AIStateMapper`**: Handles the mapping between AI-friendly JSON and the internal synthesizer graph.
 
@@ -111,6 +116,8 @@ Tests use paths relative to `Source/`:
 ```
 
 ## Common Tasks
+- **Viewing GitHub Issues**:
+    - Use the `gh` CLI tool to view issues. For example, `gh issue view <issue_number>` to see details of a specific issue.
 - **Adding a new module**:
     1.  Create `Source/Modules/NewModule.h`.
     2.  Add to `GravisynthCore` in `CMakeLists.txt`.

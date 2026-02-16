@@ -33,6 +33,21 @@ public:
      * @brief Returns the name of the provider.
      */
     virtual juce::String getProviderName() const = 0;
+
+    /**
+     * @brief Sets the model to use for completion.
+     */
+    virtual void setModel(const juce::String& name) = 0;
+
+    /**
+     * @brief Returns the current model name.
+     */
+    virtual juce::String getCurrentModel() const = 0;
+
+    /**
+     * @brief Fetches all available models from the provider.
+     */
+    virtual void fetchAvailableModels(std::function<void(const juce::StringArray& models, bool success)> callback) = 0;
 };
 
 } // namespace gsynth
