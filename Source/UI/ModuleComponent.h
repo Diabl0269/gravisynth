@@ -1,7 +1,9 @@
 #pragma once
 
+#include "../Modules/MidiKeyboardModule.h"
 #include "ScopeComponent.h"
 #include <JuceHeader.h>
+#include <juce_audio_utils/juce_audio_utils.h>
 
 class GraphEditor; // Forward declaration
 
@@ -54,6 +56,7 @@ private:
 
     std::unique_ptr<ScopeComponent> scopeComponent;
     std::unique_ptr<juce::ToggleButton> scopeToggle;
+    std::unique_ptr<juce::MidiKeyboardComponent> keyboardComponent;
 
     void createControls();
     void updateLayout();

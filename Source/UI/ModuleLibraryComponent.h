@@ -7,7 +7,8 @@ class ModuleLibraryComponent
     , public juce::DragAndDropContainer {
 public:
     ModuleLibraryComponent() {
-        moduleNames = {"Oscillator", "Filter", "LFO", "ADSR", "VCA", "Sequencer", "Distortion", "Delay", "Reverb"};
+        moduleNames = {"Oscillator", "Filter",     "LFO",   "ADSR",   "VCA",
+                       "Sequencer",  "Distortion", "Delay", "Reverb", "MidiKeyboard"};
     }
 
     void paint(juce::Graphics& g) override {

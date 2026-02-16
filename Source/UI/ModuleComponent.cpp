@@ -29,55 +29,62 @@ ModuleComponent::~ModuleComponent() { stopTimer(); }
 void ModuleComponent::timerCallback() { repaint(); }
 
 void ModuleComponent::createControls() {
-    const auto& params = module->getParameters();
+    // Auto-UI
+    if (auto* midiKeyboard = dynamic_cast<MidiKeyboardModule*>(module)) {
+        keyboardComponent = std::make_unique<juce::MidiKeyboardComponent>(
+            midiKeyboard->getKeyboardState(), juce::MidiKeyboardComponent::horizontalKeyboard);
+        addAndMakeVisible(keyboardComponent.get());
+    } else {
+        const auto& params = module->getParameters();
 
-    for (auto* param : params) {
-        if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(param)) {
-            auto* combo = comboBoxes.add(new juce::ComboBox());
-            combo->addItemList(choiceParam->choices, 1);
-            addAndMakeVisible(combo);
+        for (auto* param : params) {
+            if (auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(param)) {
+                auto* combo = comboBoxes.add(new juce::ComboBox());
+                combo->addItemList(choiceParam->choices, 1);
+                addAndMakeVisible(combo);
 
-            auto* attach = comboAttachments.add(new juce::ComboBoxParameterAttachment(*choiceParam, *combo));
+                auto* attach = comboAttachments.add(new juce::ComboBoxParameterAttachment(*choiceParam, *combo));
 
-            auto* label = comboLabels.add(new juce::Label(param->getName(100), param->getName(100)));
-            addAndMakeVisible(label);
-        } else if (auto* floatParam = dynamic_cast<juce::AudioParameterFloat*>(param)) {
-            auto* slider = sliders.add(new juce::Slider());
-            slider->setComponentID(param->getName(100)); // ID for lookup
-            if (module->getName().contains("ADSR") || module->getName().contains("Env")) {
-                slider->setSliderStyle(juce::Slider::LinearVertical);
-                slider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-            } else {
+                auto* label = comboLabels.add(new juce::Label(param->getName(100), param->getName(100)));
+                addAndMakeVisible(label);
+            } else if (auto* floatParam = dynamic_cast<juce::AudioParameterFloat*>(param)) {
+                auto* slider = sliders.add(new juce::Slider());
+                slider->setComponentID(param->getName(100)); // ID for lookup
+                if (module->getName().contains("ADSR") || module->getName().contains("Env")) {
+                    slider->setSliderStyle(juce::Slider::LinearVertical);
+                    slider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+                } else {
+                    slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+                    slider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+                }
+                addAndMakeVisible(slider);
+
+                auto* attach = sliderAttachments.add(new juce::SliderParameterAttachment(*floatParam, *slider));
+
+                auto* label = sliderLabels.add(new juce::Label(param->getName(100), param->getName(100)));
+                label->setJustificationType(juce::Justification::centred);
+                addAndMakeVisible(label);
+            } else if (auto* intParam = dynamic_cast<juce::AudioParameterInt*>(param)) {
+                auto* slider = sliders.add(new juce::Slider());
+                slider->setComponentID(param->getName(100)); // ID for lookup
                 slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
                 slider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+                // slider->setRange(intParam->getRange().start,
+                // intParam->getRange().end, 1.0); // Attachment handles range
+                addAndMakeVisible(slider);
+
+                auto* attach = sliderAttachments.add(new juce::SliderParameterAttachment(*intParam, *slider));
+
+                auto* label = sliderLabels.add(new juce::Label(param->getName(100), param->getName(100)));
+                label->setJustificationType(juce::Justification::centred);
+                addAndMakeVisible(label);
+            } else if (auto* boolParam = dynamic_cast<juce::AudioParameterBool*>(param)) {
+                auto* toggle = toggles.add(new juce::ToggleButton(boolParam->getName(100)));
+                toggle->setComponentID(boolParam->getName(100)); // ID for Lookup
+                addAndMakeVisible(toggle);
+
+                auto* attach = buttonAttachments.add(new juce::ButtonParameterAttachment(*boolParam, *toggle));
             }
-            addAndMakeVisible(slider);
-
-            auto* attach = sliderAttachments.add(new juce::SliderParameterAttachment(*floatParam, *slider));
-
-            auto* label = sliderLabels.add(new juce::Label(param->getName(100), param->getName(100)));
-            label->setJustificationType(juce::Justification::centred);
-            addAndMakeVisible(label);
-        } else if (auto* intParam = dynamic_cast<juce::AudioParameterInt*>(param)) {
-            auto* slider = sliders.add(new juce::Slider());
-            slider->setComponentID(param->getName(100)); // ID for lookup
-            slider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-            slider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-            // slider->setRange(intParam->getRange().start,
-            // intParam->getRange().end, 1.0); // Attachment handles range
-            addAndMakeVisible(slider);
-
-            auto* attach = sliderAttachments.add(new juce::SliderParameterAttachment(*intParam, *slider));
-
-            auto* label = sliderLabels.add(new juce::Label(param->getName(100), param->getName(100)));
-            label->setJustificationType(juce::Justification::centred);
-            addAndMakeVisible(label);
-        } else if (auto* boolParam = dynamic_cast<juce::AudioParameterBool*>(param)) {
-            auto* toggle = toggles.add(new juce::ToggleButton(boolParam->getName(100)));
-            toggle->setComponentID(boolParam->getName(100)); // ID for Lookup
-            addAndMakeVisible(toggle);
-
-            auto* attach = buttonAttachments.add(new juce::ButtonParameterAttachment(*boolParam, *toggle));
         }
     }
 
@@ -148,58 +155,58 @@ void ModuleComponent::paint(juce::Graphics& g) {
     // --- PORTS ---
     int numIns = module->getTotalNumInputChannels();
     int numOuts = module->getTotalNumOutputChannels();
+    bool midiOutDrawn = false; // Reintroduced
+                               // MIDI Output (Top Right if produces midi)
+    if (module->producesMidi()) {
+        g.setColour(juce::Colours::white);
+        auto p = juce::Point<int>(getWidth() - 10, 30); // Top right, below header
+        g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+        g.drawText("Midi Out", p.x - 65, p.y - 5, 60, 10, juce::Justification::right, false);
+    }
+    // MIDI Input (Top Left if accepts midi components)
+    if (module->acceptsMidi()) {
+        g.setColour(juce::Colours::white);
+        auto p = juce::Point<int>(10, 30); // Top left near header
+        g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+        g.drawText("Midi In", p.x + 10, p.y - 5, 60, 10, juce::Justification::left, false);
+    }
 
-    if (module->getName() == "Sequencer") {
-        numIns = 0; // Visual fix
-        if (module->producesMidi()) {
-            g.setColour(juce::Colours::white);
-            auto p = getPortCenter(0, false);
-            g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
-            g.drawText("Midi Out", p.x - 65, p.y - 5, 60, 10, juce::Justification::right, false);
+    // Inputs
+    g.setColour(juce::Colours::yellow);
+    for (int i = 0; i < numIns; ++i) {
+        auto p = getPortCenter(i, true);
+        g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+
+        juce::String label = "In " + juce::String(i);
+        // Custom labels for Filter
+        if (module->getName() == "Filter") {
+            if (i == 0)
+                label = "Audio";
+            if (i == 1)
+                label = "Freq CV";
         }
-    } else {
-        // MIDI Input (Top Left if accepts midi components)
-        if (module->acceptsMidi()) {
-            g.setColour(juce::Colours::white);
-            // Draw at top left? Or index -1?
-            // Let's reuse getPortCenter logic but custom.
-            auto p = juce::Point<int>(10, 30); // Top left near header
-            g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
-            g.drawText("Midi In", p.x + 10, p.y - 5, 60, 10, juce::Justification::left, false);
-        }
-
-        // Inputs
-        g.setColour(juce::Colours::yellow);
-        for (int i = 0; i < numIns; ++i) {
-            auto p = getPortCenter(i, true);
-            g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
-
-            juce::String label = "In " + juce::String(i);
-            // Custom labels for Filter
-            if (module->getName() == "Filter") {
-                if (i == 0)
-                    label = "Audio";
-                if (i == 1)
-                    label = "Freq CV";
-            }
-            if (module->getName() == "VCA") {
-                if (i == 0)
-                    label = "Audio";
-                if (i == 1)
-                    label = "CV";
-            }
-
-            g.drawText(label, p.x + 10, p.y - 10, 60, 20, juce::Justification::left, false);
+        if (module->getName() == "VCA") {
+            if (i == 0)
+                label = "Audio";
+            if (i == 1)
+                label = "CV";
         }
 
-        // Outputs
-        for (int i = 0; i < numOuts; ++i) {
-            auto p = getPortCenter(i, false);
-            g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+        g.drawText(label, p.x + 10, p.y - 10, 60, 20, juce::Justification::left, false);
+    }
 
-            juce::String label = "Out " + juce::String(i);
-            g.drawText(label, p.x - 70, p.y - 10, 60, 20, juce::Justification::right, false);
-        }
+    // Outputs
+    // Only draw audio outputs if MIDI out hasn't been drawn in the same general area (to prevent overlap)
+    // For now, we assume MIDI out takes the "first" audio output slot.
+    // A more robust solution would involve explicit port mapping.
+    int audioOutStartIndex = midiOutDrawn ? 1 : 0;
+    for (int i = audioOutStartIndex; i < numOuts + audioOutStartIndex;
+         ++i) { // Adjust index for display if midi out is present
+        auto p = getPortCenter(i, false);
+        g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
+
+        juce::String label = "Out " + juce::String(i);
+        g.drawText(label, p.x - 70, p.y - 10, 60, 20, juce::Justification::right, false);
     }
 }
 
@@ -207,10 +214,17 @@ juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
     int yStep = 20;
     int headerHeight = 30;
 
+    int portOffset = 0;
+    if (module->producesMidi()) {
+        portOffset = 20; // Additional offset for all ports if MIDI out is present, to avoid collision with MIDI Out at
+                         // (getWidth() - 10, 30)
+    }
+
     if (isInput) {
-        return {10, headerHeight + index * yStep + 20}; // Left side
+        return {10, headerHeight + portOffset + index * yStep + 20}; // Left side, apply offset
     } else {
-        return {getWidth() - 10, headerHeight + index * yStep + 20}; // Right side
+        // No additional midiOffset for outputs here, as MIDI out is now fixed.
+        return {getWidth() - 10, headerHeight + portOffset + index * yStep + 20}; // Right side, apply offset
     }
 }
 
@@ -218,19 +232,23 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
     int numIns = module->getTotalNumInputChannels();
     int numOuts = module->getTotalNumOutputChannels();
 
-    // Special handling for Sequencer Midi Out
-    if (module->getName() == "Sequencer" && module->producesMidi()) {
-        auto p = getPortCenter(0, false);
+    // Check for MIDI Output at fixed top-right position
+    if (module->producesMidi()) {
+        auto p = juce::Point<int>(getWidth() - 10, 30); // Matches paint()
         if (localPoint.getDistanceFrom(p) < 10) {
-            return Port{{p.x - 5, p.y - 5, 10, 10}, 0, false, true}; // Index 0, Output, IsMidi
+            return Port{{p.x - 5, p.y - 5, 10, 10},
+                        juce::AudioProcessorGraph::midiChannelIndex,
+                        false,
+                        true}; // Index 0, Output, IsMidi
         }
     }
 
-    // MIDI Input detection
-    if (module->acceptsMidi() && !(module->getName() == "Sequencer")) { // Sequencer accepts midi? No, it produces.
-        auto p = juce::Point<int>(10, 30);
+    // MIDI Input detection (Top Left)
+    if (module->acceptsMidi()) {
+        auto p = juce::Point<int>(10, 30); // Top left near header
         if (localPoint.getDistanceFrom(p) < 10) {
-            return Port{{p.x - 5, p.y - 5, 10, 10}, 0, true, true}; // Index 0, Input, IsMidi
+            return Port{
+                {p.x - 5, p.y - 5, 10, 10}, juce::AudioProcessorGraph::midiChannelIndex, true, true}; // MIDI Input
         }
     }
 
@@ -242,7 +260,7 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
         }
     }
 
-    // Outputs
+    // Outputs (audio outputs)
     for (int i = 0; i < numOuts; ++i) {
         auto p = getPortCenter(i, false);
         if (localPoint.getDistanceFrom(p) < 10) {
@@ -329,6 +347,15 @@ void ModuleComponent::resized() {
             int x = margin + 10 + i * sliderWidth;
             sliderLabels[i]->setBounds(x, y, sliderWidth, 20);
             sliders[i]->setBounds(x, y + 20, sliderWidth, sliderHeight);
+        }
+        return;
+    }
+
+    // --- MIDI Keyboard Layout ---
+    if (module->getName() == "MIDI Keyboard") {
+        setSize(500, 150); // Appropriate size for a keyboard
+        if (keyboardComponent) {
+            keyboardComponent->setBounds(10, 50, getWidth() - 20, getHeight() - 60);
         }
         return;
     }
