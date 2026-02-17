@@ -166,12 +166,15 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                         if (nObj->hasProperty("params")) {
                             if (auto* pObj = nObj->getProperty("params").getDynamicObject()) {
                                 for (auto* param : processor->getParameters()) {
-                                    if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+                                    if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param)) {
                                         if (pObj->hasProperty(p->paramID)) {
                                             float value = (float)pObj->getProperty(p->paramID);
-                                            // Clamp value to the parameter's normalized range
-                                            value = juce::jlimit(0.0f, 1.0f, value);
-                                            p->setValue(value);
+                                            // Convert the value from the JSON (unnormalized) to the parameter's
+                                            // normalized range
+                                            value = p->getNormalisableRange().snapToLegalValue(
+                                                value); // Snap to legal value first
+                                            float normalizedValue = p->getNormalisableRange().convertTo0to1(value);
+                                            p->setValue(normalizedValue);
                                         } else {
                                             juce::Logger::writeToLog("AIStateMapper: Parameter '" + p->paramID +
                                                                      "' not found in JSON for module '" + type + "'");

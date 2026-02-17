@@ -110,7 +110,7 @@ TEST(AIStateMapperTest, ParameterValidationClamping) {
     ASSERT_NE(frequencyParamValue, -1.0f); // Ensure frequency parameter was found
 
     // Parameter value should be clamped between 0.0 and 1.0
-    ASSERT_NEAR(frequencyParamValue, 1.0f, 0.001f); // Should be clamped to 1.0
+    ASSERT_NEAR(frequencyParamValue, 0.0f, 0.001f); // Should be clamped to 0.0 (min of range)
 }
 
 TEST(AIStateMapperTest, UnknownModuleTypeLogsErrorAndSkips) {
