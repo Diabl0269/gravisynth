@@ -63,6 +63,31 @@ private:
     bool shouldSimulateError;
 };
 
+// Mock InputStream that simulates a delay for timeout testing
+class SlowInputStream : public juce::InputStream {
+public:
+    SlowInputStream(int delayMs)
+        : delayInMs(delayMs) {}
+
+    bool failedToOpen() const { return false; }         // Always "opens" successfully
+    juce::int64 getTotalLength() override { return 1; } // A minimal length to make read work
+    juce::int64 getPosition() override { return 0; }
+    bool setPosition(juce::int64 newPosition) override {
+        juce::ignoreUnused(newPosition);
+        return false;
+    }
+    bool isExhausted() override { return false; }
+
+    int read(void* destBuffer, int maxBytesToRead) override {
+        juce::ignoreUnused(destBuffer, maxBytesToRead);
+        juce::Thread::sleep(delayInMs); // Simulate a long delay
+        return 0;                       // Return 0 to indicate no data read, or error
+    }
+
+private:
+    int delayInMs;
+};
+
 class OllamaProviderTest : public ::testing::Test {
 protected:
     // This is set to an invalid host so it tries to connect and fails,
@@ -94,6 +119,20 @@ protected:
         juce::String jsonResponse =
             R"({"model":"mock-model","message":{"role":"assistant","content":"Mocked AI response."}})";
         return std::make_unique<MockInputStream>(jsonResponse, false);
+    }
+
+    // A factory that returns a stream that takes a long time to respond
+    static std::unique_ptr<juce::InputStream> createSlowStream(const juce::URL& url,
+                                                               const juce::URL::InputStreamOptions& options) {
+        juce::ignoreUnused(url);
+        // Extract timeout from options. Use a value slightly larger than the actual timeout
+        // to ensure the timeout mechanism triggers.
+        int timeoutMs = options.getConnectionTimeoutMs();
+        int delayMs = timeoutMs + 1000; // Delay for 1 second longer than the timeout
+        if (timeoutMs == 0)
+            delayMs = 121000; // Default to 2 min + 1 sec if no timeout set
+
+        return std::make_unique<SlowInputStream>(delayMs);
     }
 
     gsynth::OllamaProvider mockProviderFailingStreams{"http://mock-host:11434", createFailingStream};
@@ -159,4 +198,22 @@ TEST_F(OllamaProviderTest, SendPromptSuccessWithMock) {
     ASSERT_TRUE(std::get<1>(result));            // Should be successful
     ASSERT_FALSE(std::get<0>(result).isEmpty()); // Response should not be empty
     ASSERT_TRUE(std::get<0>(result).contains("Mocked AI response."));
+}
+
+TEST_F(OllamaProviderTest, SendPromptTimeoutFails) {
+    // Create a provider that uses the slow stream factory
+    gsynth::OllamaProvider mockProviderSlowStream{"http://mock-host:11434", createSlowStream};
+    mockProviderSlowStream.setTestMode(true);
+    mockProviderSlowStream.setModel("mock-model:latest");
+
+    std::vector<gsynth::AIProvider::Message> conversation = {{"user", "Simulate timeout"}};
+    MockCompletionCallback callback;
+    mockProviderSlowStream.sendPrompt(
+        conversation, [&callback](const juce::String& response, bool success) { callback(response, success); });
+
+    auto result = callback.getResult();
+    ASSERT_FALSE(std::get<1>(result)); // Should be unsuccessful
+    // The response text on timeout is "Error: Could not connect to Ollama at "
+    // So we can check for that string or a part of it.
+    ASSERT_TRUE(std::get<0>(result).isEmpty()); // The response text should be empty string on timeout
 }

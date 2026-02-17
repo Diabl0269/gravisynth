@@ -22,7 +22,7 @@ void OllamaProvider::fetchAvailableModels(std::function<void(const juce::StringA
         bool success = false;
 
         if (auto stream = createStream(url, juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                                                .withConnectionTimeoutMs(60000))) {
+                                                .withConnectionTimeoutMs(120000))) {
             juce::String responseText = stream->readEntireStreamAsString();
             // DBG("AI Discovery Response (before JSON parse): [" + responseText + "]"); // Potentially expensive
             // DBG("AI Discovery Response: " + responseText); // Redundant
@@ -111,7 +111,7 @@ void OllamaProvider::processRequest(const Request& req) {
 
     if (auto stream = createStream(
             url.withPOSTData(jsonString),
-            juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData).withConnectionTimeoutMs(60000))) {
+            juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData).withConnectionTimeoutMs(120000))) {
         responseText = stream->readEntireStreamAsString();
         // DBG("AI Chat Response (before JSON parse): [" + responseText + "]"); // Potentially expensive
 
