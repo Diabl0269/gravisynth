@@ -29,6 +29,7 @@ The project follows a modular architecture with:
 - ADSR: Envelope generator for amplitude/filter modulation
 - LFO: Low Frequency Oscillator for modulation
 - Sequencer: Step sequencer with per-step pitch control
+- MIDI Keyboard: Interactive on-screen keyboard for MIDI input
 - FX Modules: Delay, Distortion, Reverb
 
 ## Build System

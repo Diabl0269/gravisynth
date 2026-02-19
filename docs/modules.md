@@ -29,3 +29,10 @@ Detailed specifications for Gravisynth's primary synthesis modules.
 - **Capacity**: 8 simultaneous voices.
 - **Allocation**: Least Recently Used (LRU) algorithm.
 - **Outputs**: Provides 8 separate Pitch and Gate channels for polyphonic routing.
+
+## MIDI Keyboard Module
+- **Purpose**: Provides an interactive on-screen keyboard for MIDI input.
+- **Features**:
+    - **Octave Shift**: Shift the keyboard range by ±2 octaves.
+    - **Visual Feedback**: Real-time display of pressed keys.
+    - **MIDI Output**: Generates standard MIDI messages for driving oscillators or other MIDI-capable modules.

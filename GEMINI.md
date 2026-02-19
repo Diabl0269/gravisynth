@@ -74,6 +74,7 @@ Key patterns:
 - **LFOModule**: Modulation oscillator with sync/glide.
 - **VCAModule**: Smoothed gain stage with CV control.
 - **SequencerModule**: Mono step sequencer.
+- **MidiKeyboardModule**: Interactive on-screen keyboard for MIDI input.
 
 ### Polyphonic Modules
 - **PolyMidiModule**: 8-voice MIDI manager with LRU allocation.

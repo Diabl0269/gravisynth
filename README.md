@@ -21,6 +21,7 @@ Modules connect via inputs and outputs:
 - **ADSR**: Envelope generator for amplitude/filter modulation.
 - **LFO**: Modulation oscillator with glide and S&H modes.
 - **Sequencer**: Step sequencer for melodic patterns.
+- **MIDI Keyboard**: Interactive on-screen keyboard for real-time performance.
 
 ### FX Modules
 - **Delay**: Interpolated delay with feedback and mix control.

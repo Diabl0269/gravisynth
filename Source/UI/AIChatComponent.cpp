@@ -221,7 +221,7 @@ void AIChatComponent::timerCallback() {
     sendButton.setEnabled(true);
     inputField.setReadOnly(false);
     isWaitingForResponse = false;
-    messages.push_back({"assistant", "Error: Request timed out after 30 seconds.", ""});
+    messages.push_back({"assistant", "Error: Request timed out after 2 minutes.", ""});
     updateChatDisplay();
     inputField.grabKeyboardFocus();
 }
@@ -282,10 +282,14 @@ void AIChatComponent::sendButtonClicked() {
     inputField.setReadOnly(true);
 
     // Start timeout timer (30 seconds)
-    startTimer(30000);
+    startTimer(120000);
 
     aiService.sendMessage(text, [this](const juce::String& response, bool success) {
         juce::MessageManager::callAsync([this, response, success]() {
+            if (!isWaitingForResponse) {
+                return;
+            } // Ignore late responses if a timeout already occurred
+
             stopTimer(); // Cancel timeout
             isWaitingForResponse = false;
             sendButton.setEnabled(true);
