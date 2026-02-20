@@ -132,3 +132,44 @@ TEST(AIStateMapperTest, UnknownModuleTypeLogsErrorAndSkips) {
     ASSERT_EQ(graph.getNumNodes(), 0);   // Unknown module should not be added
     ASSERT_TRUE(logger.lastMessage.contains("Unknown module type"));
 }
+
+TEST(AIStateMapperTest, ChoiceParameterStringMapping) {
+    juce::AudioProcessorGraph graph;
+    // Oscillator waveform choice: 0: Sine, 1: Square, 2: Saw, 3: Triangle
+    juce::var json =
+        juce::JSON::parse(R"({"nodes":[{"id":1,"type":"Oscillator","params":{"waveform":"Saw"}}],"connections":[]})");
+
+    gsynth::AIStateMapper::applyJSONToGraph(json, graph, true);
+
+    auto oscNode = graph.getNodes().getUnchecked(0);
+    auto* osc = dynamic_cast<juce::AudioProcessor*>(oscNode->getProcessor());
+    auto* waveformParam = dynamic_cast<juce::AudioParameterChoice*>(osc->getParameters().getUnchecked(0));
+
+    ASSERT_NE(waveformParam, nullptr);
+    ASSERT_EQ(waveformParam->getIndex(), 2); // "Saw" is index 2
+}
+
+TEST(AIStateMapperTest, ChoiceParameterCaseInsensitiveMapping) {
+    juce::AudioProcessorGraph graph;
+    // Test case-insensitivity: "sawtooth" instead of "Saw" (if applicable) or just "saw"
+    juce::var json =
+        juce::JSON::parse(R"({"nodes":[{"id":1,"type":"Oscillator","params":{"waveform":"saw"}}],"connections":[]})");
+
+    gsynth::AIStateMapper::applyJSONToGraph(json, graph, true);
+
+    auto oscNode = graph.getNodes().getUnchecked(0);
+    auto* osc = dynamic_cast<juce::AudioProcessor*>(oscNode->getProcessor());
+    auto* waveformParam = dynamic_cast<juce::AudioParameterChoice*>(osc->getParameters().getUnchecked(0));
+
+    ASSERT_NE(waveformParam, nullptr);
+    ASSERT_EQ(waveformParam->getIndex(), 2); // "saw" matches "Saw"
+}
+
+TEST(AIStateMapperTest, SchemaGeneration) {
+    juce::String schema = gsynth::AIStateMapper::getModuleSchema();
+    ASSERT_FALSE(schema.isEmpty());
+    ASSERT_TRUE(schema.contains("Oscillator"));
+    ASSERT_TRUE(schema.contains("Filter"));
+    ASSERT_TRUE(schema.contains("waveform"));
+    ASSERT_TRUE(schema.contains("cutoff"));
+}

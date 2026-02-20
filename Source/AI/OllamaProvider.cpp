@@ -104,6 +104,9 @@ void OllamaProvider::processRequest(const Request& req) {
     }
     body->setProperty("messages", messages);
 
+    if (!req.responseSchema.isVoid())
+        body->setProperty("format", req.responseSchema);
+
     juce::String jsonString = juce::JSON::toString(juce::var(body.get()));
 
     juce::String responseText;

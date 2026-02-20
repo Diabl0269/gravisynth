@@ -26,8 +26,12 @@ public:
 
     /**
      * @brief Sends a prompt to the AI and calls the callback when the response is ready.
+     * @param conversation The chat history
+     * @param callback Callback for result
+     * @param responseSchema Optional JSON schema for structured output
      */
-    virtual void sendPrompt(const std::vector<Message>& conversation, CompletionCallback callback) = 0;
+    virtual void sendPrompt(const std::vector<Message>& conversation, CompletionCallback callback,
+                            const juce::var& responseSchema = juce::var()) = 0;
 
     /**
      * @brief Returns the name of the provider.

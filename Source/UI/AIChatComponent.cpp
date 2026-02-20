@@ -273,6 +273,12 @@ void AIChatComponent::sendButtonClicked() {
 
     inputField.clear();
 
+    // Heuristic to decide if we want structured output (e.g. if the user asks for a patch)
+    bool useStructuredOutput =
+        text.containsIgnoreCase("patch") || text.containsIgnoreCase("create") || text.containsIgnoreCase("modify") ||
+        text.containsIgnoreCase("oscillator") || text.containsIgnoreCase("filter") || text.containsIgnoreCase("vca") ||
+        text.containsIgnoreCase("adsr") || text.containsIgnoreCase("sound") || text.containsIgnoreCase("preset");
+
     // Add user message to local state immediately
     messages.push_back({"user", text, ""});
     isWaitingForResponse = true;
@@ -281,46 +287,58 @@ void AIChatComponent::sendButtonClicked() {
     sendButton.setEnabled(false);
     inputField.setReadOnly(true);
 
-    // Start timeout timer (30 seconds)
+    // Start timeout timer (120 seconds)
     startTimer(120000);
 
-    aiService.sendMessage(text, [this](const juce::String& response, bool success) {
-        juce::MessageManager::callAsync([this, response, success]() {
-            if (!isWaitingForResponse) {
-                return;
-            } // Ignore late responses if a timeout already occurred
+    aiService.sendMessage(
+        text,
+        [this, useStructuredOutput](const juce::String& response, bool success) {
+            juce::MessageManager::callAsync([this, response, success, useStructuredOutput]() {
+                if (!isWaitingForResponse) {
+                    return;
+                } // Ignore late responses if a timeout already occurred
 
-            stopTimer(); // Cancel timeout
-            isWaitingForResponse = false;
-            sendButton.setEnabled(true);
-            inputField.setReadOnly(false);
+                stopTimer(); // Cancel timeout
+                isWaitingForResponse = false;
+                sendButton.setEnabled(true);
+                inputField.setReadOnly(false);
 
-            if (success) {
-                // Parse for JSON using robust helper
-                juce::String json;
-                juce::String cleanText = response;
+                if (success) {
+                    juce::String json;
+                    juce::String cleanText = response;
 
-                juce::StringArray jsonBlocks = extractJSONBlocks(response);
-                if (!jsonBlocks.isEmpty()) {
-                    json = jsonBlocks[0]; // Use the first block found
-                    // Attempt to remove the JSON block from the cleanText if it was extracted
-                    int start = response.indexOf("```json");
-                    if (start != -1) {
-                        int end = response.indexOf(start + 7, "```");
-                        if (end != -1) {
-                            cleanText = response.substring(0, start) + response.substring(end + 3);
+                    // 1. Try to find JSON between backticks
+                    juce::StringArray jsonBlocks = extractJSONBlocks(response);
+                    if (!jsonBlocks.isEmpty()) {
+                        json = jsonBlocks[0]; // Use the first block found
+                        // Attempt to remove the JSON block from the cleanText
+                        int start = response.indexOf("```json");
+                        if (start != -1) {
+                            int end = response.indexOf(start + 7, "```");
+                            if (end != -1) {
+                                cleanText = response.substring(0, start) + response.substring(end + 3);
+                            }
+                        }
+                    } else if (useStructuredOutput) {
+                        // 2. If we requested structured output, the WHOLE response should be JSON
+                        // Verify if it's actually JSON
+                        juce::var parsed = juce::JSON::parse(response);
+                        if (!parsed.isVoid()) {
+                            json = response.trim();
+                            cleanText = "I've created a new patch based on your request.";
                         }
                     }
-                }
-                messages.push_back({"assistant", cleanText.trim(), json});
-            } else {
-                messages.push_back({"assistant", "Error: Failed to get response from AI.", ""});
-            }
 
-            updateChatDisplay();
-            inputField.grabKeyboardFocus();
-        });
-    });
+                    messages.push_back({"assistant", cleanText.trim(), json});
+                } else {
+                    messages.push_back({"assistant", "Error: Failed to get response from AI.", ""});
+                }
+
+                updateChatDisplay();
+                inputField.grabKeyboardFocus();
+            });
+        },
+        useStructuredOutput);
 }
 
 void AIChatComponent::updateChatDisplay() {

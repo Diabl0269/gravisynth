@@ -126,6 +126,55 @@ juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
     return juce::var(root.get());
 }
 
+juce::String AIStateMapper::getModuleSchema() {
+    juce::String schema = "### Available Modules and Parameters\n\n";
+
+    for (const auto& entry : moduleFactory) {
+        auto processor = entry.second();
+        if (!processor)
+            continue;
+
+        schema += "#### " + entry.first + "\n";
+        schema += "| Parameter ID | Name | Range / Options | Default |\n";
+        schema += "| :--- | :--- | :--- | :--- |\n";
+
+        for (auto* param : processor->getParameters()) {
+            if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param)) {
+                juce::String rangeStr;
+                if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(param)) {
+                    rangeStr = "Choice: [" + choice->choices.joinIntoString(", ") + "]";
+                } else if (dynamic_cast<juce::AudioParameterBool*>(param)) {
+                    rangeStr = "Boolean (0 or 1)";
+                } else {
+                    auto range = p->getNormalisableRange();
+                    rangeStr = juce::String(range.start) + " to " + juce::String(range.end);
+                }
+
+                schema += "| `" + p->paramID + "` | " + p->name + " | " + rangeStr + " | " +
+                          juce::String(p->getDefaultValue()) + " |\n";
+            }
+        }
+        schema += "\n";
+    }
+
+    return schema;
+}
+
+int AIStateMapper::findChoiceIndex(juce::AudioParameterChoice* p, const juce::String& choiceText) {
+    // 1. Exact match
+    int index = p->choices.indexOf(choiceText);
+    if (index >= 0)
+        return index;
+
+    // 2. Case-insensitive match
+    for (int i = 0; i < p->choices.size(); ++i) {
+        if (p->choices[i].equalsIgnoreCase(choiceText))
+            return i;
+    }
+
+    return -1;
+}
+
 bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting) {
     if (!json.isObject()) {
         juce::Logger::writeToLog("applyJSONToGraph: JSON is not an object.");
@@ -168,13 +217,31 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                                 for (auto* param : processor->getParameters()) {
                                     if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param)) {
                                         if (pObj->hasProperty(p->paramID)) {
-                                            float value = (float)pObj->getProperty(p->paramID);
-                                            // Convert the value from the JSON (unnormalized) to the parameter's
-                                            // normalized range
-                                            value = p->getNormalisableRange().snapToLegalValue(
-                                                value); // Snap to legal value first
-                                            float normalizedValue = p->getNormalisableRange().convertTo0to1(value);
-                                            p->setValue(normalizedValue);
+                                            auto jsonValue = pObj->getProperty(p->paramID);
+
+                                            if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(p)) {
+                                                if (jsonValue.isString()) {
+                                                    int index = findChoiceIndex(choice, jsonValue.toString());
+                                                    if (index >= 0) {
+                                                        p->setValueNotifyingHost(
+                                                            p->getNormalisableRange().convertTo0to1((float)index));
+                                                    }
+                                                } else {
+                                                    float val = (float)jsonValue;
+                                                    p->setValueNotifyingHost(
+                                                        p->getNormalisableRange().convertTo0to1(val));
+                                                }
+                                            } else if (auto* b = dynamic_cast<juce::AudioParameterBool*>(p)) {
+                                                b->setValueNotifyingHost((bool)jsonValue ? 1.0f : 0.0f);
+                                            } else {
+                                                float val = (float)jsonValue;
+                                                // Convert the value from the JSON (unnormalized) to the parameter's
+                                                // normalized range
+                                                val = p->getNormalisableRange().snapToLegalValue(
+                                                    val); // Snap to legal value first
+                                                float normalizedValue = p->getNormalisableRange().convertTo0to1(val);
+                                                p->setValueNotifyingHost(normalizedValue);
+                                            }
                                         } else {
                                             juce::Logger::writeToLog("AIStateMapper: Parameter '" + p->paramID +
                                                                      "' not found in JSON for module '" + type + "'");
@@ -220,6 +287,54 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
     }
 
     return true;
+}
+
+juce::var AIStateMapper::getPatchSchema() {
+    juce::DynamicObject::Ptr schema = new juce::DynamicObject();
+    schema->setProperty("type", "object");
+
+    juce::DynamicObject::Ptr properties = new juce::DynamicObject();
+
+    // 1. Nodes
+    juce::DynamicObject::Ptr nodes = new juce::DynamicObject();
+    nodes->setProperty("type", "array");
+    juce::DynamicObject::Ptr nodeItems = new juce::DynamicObject();
+    nodeItems->setProperty("type", "object");
+    juce::DynamicObject::Ptr nodeProperties = new juce::DynamicObject();
+
+    nodeProperties->setProperty("id", juce::JSON::parse("{\"type\": \"integer\"}"));
+    nodeProperties->setProperty(
+        "type", juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
+                                  "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Sequencer\", \"LFO\", "
+                                  "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\"]}"));
+    nodeProperties->setProperty("params", juce::JSON::parse("{\"type\": \"object\"}"));
+
+    nodeItems->setProperty("properties", juce::var(nodeProperties.get()));
+    nodeItems->setProperty("required", juce::Array<juce::var>({"id", "type"}));
+    nodes->setProperty("items", juce::var(nodeItems.get()));
+    properties->setProperty("nodes", juce::var(nodes.get()));
+
+    // 2. Connections
+    juce::DynamicObject::Ptr connections = new juce::DynamicObject();
+    connections->setProperty("type", "array");
+    juce::DynamicObject::Ptr connItems = new juce::DynamicObject();
+    connItems->setProperty("type", "object");
+    juce::DynamicObject::Ptr connProperties = new juce::DynamicObject();
+
+    connProperties->setProperty("src", juce::JSON::parse("{\"type\": \"integer\"}"));
+    connProperties->setProperty("srcPort", juce::JSON::parse("{\"type\": \"integer\"}"));
+    connProperties->setProperty("dst", juce::JSON::parse("{\"type\": \"integer\"}"));
+    connProperties->setProperty("dstPort", juce::JSON::parse("{\"type\": \"integer\"}"));
+
+    connItems->setProperty("properties", juce::var(connProperties.get()));
+    connItems->setProperty("required", juce::Array<juce::var>({"src", "srcPort", "dst", "dstPort"}));
+    connections->setProperty("items", juce::var(connItems.get()));
+    properties->setProperty("connections", juce::var(connections.get()));
+
+    schema->setProperty("properties", juce::var(properties.get()));
+    schema->setProperty("required", juce::Array<juce::var>({"nodes", "connections"}));
+
+    return juce::var(schema.get());
 }
 
 } // namespace gsynth

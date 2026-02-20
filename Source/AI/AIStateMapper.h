@@ -23,10 +23,26 @@ public:
      */
     static bool applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting = true);
 
+    /**
+     * @brief Gets a Markdown-formatted string of all available modules and their parameters.
+     */
+    static juce::String getModuleSchema();
+
+    /**
+     * @brief Generates a JSON schema for patch validation and structured AI output.
+     */
+    static juce::var getPatchSchema();
+
     static std::unique_ptr<juce::AudioProcessor> createModule(const juce::String& type);
 
 private:
     static bool validatePatchJSON(const juce::var& json);
+
+    /**
+     * @brief Helper to find the index of a string choice in an AudioParameterChoice.
+     * @return index if found, -1 otherwise.
+     */
+    static int findChoiceIndex(juce::AudioParameterChoice* p, const juce::String& choiceText);
 };
 
 } // namespace gsynth
