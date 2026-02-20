@@ -28,10 +28,11 @@ public:
 
     ~OllamaProvider() override { stopThread(2000); }
 
-    void sendPrompt(const std::vector<Message>& conversation, CompletionCallback callback) override {
+    void sendPrompt(const std::vector<Message>& conversation, CompletionCallback callback,
+                    const juce::var& responseSchema = juce::var()) override {
         {
             const juce::ScopedLock sl(queueLock);
-            pendingRequests.push_back({conversation, callback});
+            pendingRequests.push_back({conversation, callback, responseSchema});
         }
 
         if (!isThreadRunning())
@@ -57,6 +58,7 @@ private:
     struct Request {
         std::vector<Message> conversation;
         AIProvider::CompletionCallback callback;
+        juce::var responseSchema;
     };
 
     juce::CriticalSection queueLock;

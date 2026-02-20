@@ -37,7 +37,8 @@ public:
     /**
      * @brief Sends a user message and gets a response.
      */
-    void sendMessage(const juce::String& text, AIProvider::CompletionCallback callback);
+    void sendMessage(const juce::String& text, AIProvider::CompletionCallback callback,
+                     bool useStructuredOutput = false);
 
     /**
      * @brief Applies a JSON patch to the graph.
@@ -73,6 +74,11 @@ private:
     juce::ListenerList<Listener> listeners;
 
     void initSystemPrompt();
+
+    /**
+     * @brief Helper to extract JSON from a response that might contain conversational text.
+     */
+    juce::String extractJsonFromResponse(const juce::String& response);
 
     JUCE_DECLARE_WEAK_REFERENCEABLE(AIIntegrationService)
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AIIntegrationService)

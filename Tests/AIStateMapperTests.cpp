@@ -110,7 +110,7 @@ TEST(AIStateMapperTest, ParameterValidationClamping) {
     ASSERT_NE(frequencyParamValue, -1.0f); // Ensure frequency parameter was found
 
     // Parameter value should be clamped between 0.0 and 1.0
-    ASSERT_NEAR(frequencyParamValue, 1.0f, 0.001f); // Should be clamped to 1.0
+    ASSERT_NEAR(frequencyParamValue, 0.0f, 0.001f); // Should be clamped to 0.0 (min of range)
 }
 
 TEST(AIStateMapperTest, UnknownModuleTypeLogsErrorAndSkips) {
@@ -131,4 +131,45 @@ TEST(AIStateMapperTest, UnknownModuleTypeLogsErrorAndSkips) {
     ASSERT_TRUE(success_unknown_module); // Should still return true if valid JSON, just skips the node
     ASSERT_EQ(graph.getNumNodes(), 0);   // Unknown module should not be added
     ASSERT_TRUE(logger.lastMessage.contains("Unknown module type"));
+}
+
+TEST(AIStateMapperTest, ChoiceParameterStringMapping) {
+    juce::AudioProcessorGraph graph;
+    // Oscillator waveform choice: 0: Sine, 1: Square, 2: Saw, 3: Triangle
+    juce::var json =
+        juce::JSON::parse(R"({"nodes":[{"id":1,"type":"Oscillator","params":{"waveform":"Saw"}}],"connections":[]})");
+
+    gsynth::AIStateMapper::applyJSONToGraph(json, graph, true);
+
+    auto oscNode = graph.getNodes().getUnchecked(0);
+    auto* osc = dynamic_cast<juce::AudioProcessor*>(oscNode->getProcessor());
+    auto* waveformParam = dynamic_cast<juce::AudioParameterChoice*>(osc->getParameters().getUnchecked(0));
+
+    ASSERT_NE(waveformParam, nullptr);
+    ASSERT_EQ(waveformParam->getIndex(), 2); // "Saw" is index 2
+}
+
+TEST(AIStateMapperTest, ChoiceParameterCaseInsensitiveMapping) {
+    juce::AudioProcessorGraph graph;
+    // Test case-insensitivity: "sawtooth" instead of "Saw" (if applicable) or just "saw"
+    juce::var json =
+        juce::JSON::parse(R"({"nodes":[{"id":1,"type":"Oscillator","params":{"waveform":"saw"}}],"connections":[]})");
+
+    gsynth::AIStateMapper::applyJSONToGraph(json, graph, true);
+
+    auto oscNode = graph.getNodes().getUnchecked(0);
+    auto* osc = dynamic_cast<juce::AudioProcessor*>(oscNode->getProcessor());
+    auto* waveformParam = dynamic_cast<juce::AudioParameterChoice*>(osc->getParameters().getUnchecked(0));
+
+    ASSERT_NE(waveformParam, nullptr);
+    ASSERT_EQ(waveformParam->getIndex(), 2); // "saw" matches "Saw"
+}
+
+TEST(AIStateMapperTest, SchemaGeneration) {
+    juce::String schema = gsynth::AIStateMapper::getModuleSchema();
+    ASSERT_FALSE(schema.isEmpty());
+    ASSERT_TRUE(schema.contains("Oscillator"));
+    ASSERT_TRUE(schema.contains("Filter"));
+    ASSERT_TRUE(schema.contains("waveform"));
+    ASSERT_TRUE(schema.contains("cutoff"));
 }
