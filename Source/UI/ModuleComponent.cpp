@@ -98,6 +98,18 @@ void ModuleComponent::createControls() {
 }
 
 void ModuleComponent::updateLayout() {
+    if (module->getName() == "Attenuverter") {
+        setSize(40, 40);
+        if (sliders.size() > 0) {
+            sliders[0]->setBounds(0, 0, 40, 40);
+            sliders[0]->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+            sliders[0]->setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::yellow);
+            if (sliderLabels.size() > 0)
+                sliderLabels[0]->setVisible(false);
+        }
+        return;
+    }
+
     if (module->getName() == "Sequencer") {
         setSize(510, 380);
         return;
@@ -127,6 +139,10 @@ void ModuleComponent::updateLayout() {
 }
 
 void ModuleComponent::paint(juce::Graphics& g) {
+    if (module->getName() == "Attenuverter") {
+        return; // Transparent background, no ports, no header
+    }
+
     g.fillAll(juce::Colours::lightgrey);
 
     // Highlight Active Step (Sequencer only)
@@ -183,7 +199,11 @@ void ModuleComponent::paint(juce::Graphics& g) {
             if (i == 0)
                 label = "Audio";
             if (i == 1)
-                label = "Freq CV";
+                label = "Cutoff CV";
+            if (i == 2)
+                label = "Res CV";
+            if (i == 3)
+                label = "Drive CV";
         }
         if (module->getName() == "VCA") {
             if (i == 0)
@@ -211,6 +231,10 @@ void ModuleComponent::paint(juce::Graphics& g) {
 }
 
 juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
+    if (module->getName() == "Attenuverter") {
+        return {getWidth() / 2, getHeight() / 2};
+    }
+
     int yStep = 20;
     int headerHeight = 30;
 
@@ -229,6 +253,10 @@ juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
 }
 
 std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Point<int> localPoint) {
+    if (module->getName() == "Attenuverter") {
+        return std::nullopt; // Users cannot manually drag connections from the smart wire knob
+    }
+
     int numIns = module->getTotalNumInputChannels();
     int numOuts = module->getTotalNumOutputChannels();
 
@@ -428,6 +456,9 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
         }
     } else {
         // Click on Body
+        if (module->getName() == "Attenuverter")
+            return; // cannot drag
+
         if (e.mods.isPopupMenu()) {
             juce::PopupMenu m;
             m.addItem("Delete Module", [this] { owner.deleteModule(this); });

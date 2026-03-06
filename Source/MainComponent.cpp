@@ -60,6 +60,23 @@ MainComponent::MainComponent()
         });
     };
 
+    addAndMakeVisible(toggleAiPanelButton);
+    toggleAiPanelButton.setButtonText("Hide AI");
+    toggleAiPanelButton.onClick = [this] {
+        isAiPanelVisible = !isAiPanelVisible;
+        aiChatComponent.setVisible(isAiPanelVisible);
+        toggleAiPanelButton.setButtonText(isAiPanelVisible ? "Hide AI" : "Show AI");
+        resized();
+    };
+
+    addAndMakeVisible(toggleModMatrixButton);
+    toggleModMatrixButton.setButtonText("Hide Matrix");
+    toggleModMatrixButton.onClick = [this] {
+        graphEditor.toggleModMatrixVisibility();
+        toggleModMatrixButton.setButtonText(graphEditor.isModMatrixVisible() ? "Hide Matrix" : "Show Matrix");
+        resized();
+    };
+
     addAndMakeVisible(settingsButton);
     settingsButton.setButtonText("Settings");
     settingsButton.onClick = [this, savedProviderName, savedOllamaHost]() mutable { // Capture by value
@@ -190,7 +207,14 @@ void MainComponent::resized() {
     loadButton.setBounds(header.removeFromLeft(100).reduced(2));
     settingsButton.setBounds(header.removeFromLeft(100).reduced(2));
 
-    aiChatComponent.setBounds(bounds.removeFromRight((int)aiPaneWidth));
+    // Position toggle buttons on the right side of the header
+    toggleAiPanelButton.setBounds(header.removeFromRight(100).reduced(2));
+    toggleModMatrixButton.setBounds(header.removeFromRight(100).reduced(2));
+
+    if (isAiPanelVisible) {
+        aiChatComponent.setBounds(bounds.removeFromRight((int)aiPaneWidth));
+    }
+
     moduleLibrary.setBounds(bounds.removeFromLeft(200));
     graphEditor.setBounds(bounds);
 }

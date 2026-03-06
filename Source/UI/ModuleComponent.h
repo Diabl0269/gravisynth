@@ -1,9 +1,11 @@
 #pragma once
 
+#include "../AudioEngine.h"
 #include "../Modules/MidiKeyboardModule.h"
 #include "ScopeComponent.h"
-#include <JuceHeader.h>
+#include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 class GraphEditor; // Forward declaration
 

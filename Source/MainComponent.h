@@ -19,6 +19,18 @@ public:
     void paint(juce::Graphics&) override;
     void resized() override;
 
+    // Testing Hooks
+    bool isAiPanelConfiguredVisible() const { return isAiPanelVisible; }
+    void simulateToggleAiPanelClick() {
+        if (toggleAiPanelButton.onClick)
+            toggleAiPanelButton.onClick();
+    }
+    void simulateToggleModMatrixClick() {
+        if (toggleModMatrixButton.onClick)
+            toggleModMatrixButton.onClick();
+    }
+    GraphEditor& getGraphEditor() { return graphEditor; }
+
 private:
     // AIIntegrationService::Listener
     void aiPatchApplied() override;
@@ -30,10 +42,14 @@ private:
     juce::TextButton saveButton;
     juce::TextButton loadButton;
     juce::TextButton settingsButton;
+    juce::TextButton toggleAiPanelButton;
+    juce::TextButton toggleModMatrixButton;
+
     std::unique_ptr<juce::FileChooser> fileChooser;
 
     gsynth::AIIntegrationService aiService;
     gsynth::AIChatComponent aiChatComponent;
+    bool isAiPanelVisible = true;
 
     juce::ApplicationProperties appProperties;
     juce::PropertiesFile::Options propertiesOptions;

@@ -1,5 +1,6 @@
 #include "AudioEngine.h"
 #include "Modules/ADSRModule.h"
+#include "Modules/AttenuverterModule.h"
 #include "Modules/FX/DelayModule.h"
 #include "Modules/FX/DistortionModule.h"
 #include "Modules/FX/ReverbModule.h"
@@ -117,10 +118,18 @@ void AudioEngine::createDefaultPatch() {
     mainProcessorGraph.addConnection({{filterNode->nodeID, 0}, {vcaNode->nodeID, 0}}); // VCA Audio In
 
     // ADSR (Amp) -> VCA (CV)
-    mainProcessorGraph.addConnection({{adsrNode->nodeID, 0}, {vcaNode->nodeID, 1}});
+    auto vcaAtten = mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>());
+    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(vcaAtten->getProcessor()->getParameters()[0]))
+        param->setValueNotifyingHost(param->convertTo0to1(1.0f));
+    mainProcessorGraph.addConnection({{adsrNode->nodeID, 0}, {vcaAtten->nodeID, 0}});
+    mainProcessorGraph.addConnection({{vcaAtten->nodeID, 0}, {vcaNode->nodeID, 1}});
 
     // ADSR (Filter) -> Filter CV
-    mainProcessorGraph.addConnection({{filterAdsrNode->nodeID, 0}, {filterNode->nodeID, 1}});
+    auto filterAtten = mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>());
+    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(filterAtten->getProcessor()->getParameters()[0]))
+        param->setValueNotifyingHost(param->convertTo0to1(1.0f));
+    mainProcessorGraph.addConnection({{filterAdsrNode->nodeID, 0}, {filterAtten->nodeID, 0}});
+    mainProcessorGraph.addConnection({{filterAtten->nodeID, 0}, {filterNode->nodeID, 1}});
 
     // Sequencer MIDI to Filter (for CC 74)
     mainProcessorGraph.addConnection({{sequencerNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
