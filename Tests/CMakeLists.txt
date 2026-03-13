@@ -24,6 +24,9 @@ add_executable(GravisynthTests
     AIStateMapperTests.cpp
     OllamaProviderTests.cpp
     MainComponentTests.cpp
+    PolyMidiModuleTests.cpp
+    PolySequencerModuleTests.cpp
+    AIIntegrationServiceTests.cpp
     ../Source/MainComponent.cpp
     ../Source/UI/GraphEditor.cpp
     ../Source/UI/ModMatrixComponent.cpp

@@ -36,3 +36,30 @@ Detailed specifications for Gravisynth's primary synthesis modules.
     - **Octave Shift**: Shift the keyboard range by ±2 octaves.
     - **Visual Feedback**: Real-time display of pressed keys.
     - **MIDI Output**: Generates standard MIDI messages for driving oscillators or other MIDI-capable modules.
+
+## Attenuverter Module (Hidden)
+- **Purpose**: Invisible gain/polarity stage automatically inserted on every CV connection.
+- **Parameters**: `Amount` — ranges from -1.0 (full inversion) to +1.0 (full depth), default 1.0.
+- **Interaction**: Controlled via the **Smart Cable knob** on the graph or the **Mod Matrix** slider.
+- **Serialization**: Saved and restored as part of every preset alongside the connection it belongs to.
+
+---
+
+## Modulation System
+
+Gravisynth uses a **hidden Attenuverter architecture** for modulation depth control, inspired by Serum's mod matrix.
+
+### Smart Cables
+- Every CV cable renders a circular knob at the midpoint of the bezier curve.
+- **Drag up/down** to sweep depth from -100% to +100%.
+- **Double-click** to instantly delete the connection.
+
+### Mod Matrix Panel
+- Sits on the right edge of the Graph Editor (toggleable).
+- Lists every active CV connection as a labelled row with a bipolar slider.
+- Sliders and smart cable knobs are **bidirectionally synced** in real time via a 30 Hz timer.
+
+### Panel Toggles
+- **Hide AI / Show AI** — collapses the right-side AI chat panel.
+- **Hide Matrix / Show Matrix** — collapses the Mod Matrix panel.
+- Both buttons live in the top application bar, and the Graph Editor canvas expands to fill reclaimed space.

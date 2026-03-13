@@ -32,7 +32,13 @@ Modules connect via inputs and outputs:
 - **Poly MIDI**: 8-voice voice management with LRU allocation.
 - **Poly Sequencer**: Multi-voice pattern sequencing.
 
-### AI Integration [NEW]
+### Modulation System
+Gravisynth uses a hidden **Attenuverter** node architecture for modulation routing:
+- **Smart Cables**: CV connections display an interactive depth knob at the cable midpoint. Drag to adjust depth (bipolar ±100%), double-click to delete.
+- **Mod Matrix Panel**: A panel listing all active CV connections with labelled sliders. Fully synced with the smart cable knobs in real time.
+- **Panel Toggles**: Top-bar **Hide AI** and **Hide Matrix** buttons collapse panels to give the graph more space.
+
+### AI Integration
 - **AI Sound Designer**: Describe a sound in natural language and the AI generates the complete patch (modules, parameters, and connections).
 - **One-Click Apply**: Instantly apply AI-generated patches to the graph editor.
 
@@ -120,15 +126,17 @@ This script will build the project with coverage flags, run the tests, and gener
 
 ## Roadmap
 
-### Current Focus: UI/UX & Workflow
+### UI/UX & Workflow
 - [x] **FX Suite**: Delay, Distortion, Reverb.
 - [x] **Anti-Aliasing**: High-quality oscillators.
-- [ ] **Patch Saving/Loading**: Full state persistence for complex graphs.
+- [x] **Patch Saving/Loading**: Full state persistence for complex graphs.
+- [x] **Smart Cables & Mod Matrix**: Inline modulation depth control + matrix overview panel.
+- [x] **Panel Toggles**: Hide/show AI and Mod Matrix panels from the top bar.
 - [ ] **Drag-and-Drop Patching**: Improved visual connection workflow.
 
 ### Advanced Features
-- **Wavetable Synthesis**: Support for custom wavetables and morphine.
-- **Advanced Modulation**: Matrix-style routing for complex sounds.
+- **Wavetable Synthesis**: Support for custom wavetables and morphing.
+- **Polyphonic Modulation**: Route LFOs/envelopes per voice.
 
 ### Vision: AI-Powered Sound Design
 - [x] **Local AI Integration**: Support for Ollama and local models.
