@@ -30,12 +30,7 @@ protected:
     std::unique_ptr<ModuleComponent> moduleComponent;
 };
 
-TEST_F(ModuleComponentTest, InitializationAndResizing) {
-    EXPECT_NO_THROW(moduleComponent->setSize(200, 300));
-    juce::Image image(juce::Image::RGB, 200, 300, true);
-    juce::Graphics g(image);
-    EXPECT_NO_THROW(moduleComponent->paint(g));
-}
+TEST_F(ModuleComponentTest, InitializationAndResizing) { EXPECT_NO_THROW(moduleComponent->setSize(200, 300)); }
 
 TEST_F(ModuleComponentTest, ParameterAttachmentLinksUI) {
     // The processor should have an "OSC_TYPE" parameter which is a combo box

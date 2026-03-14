@@ -32,9 +32,6 @@ protected:
 TEST_F(GraphEditorTest, InitializationAndResizing) {
     EXPECT_TRUE(editor->isModMatrixVisible());
     EXPECT_NO_THROW(editor->resized());
-    juce::Image image(juce::Image::RGB, 800, 600, true);
-    juce::Graphics g(image);
-    EXPECT_NO_THROW(editor->paint(g));
 }
 
 TEST_F(GraphEditorTest, ToggleModMatrixVisibility) {

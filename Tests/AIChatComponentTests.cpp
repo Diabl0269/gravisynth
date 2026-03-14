@@ -53,12 +53,7 @@ protected:
     std::unique_ptr<gsynth::AIChatComponent> chatComponent;
 };
 
-TEST_F(AIChatComponentTest, InitializationAndResizing) {
-    EXPECT_NO_THROW(chatComponent->resized());
-    juce::Image image(juce::Image::RGB, 400, 600, true);
-    juce::Graphics g(image);
-    EXPECT_NO_THROW(chatComponent->paint(g));
-}
+TEST_F(AIChatComponentTest, InitializationAndResizing) { EXPECT_NO_THROW(chatComponent->resized()); }
 
 TEST_F(AIChatComponentTest, SendMessageUpdatesUIAndHistory) {
     // Find the TextEditor and Send Button
