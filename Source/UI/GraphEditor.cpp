@@ -1,5 +1,6 @@
 #include "GraphEditor.h"
 #include "../Modules/ADSRModule.h"
+#include "../Modules/AttenuverterModule.h"
 #include "../Modules/FX/DelayModule.h"
 #include "../Modules/FX/DistortionModule.h"
 #include "../Modules/FX/ReverbModule.h"
@@ -13,8 +14,10 @@
 
 GraphEditor::GraphEditor(AudioEngine& engine)
     : audioEngine(engine)
-    , content(*this) {
+    , content(*this)
+    , modMatrix(engine) {
     addAndMakeVisible(content);
+    addAndMakeVisible(modMatrix);
     content.setInterceptsMouseClicks(false, true); // Fallback clicks to parent
     startTimerHz(30);
 }
@@ -32,35 +35,92 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
     g.setColour(juce::Colours::yellow);
 
     for (auto& connection : graph.getConnections()) {
+        auto* node1 = graph.getNodeForId(connection.source.nodeID);
+        auto* node2 = graph.getNodeForId(connection.destination.nodeID);
+
+        if (!node1 || !node2)
+            continue;
+
+        if (node2->getProcessor()->getName() == "Attenuverter") {
+            juce::AudioProcessorGraph::Node* realDstNode = nullptr;
+            int realDstPort = 0;
+            for (auto& c : graph.getConnections()) {
+                if (c.source.nodeID == node2->nodeID) {
+                    realDstNode = graph.getNodeForId(c.destination.nodeID);
+                    realDstPort = c.destination.channelIndex;
+                    break;
+                }
+            }
+
+            if (realDstNode) {
+                juce::Point<int> p1, p2;
+                bool found1 = false, found2 = false;
+                for (auto* comp : moduleComponents) {
+                    if (comp->getModule() == node1->getProcessor()) {
+                        auto localP = comp->getPortCenter(connection.source.channelIndex, false);
+                        p1 = comp->getBounds().getPosition() + localP;
+                        found1 = true;
+                    }
+                    if (comp->getModule() == realDstNode->getProcessor()) {
+                        auto localP = comp->getPortCenter(realDstPort, true);
+                        p2 = comp->getBounds().getPosition() + localP;
+                        found2 = true;
+                    }
+                }
+
+                if (found1 && found2) {
+                    g.setColour(juce::Colours::yellow);
+                    g.drawLine(p1.toFloat().x, p1.toFloat().y, p2.toFloat().x, p2.toFloat().y, 2.0f);
+
+                    float amt = 0.0f;
+                    if (auto* p = node2->getProcessor()->getParameters()[0]) {
+                        amt = p->getValue();
+                        amt = amt * 2.0f - 1.0f; // 0 to 1 back to -1.0 to 1.0
+                    }
+
+                    auto mid = (p1 + p2) / 2;
+                    juce::Rectangle<float> knobArea(mid.toFloat().x - 10, mid.toFloat().y - 10, 20, 20);
+                    g.setColour(juce::Colours::darkgrey);
+                    g.fillEllipse(knobArea);
+                    g.setColour(juce::Colours::white);
+                    g.drawEllipse(knobArea, 1.0f);
+
+                    float angle = juce::jmap(amt, -1.0f, 1.0f, -juce::MathConstants<float>::pi * 0.75f,
+                                             juce::MathConstants<float>::pi * 0.75f);
+                    float dx = std::sin(angle) * 8.0f;
+                    float dy = -std::cos(angle) * 8.0f;
+                    g.drawLine(mid.toFloat().x, mid.toFloat().y, mid.toFloat().x + dx, mid.toFloat().y + dy, 2.0f);
+                }
+            }
+            continue;
+        } else if (node1->getProcessor()->getName() == "Attenuverter") {
+            continue;
+        }
+
         juce::Point<int> p1, p2;
         bool found1 = false;
         bool found2 = false;
 
         for (auto* comp : moduleComponents) {
-            if (auto* module = comp->getModule()) {
-                auto* node1 = graph.getNodeForId(connection.source.nodeID);
-                auto* node2 = graph.getNodeForId(connection.destination.nodeID);
-
-                if (node1 && node1->getProcessor() == module) {
-                    juce::Point<int> localP;
-                    if (connection.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) {
-                        localP = comp->getPortCenter(0, false);
-                    } else {
-                        localP = comp->getPortCenter(connection.source.channelIndex, false);
-                    }
-                    p1 = comp->getBounds().getPosition() + localP;
-                    found1 = true;
+            if (comp->getModule() == node1->getProcessor()) {
+                juce::Point<int> localP;
+                if (connection.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) {
+                    localP = comp->getPortCenter(0, false);
+                } else {
+                    localP = comp->getPortCenter(connection.source.channelIndex, false);
                 }
-                if (node2 && node2->getProcessor() == module) {
-                    juce::Point<int> localP;
-                    if (connection.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) {
-                        localP = juce::Point<int>(10, 30);
-                    } else {
-                        localP = comp->getPortCenter(connection.destination.channelIndex, true);
-                    }
-                    p2 = comp->getBounds().getPosition() + localP;
-                    found2 = true;
+                p1 = comp->getBounds().getPosition() + localP;
+                found1 = true;
+            }
+            if (comp->getModule() == node2->getProcessor()) {
+                juce::Point<int> localP;
+                if (connection.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) {
+                    localP = juce::Point<int>(10, 30);
+                } else {
+                    localP = comp->getPortCenter(connection.destination.channelIndex, true);
                 }
+                p2 = comp->getBounds().getPosition() + localP;
+                found2 = true;
             }
         }
 
@@ -156,10 +216,27 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
                     graph.addConnection({{srcNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                          {dstNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
                 } else {
-                    if (dragSourceIsInput) {
-                        graph.addConnection({{dstNode->nodeID, port->index}, {srcNode->nodeID, dragSourceChannel}});
+                    int sPort = dragSourceIsInput ? port->index : dragSourceChannel;
+                    int dPort = dragSourceIsInput ? dragSourceChannel : port->index;
+
+                    juce::String dstName = dstNode->getProcessor()->getName();
+                    bool isCV = false;
+                    if (dstName == "Filter" && dPort >= 1)
+                        isCV = true;
+                    if (dstName == "VCA" && dPort == 1)
+                        isCV = true;
+                    if (dstName == "Oscillator" && dPort == 0)
+                        isCV = true;
+
+                    if (isCV) {
+                        // Create Attenuverter
+                        auto attenNode = graph.addNode(std::make_unique<AttenuverterModule>());
+                        if (attenNode) {
+                            graph.addConnection({{srcNode->nodeID, sPort}, {attenNode->nodeID, 0}});
+                            graph.addConnection({{attenNode->nodeID, 0}, {dstNode->nodeID, dPort}});
+                        }
                     } else {
-                        graph.addConnection({{srcNode->nodeID, dragSourceChannel}, {dstNode->nodeID, port->index}});
+                        graph.addConnection({{srcNode->nodeID, sPort}, {dstNode->nodeID, dPort}});
                     }
                 }
             }
@@ -180,6 +257,10 @@ void GraphEditor::updateComponents() {
     for (auto* node : graph.getNodes()) {
         auto* processor = node->getProcessor();
         if (processor) {
+            juce::String name = processor->getName();
+            if (name == "Attenuverter")
+                continue;
+
             auto* comp = content.getModules().add(new ModuleComponent(processor, *this));
             content.addAndMakeVisible(comp);
 
@@ -189,8 +270,6 @@ void GraphEditor::updateComponents() {
             if (static_cast<int>(x) != -1 && static_cast<int>(y) != -1) {
                 comp->setTopLeftPosition(static_cast<int>(x), static_cast<int>(y));
             } else {
-                // Robust fallback for missing positions
-                juce::String name = processor->getName();
                 if (name == "Sequencer")
                     comp->setTopLeftPosition(10, 80);
                 else if (name == "Oscillator")
@@ -222,12 +301,24 @@ void GraphEditor::paint(juce::Graphics& g) {
     // But content handles it now.
 }
 
-void GraphEditor::resized() { updateTransform(); }
+void GraphEditor::resized() {
+    if (isMatrixVisible) {
+        modMatrix.setBounds(getWidth() - 250, 0, 250, getHeight());
+    }
+    updateTransform();
+}
+
+void GraphEditor::toggleModMatrixVisibility() {
+    isMatrixVisible = !isMatrixVisible;
+    modMatrix.setVisible(isMatrixVisible);
+    resized();
+}
 
 void GraphEditor::updateTransform() {
     juce::AffineTransform t;
     t = t.translated(panOffset);
-    t = t.scaled(zoomLevel, zoomLevel, getWidth() / 2.0f, getHeight() / 2.0f);
+    float xOffset = isMatrixVisible ? (getWidth() - 250) / 2.0f : getWidth() / 2.0f;
+    t = t.scaled(zoomLevel, zoomLevel, xOffset, getHeight() / 2.0f);
 
     content.setBounds(0, 0, 10000, 10000);
     content.setTransform(t);
@@ -247,16 +338,108 @@ void GraphEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWhe
 void GraphEditor::mouseDown(const juce::MouseEvent& e) {
     if (e.mods.isLeftButtonDown()) {
         lastMousePos = e.getPosition();
+
+        auto localPos = content.getLocalPoint(this, e.getPosition());
+        auto attenId = getAttenuverterNodeAt(localPos.toFloat());
+        if (attenId.uid != 0) {
+            draggingAttenuverterNodeId = attenId;
+        } else {
+            draggingAttenuverterNodeId = juce::AudioProcessorGraph::NodeID();
+        }
     }
 }
 
 void GraphEditor::mouseDrag(const juce::MouseEvent& e) {
     if (e.mods.isLeftButtonDown() && !isDraggingConnection) {
+        if (draggingAttenuverterNodeId.uid != 0) {
+            auto& graph = audioEngine.getGraph();
+            auto* node = graph.getNodeForId(draggingAttenuverterNodeId);
+            if (node) {
+                if (auto* p = dynamic_cast<juce::AudioParameterFloat*>(node->getProcessor()->getParameters()[0])) {
+                    float delta = (e.getPosition().y - lastMousePos.y) * -0.01f;
+                    float currentVal = p->get(); // -1 to 1
+                    currentVal = juce::jlimit(-1.0f, 1.0f, currentVal + delta);
+                    p->setValueNotifyingHost(p->convertTo0to1(currentVal));
+                    content.repaint();
+                }
+            }
+            lastMousePos = e.getPosition();
+            return;
+        }
+
         auto delta = e.getPosition() - lastMousePos;
         panOffset += delta.toFloat();
         lastMousePos = e.getPosition();
         updateTransform();
     }
+}
+
+void GraphEditor::mouseDoubleClick(const juce::MouseEvent& e) {
+    auto localPos = content.getLocalPoint(this, e.getPosition());
+    auto attenId = getAttenuverterNodeAt(localPos.toFloat());
+    if (attenId.uid != 0) {
+        auto& graph = audioEngine.getGraph();
+        std::vector<juce::AudioProcessorGraph::Connection> toRemove;
+        for (auto& c : graph.getConnections()) {
+            if (c.source.nodeID == attenId || c.destination.nodeID == attenId) {
+                toRemove.push_back(c);
+            }
+        }
+        for (auto& c : toRemove) {
+            graph.removeConnection(c);
+        }
+        modMatrix.clearRows();
+        graph.removeNode(attenId);
+        content.repaint();
+    }
+}
+
+juce::AudioProcessorGraph::NodeID GraphEditor::getAttenuverterNodeAt(juce::Point<float> localPos) {
+    auto& graph = audioEngine.getGraph();
+    for (auto& connection : graph.getConnections()) {
+        auto* node1 = graph.getNodeForId(connection.source.nodeID);
+        auto* node2 = graph.getNodeForId(connection.destination.nodeID);
+
+        if (!node1 || !node2)
+            continue;
+
+        if (node2->getProcessor()->getName() == "Attenuverter") {
+            juce::AudioProcessorGraph::Node* realDstNode = nullptr;
+            int realDstPort = 0;
+            for (auto& c : graph.getConnections()) {
+                if (c.source.nodeID == node2->nodeID) {
+                    realDstNode = graph.getNodeForId(c.destination.nodeID);
+                    realDstPort = c.destination.channelIndex;
+                    break;
+                }
+            }
+
+            if (realDstNode) {
+                juce::Point<int> p1, p2;
+                bool found1 = false, found2 = false;
+                for (auto* comp : content.getModules()) {
+                    if (comp->getModule() == node1->getProcessor()) {
+                        auto localP = comp->getPortCenter(connection.source.channelIndex, false);
+                        p1 = comp->getBounds().getPosition() + localP;
+                        found1 = true;
+                    }
+                    if (comp->getModule() == realDstNode->getProcessor()) {
+                        auto localP = comp->getPortCenter(realDstPort, true);
+                        p2 = comp->getBounds().getPosition() + localP;
+                        found2 = true;
+                    }
+                }
+
+                if (found1 && found2) {
+                    auto mid = (p1 + p2) / 2;
+                    if (juce::Point<float>(mid.toFloat().x, mid.toFloat().y).getDistanceFrom(localPos) <= 15.0f) {
+                        return node2->nodeID;
+                    }
+                }
+            }
+        }
+    }
+    return {};
 }
 
 void GraphEditor::updateModulePosition(ModuleComponent* module) {
@@ -286,6 +469,7 @@ void GraphEditor::deleteModule(ModuleComponent* module) {
     if (nodeId.uid == 0)
         return; // Not found
 
+    modMatrix.clearRows();
     graph.removeNode(nodeId);
     updateComponents(); // Rebuild moduleComponents
     repaint();
@@ -331,7 +515,45 @@ void GraphEditor::disconnectPort(ModuleComponent* module, int portIndex, bool is
 }
 
 void GraphEditor::timerCallback() {
-    // empty for now, or use for other periodic updates
+    auto& graph = audioEngine.getGraph();
+    std::vector<juce::AudioProcessorGraph::NodeID> toDelete;
+
+    for (auto* n : graph.getNodes()) {
+        if (n->getProcessor()->getName() == "Attenuverter") {
+            int conns = 0;
+            for (auto& c : graph.getConnections()) {
+                if (c.destination.nodeID == n->nodeID) {
+                    conns++;
+                }
+                if (c.source.nodeID == n->nodeID) {
+                    conns++;
+                }
+            }
+
+            if (conns < 2) {
+                toDelete.push_back(n->nodeID);
+            }
+        }
+    }
+
+    for (auto id : toDelete) {
+        std::vector<juce::AudioProcessorGraph::Connection> connsToRemove;
+        for (auto& c : graph.getConnections()) {
+            if (c.source.nodeID == id || c.destination.nodeID == id)
+                connsToRemove.push_back(c);
+        }
+        for (auto& c : connsToRemove)
+            graph.removeConnection(c);
+
+        modMatrix.clearRows();
+        graph.removeNode(id);
+    }
+
+    if (!toDelete.empty()) {
+        updateComponents();
+    }
+
+    content.repaint(); // Ensure graph redrawing catches ModMatrix slider changes
 }
 
 bool GraphEditor::isInterestedInDragSource(const SourceDetails& dragSourceDetails) { return true; }
@@ -360,6 +582,8 @@ void GraphEditor::itemDropped(const SourceDetails& dragSourceDetails) {
         newProcessor = std::make_unique<ReverbModule>();
     else if (name == "MidiKeyboard")
         newProcessor = std::make_unique<MidiKeyboardModule>();
+    else if (name == "Attenuverter")
+        newProcessor = std::make_unique<AttenuverterModule>();
 
     if (newProcessor) {
         auto node = audioEngine.getGraph().addNode(std::move(newProcessor));
@@ -453,6 +677,10 @@ void GraphEditor::loadPreset(juce::File file) {
                 newProcessor = std::make_unique<DelayModule>();
             } else if (type == "Reverb") {
                 newProcessor = std::make_unique<ReverbModule>();
+            } else if (type == "MidiKeyboard") {
+                newProcessor = std::make_unique<MidiKeyboardModule>();
+            } else if (type == "Attenuverter") {
+                newProcessor = std::make_unique<AttenuverterModule>();
             }
 
             if (newProcessor) {

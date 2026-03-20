@@ -23,6 +23,18 @@ add_executable(GravisynthTests
     SequencerModuleTests.cpp
     AIStateMapperTests.cpp
     OllamaProviderTests.cpp
+    MainComponentTests.cpp
+    GraphEditorTests.cpp
+    ModuleComponentTests.cpp
+    AIChatComponentTests.cpp
+    PolyMidiModuleTests.cpp
+    PolySequencerModuleTests.cpp
+    AIIntegrationServiceTests.cpp
+    ../Source/MainComponent.cpp
+    ../Source/UI/GraphEditor.cpp
+    ../Source/UI/ModMatrixComponent.cpp
+    ../Source/UI/AIChatComponent.cpp
+    ../Source/UI/ModuleComponent.cpp
 )
 
 target_link_libraries(GravisynthTests PRIVATE

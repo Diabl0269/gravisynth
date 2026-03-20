@@ -8,9 +8,11 @@
 class ModuleBase : public juce::AudioProcessor {
 public:
     ModuleBase(const juce::String& name, int numInputs, int numOutputs)
-        : AudioProcessor(BusesProperties()
-                             .withInput("Input", juce::AudioChannelSet::stereo(), numInputs > 0)
-                             .withOutput("Output", juce::AudioChannelSet::stereo(), numOutputs > 0))
+        : AudioProcessor(
+              BusesProperties()
+                  .withInput("Input", juce::AudioChannelSet::discreteChannels(std::max(1, numInputs)), numInputs > 0)
+                  .withOutput("Output", juce::AudioChannelSet::discreteChannels(std::max(1, numOutputs)),
+                              numOutputs > 0))
         , moduleName(name) {}
 
     ~ModuleBase() override = default;

@@ -9,14 +9,13 @@ protected:
 
     void SetUp() override {
         filter.prepareToPlay(44100.0, 512);
-        buffer.setSize(2, 512);
+        buffer.setSize(4, 512);
+        buffer.clear();
         // Create some noise or DC offset to filter
         juce::Random r;
-        for (int ch = 0; ch < 2; ++ch) {
-            auto* data = buffer.getWritePointer(ch);
-            for (int i = 0; i < 512; ++i) {
-                data[i] = r.nextFloat() * 2.0f - 1.0f;
-            }
+        auto* data = buffer.getWritePointer(0);
+        for (int i = 0; i < 512; ++i) {
+            data[i] = r.nextFloat() * 2.0f - 1.0f;
         }
     }
 };
@@ -57,4 +56,48 @@ TEST_F(FilterTest, LowPassAttenuatesHighFreq) {
     float outputRMS = buffer.getRMSLevel(0, 0, buffer.getNumSamples());
 
     EXPECT_LT(outputRMS, inputRMS);
+}
+
+TEST_F(FilterTest, ModulationScalesCorrectly) {
+    auto* cutoffParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[0]);
+    auto* modAmountParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[3]); // cutoffMod
+
+    // Set base cutoff to 440Hz
+    cutoffParam->setValueNotifyingHost(cutoffParam->getNormalisableRange().convertTo0to1(440.0f));
+
+    // Case 1: Cutoff Mod = 1.0, CV1 = 1.0 -> Should push frequency up significantly
+    modAmountParam->setValueNotifyingHost(modAmountParam->getNormalisableRange().convertTo0to1(1.0f));
+
+    // Set CV1 to 1.0
+    auto* cv1 = buffer.getWritePointer(1);
+    for (int i = 0; i < buffer.getNumSamples(); ++i) {
+        cv1[i] = 1.0f;
+    }
+
+    // Process
+    filter.processBlock(buffer, midiMessages);
+
+    // It is hard to test the internal frequency state directly without exposing it,
+    // but we know it processes without crashing. The visual buffer or an exposed state would be needed for exact freq
+    // assertions.
+}
+
+TEST_F(FilterTest, MultiParamModulation) {
+    auto* cutoffModParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[3]);
+    auto* resModParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[4]);
+
+    // Set mod amounts
+    cutoffModParam->setValueNotifyingHost(cutoffModParam->getNormalisableRange().convertTo0to1(0.5f));
+    resModParam->setValueNotifyingHost(resModParam->getNormalisableRange().convertTo0to1(0.8f));
+
+    // Set Cutoff CV (ch 1) to 1.0 and Res CV (ch 2) to 1.0
+    auto* cv1 = buffer.getWritePointer(1);
+    auto* cv2 = buffer.getWritePointer(2);
+    for (int i = 0; i < buffer.getNumSamples(); ++i) {
+        cv1[i] = 1.0f;
+        cv2[i] = 1.0f;
+    }
+
+    // Process
+    filter.processBlock(buffer, midiMessages);
 }

@@ -95,3 +95,73 @@ TEST_F(SequencerModuleTest, SendsFilterEnvCC) {
     }
     EXPECT_TRUE(foundCC74);
 }
+
+TEST_F(SequencerModuleTest, RestStepSendsNoteOff) {
+    juce::AudioBuffer<float> buffer(2, 512);
+    juce::MidiBuffer midi;
+
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    runParam->setValueNotifyingHost(1.0f);
+
+    // Set step 0 pitch to 0 (rest)
+    auto* step0 = dynamic_cast<juce::AudioParameterInt*>(seq->getParameters()[10 + 0]);
+    *step0 = 0;
+
+    // Trigger step 0 — should produce no NoteOn, but should handle rest path
+    seq->processBlock(buffer, midi);
+
+    bool foundNoteOn = false;
+    for (const auto metadata : midi)
+        if (metadata.getMessage().isNoteOn())
+            foundNoteOn = true;
+
+    EXPECT_FALSE(foundNoteOn);
+}
+
+TEST_F(SequencerModuleTest, NoteOffFiredAfterGateDuration) {
+    juce::AudioBuffer<float> buffer(2, 512);
+    juce::MidiBuffer midi;
+
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    runParam->setValueNotifyingHost(1.0f);
+
+    // Trigger step 0 — sends note on
+    seq->processBlock(buffer, midi);
+
+    // Advance enough samples so the gate length expires (default 0.5, at 120BPM = ~11025 samples)
+    int samplesToGateOff = 11100;
+    bool foundNoteOff = false;
+    while (samplesToGateOff > 0) {
+        juce::AudioBuffer<float> b(2, 512);
+        juce::MidiBuffer m;
+        seq->processBlock(b, m);
+        for (const auto meta : m)
+            if (meta.getMessage().isNoteOff())
+                foundNoteOff = true;
+        samplesToGateOff -= 512;
+    }
+    EXPECT_TRUE(foundNoteOff);
+}
+
+TEST_F(SequencerModuleTest, BPMChangeAffectsTempo) {
+    juce::AudioBuffer<float> buffer(2, 512);
+    juce::MidiBuffer midi;
+
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* bpmParam = dynamic_cast<juce::AudioParameterFloat*>(seq->getParameters()[1]);
+    runParam->setValueNotifyingHost(1.0f);
+
+    // Set fast BPM and trigger step 0
+    bpmParam->setValueNotifyingHost(bpmParam->getNormalisableRange().convertTo0to1(240.0f));
+    seq->processBlock(buffer, midi);
+
+    // At 240 BPM one beat = 11025 samples. Step should advance quickly.
+    int samplesToNextStep = 11100;
+    while (samplesToNextStep > 0) {
+        juce::AudioBuffer<float> b(2, 512);
+        juce::MidiBuffer m;
+        seq->processBlock(b, m);
+        samplesToNextStep -= 512;
+    }
+    EXPECT_EQ(seq->currentActiveStep, 1);
+}

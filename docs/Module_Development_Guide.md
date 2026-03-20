@@ -90,9 +90,13 @@ All audio modules in Gravisynth inherit from `ModuleBase`, which in turn extends
 *   `midiMessages` can be processed if your module is MIDI-aware (e.g., an instrument or MIDI effect).
 *   **Important**: If your module is bypassed or receives no active input, `buffer.clear()` the output to prevent unwanted noise or signals.
 
-## 3. Parameter Management
+## 3. Parameter Management and Modular Routing
 
 All module parameters should be defined in the constructor using `addParameter()`. Use `juce::AudioParameterFloat`, `juce::AudioParameterInt`, `juce::AudioParameterChoice`, etc.
+
+**Fully Modular Architecture Rule:** To ensure Gravisynth remains a truly modular environment, *every relevant continuous parameter in a module MUST expose a dedicated CV Input Port and a dedicated Bipolar Modulation Amount parameter.* 
+
+Instead of hardcoding dual limiters or complex internal modulation matrices, Grapevine relies on N-to-1 CV summing at the input ports. If a user wishes to modulate a parameter with multiple sources at different depths, they should route those sources through a `VCAModule` (acting as an attenuator) before connecting to the parameter's CV input.
 
 ```cpp
 MyNewModule::MyNewModule()

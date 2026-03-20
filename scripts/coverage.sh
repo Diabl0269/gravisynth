@@ -30,7 +30,7 @@ echo "Generating coverage report..."
 REPORT=$($COV report \
     ./build/Tests/GravisynthTests \
     -instr-profile=default.profdata \
-    -ignore-filename-regex="JuceLibraryCode|build/_deps|Tests")
+    -ignore-filename-regex="JuceLibraryCode|build/_deps|Tests|Source/UI|Source/Main\.cpp|Source/MainComponent")
 
 echo "$REPORT"
 

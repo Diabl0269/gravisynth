@@ -4,6 +4,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class ModuleComponent;
+#include "ModMatrixComponent.h"
 
 class GraphEditor
     : public juce::Component
@@ -18,6 +19,8 @@ public:
 
     void timerCallback() override;
     void updateComponents();
+    void toggleModMatrixVisibility();
+    bool isModMatrixVisible() const { return isMatrixVisible; }
 
     // Interactions
     void beginConnectionDrag(ModuleComponent* sourceModule, int channelIndex, bool isInput, bool isMidi,
@@ -40,6 +43,9 @@ public:
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseDoubleClick(const juce::MouseEvent& e) override;
+
+    juce::AudioProcessorGraph::NodeID getAttenuverterNodeAt(juce::Point<float> localPos);
 
 private:
     class GraphContentComponent : public juce::Component {
@@ -57,6 +63,8 @@ private:
 
     AudioEngine& audioEngine;
     GraphContentComponent content;
+    ModMatrixComponent modMatrix;
+    bool isMatrixVisible = true;
 
     // Navigation State
     float zoomLevel = 1.0f;
@@ -70,6 +78,8 @@ private:
     bool dragSourceIsInput = false;
     bool dragSourceIsMidi = false;
     juce::Point<int> dragCurrentPos;
+
+    juce::AudioProcessorGraph::NodeID draggingAttenuverterNodeId;
 
     void updateTransform();
 

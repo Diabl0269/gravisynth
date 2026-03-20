@@ -41,6 +41,7 @@ add_library(GravisynthCore STATIC
     Source/Modules/SequencerModule.h
     Source/Modules/MidiKeyboardModule.h
     Source/Modules/LFOModule.h
+    Source/Modules/AttenuverterModule.h
     Source/Modules/VisualBuffer.h
     Source/Modules/FX/DelayModule.h
     Source/Modules/FX/DistortionModule.h
@@ -112,6 +113,8 @@ target_sources(Gravisynth PRIVATE
     Source/UI/GraphEditor.h
     Source/UI/ModuleComponent.cpp
     Source/UI/ModuleComponent.h
+    Source/UI/ModMatrixComponent.cpp
+    Source/UI/ModMatrixComponent.h
 )
 
 # Link against JUCE modules
