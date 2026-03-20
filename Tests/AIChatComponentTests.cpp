@@ -28,11 +28,18 @@ private:
 
 class AIChatComponentTest : public ::testing::Test {
 protected:
-    void SetUp() override { juce::MessageManager::getInstance(); }
+    void SetUp() override {
+        if (getenv("CI") != nullptr) {
+            GTEST_SKIP() << "Skipping UI tests on headless CI";
+        }
+        juce::MessageManager::getInstance();
+    }
 
     void TearDown() override {
-        juce::MessageManager::deleteInstance();
-        juce::DeletedAtShutdown::deleteAll();
+        if (!IsSkipped()) {
+            juce::MessageManager::deleteInstance();
+            juce::DeletedAtShutdown::deleteAll();
+        }
     }
 };
 
