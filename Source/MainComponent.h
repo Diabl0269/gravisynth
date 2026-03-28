@@ -2,6 +2,7 @@
 
 #include "AI/AIIntegrationService.h"
 #include "AudioEngine.h"
+#include "PresetManager.h"
 #include "UI/AIChatComponent.h"
 #include "UI/GraphEditor.h"
 #include "UI/ModuleLibraryComponent.h"
@@ -39,6 +40,7 @@ private:
     GraphEditor graphEditor;
     ModuleLibraryComponent moduleLibrary;
 
+    juce::ComboBox presetComboBox;
     juce::TextButton saveButton;
     juce::TextButton loadButton;
     juce::TextButton settingsButton;

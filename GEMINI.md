@@ -94,6 +94,7 @@ Gravisynth features an AI-powered sound design assistant that can generate and m
 - **`OllamaProvider`**: Concrete implementation of `AIProvider` for local Ollama instances.
 - **`AIIntegrationService`**: Orchestrates AI communication, maintains chat history, and bridges the AI with the audio engine.
 - **`AIStateMapper`**: Handles the mapping between AI-friendly JSON and the internal synthesizer graph.
+- **`PresetManager`**: Manages built-in factory presets using JSON format.
 
 ### Communication Pattern
 The AI communicates using a simplified JSON schema describing nodes (id, type, params) and connections (src, dst, ports).

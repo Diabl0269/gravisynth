@@ -31,12 +31,27 @@ MainComponent::MainComponent()
     addAndMakeVisible(moduleLibrary);
     addAndMakeVisible(aiChatComponent);
 
+    // Preset Selection
+    addAndMakeVisible(presetComboBox);
+    presetComboBox.setTextWhenNothingSelected("Select Preset...");
+    auto presetNames = gsynth::PresetManager::getPresetNames();
+    for (int i = 0; i < presetNames.size(); ++i)
+        presetComboBox.addItem(presetNames[i], i + 1);
+
+    presetComboBox.setSelectedId(1, juce::dontSendNotification); // Default
+    presetComboBox.onChange = [this] {
+        int index = presetComboBox.getSelectedId() - 1;
+        if (gsynth::PresetManager::loadPreset(index, audioEngine.getGraph())) {
+            graphEditor.updateComponents();
+        }
+    };
+
     // Buttons
     addAndMakeVisible(saveButton);
     saveButton.setButtonText("Save Preset");
     saveButton.onClick = [this] {
         fileChooser = std::make_unique<juce::FileChooser>(
-            "Save Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.xml");
+            "Save Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
         auto flags = juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles;
         fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
             auto file = fc.getResult();
@@ -50,7 +65,7 @@ MainComponent::MainComponent()
     loadButton.setButtonText("Load Preset");
     loadButton.onClick = [this] {
         fileChooser = std::make_unique<juce::FileChooser>(
-            "Load Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.xml");
+            "Load Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
         auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
         fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
             auto file = fc.getResult();
@@ -203,6 +218,7 @@ void MainComponent::resized() {
     auto bounds = getLocalBounds();
     auto header = bounds.removeFromTop(30);
 
+    presetComboBox.setBounds(header.removeFromLeft(150).reduced(2));
     saveButton.setBounds(header.removeFromLeft(100).reduced(2));
     loadButton.setBounds(header.removeFromLeft(100).reduced(2));
     settingsButton.setBounds(header.removeFromLeft(100).reduced(2));
