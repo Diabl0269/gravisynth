@@ -194,6 +194,19 @@ void ModuleComponent::paint(juce::Graphics& g) {
         g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
 
         juce::String label = "In " + juce::String(i);
+        // Custom labels for Oscillator
+        if (module->getName() == "Oscillator") {
+            if (i == 0)
+                label = "Pitch CV";
+            else if (i == 1)
+                label = "Wave CV";
+            else if (i == 2)
+                label = "Oct CV";
+            else if (i == 3)
+                label = "Crs CV";
+            else if (i == 4)
+                label = "Fine CV";
+        }
         // Custom labels for Filter
         if (module->getName() == "Filter") {
             if (i == 0)
@@ -226,6 +239,9 @@ void ModuleComponent::paint(juce::Graphics& g) {
         g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
 
         juce::String label = "Out " + juce::String(i);
+        if (module->getName() == "LFO") {
+            label = "CV Out " + juce::String(i + 1);
+        }
         g.drawText(label, p.x - 70, p.y - 10, 60, 20, juce::Justification::right, false);
     }
 }

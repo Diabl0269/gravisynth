@@ -24,7 +24,7 @@ This document is intended for AI agents and developers working on `Gravisynth`.
     ```
 
 ### Code Coverage
-- **Threshold**: 90% Line Coverage is enforced. (Currently a target we are working towards.)
+- **Threshold**: 69% Line Coverage is enforced. (Target: 90%+, to be raised incrementally.)
 - Run the coverage script to verify standard compliance locally:
     ```bash
     bash scripts/coverage.sh
