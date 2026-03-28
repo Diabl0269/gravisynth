@@ -79,15 +79,15 @@ TEST_F(AntiClickTest, OscillatorFrequencySmoothing) {
     OscillatorModule osc;
     osc.prepareToPlay(44100.0, 512);
 
-    auto* freqParam = dynamic_cast<juce::AudioParameterFloat*>(osc.getParameters()[1]);
-    ASSERT_NE(freqParam, nullptr);
+    auto* coarseParam = dynamic_cast<juce::AudioParameterInt*>(osc.getParameters()[2]);
+    ASSERT_NE(coarseParam, nullptr);
 
-    // Initial freq
-    *freqParam = 100.0f;
+    // Initial coarse
+    *coarseParam = 0;
     osc.processBlock(buffer, midiMessages);
 
-    // Change freq significantly
-    midiMessages.addEvent(juce::MidiMessage::noteOn(1, 84, (juce::uint8)100), 0); // ~1046Hz
+    // Change coarse significantly
+    *coarseParam = 12; // +1 octave
     osc.processBlock(buffer, midiMessages);
 
     // Check if the waveform is producing signal

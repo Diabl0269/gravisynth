@@ -6,11 +6,13 @@
 class OscillatorModule : public ModuleBase {
 public:
     OscillatorModule()
-        : ModuleBase("Oscillator", 1, 1) // 1 input (freq/pitch mod), 1 output
+        : ModuleBase("Oscillator", 5, 1) // 1 pitch mod, 4 param mod inputs, 1 output
     {
         addParameter(waveformParam = new juce::AudioParameterChoice("waveform", "Waveform",
                                                                     {"Sine", "Square", "Saw", "Triangle"}, 0));
-        addParameter(frequencyParam = new juce::AudioParameterFloat("frequency", "Frequency", 20.0f, 20000.0f, 440.0f));
+        addParameter(octaveParam = new juce::AudioParameterInt("octave", "Octave", -4, 4, 0));
+        addParameter(coarseParam = new juce::AudioParameterInt("coarse", "Coarse", -12, 12, 0));
+        addParameter(fineParam = new juce::AudioParameterFloat("fine", "Fine", -100.0f, 100.0f, 0.0f));
 
         enableVisualBuffer(true);
     }
@@ -26,21 +28,66 @@ public:
         for (const auto metadata : midiMessages) {
             auto msg = metadata.getMessage();
             if (msg.isNoteOn()) {
-                float frequency = juce::MidiMessage::getMidiNoteInHertz(msg.getNoteNumber());
-                *frequencyParam = frequency;
+                lastMidiNote = (float)msg.getNoteNumber();
             }
         }
 
         if (buffer.getNumChannels() == 0)
             return;
 
-        smoothedFreq.setTargetValue(*frequencyParam);
-        int waveform = waveformParam->getIndex();
+        float totalPitch =
+            lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() + (fineParam->get() / 100.0f);
+        float targetFreq = 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
+        smoothedFreq.setTargetValue(targetFreq);
+
+        int baseWaveform = waveformParam->getIndex();
         int numSamples = buffer.getNumSamples();
+
+        const float* cvPitchCh = (buffer.getNumChannels() > 0) ? buffer.getReadPointer(0) : nullptr;
+        const float* cvWaveformCh = (buffer.getNumChannels() > 1) ? buffer.getReadPointer(1) : nullptr;
+        const float* cvOctaveCh = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
+        const float* cvCoarseCh = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
+        const float* cvFineCh = (buffer.getNumChannels() > 4) ? buffer.getReadPointer(4) : nullptr;
+
         auto* ch0 = buffer.getWritePointer(0);
 
         for (int i = 0; i < numSamples; ++i) {
-            float freq = smoothedFreq.getNextValue();
+            float baseFreq = smoothedFreq.getNextValue();
+
+            float cvPitch = cvPitchCh ? cvPitchCh[i] : 0.0f;
+            float freq = baseFreq;
+
+            float extraPitchShift = 0.0f;
+
+            if (cvOctaveCh) {
+                int octShift = static_cast<int>(std::round(cvOctaveCh[i] * 4.0f));
+                extraPitchShift += octShift * 12.0f;
+            }
+            if (cvCoarseCh) {
+                int coarseShift = static_cast<int>(std::round(cvCoarseCh[i] * 12.0f));
+                extraPitchShift += coarseShift;
+            }
+            if (cvFineCh) {
+                float fineShift = cvFineCh[i] * 100.0f;
+                extraPitchShift += fineShift / 100.0f;
+            }
+
+            if (extraPitchShift != 0.0f) {
+                freq = freq * std::pow(2.0f, extraPitchShift / 12.0f);
+            }
+
+            if (cvPitch != 0.0f) {
+                float totalMod = cvPitch * 2.0f; // up to 2 octaves shift
+                freq = freq * std::exp2(totalMod);
+            }
+            freq = juce::jlimit(20.0f, 20000.0f, freq);
+
+            int waveform = baseWaveform;
+            if (cvWaveformCh) {
+                int waveShift = static_cast<int>(std::round(cvWaveformCh[i] * 3.0f));
+                waveform = juce::jlimit(0, 3, waveform + waveShift);
+            }
+
             float dt = static_cast<float>(freq / currentSampleRate);
             float sample = generateSample(waveform, phase, dt);
             ch0[i] = sample;
@@ -50,16 +97,18 @@ public:
                 phase -= 1.0f;
         }
 
-        // Copy channel 0 to other channels
-        for (int ch = 1; ch < buffer.getNumChannels(); ++ch)
-            buffer.copyFrom(ch, 0, buffer, 0, 0, numSamples);
-
         // Push to visual buffer
         if (auto* vb = getVisualBuffer()) {
             for (int i = 0; i < numSamples; ++i) {
                 vb->pushSample(ch0[i]);
             }
         }
+    }
+
+    float getTargetFrequency() const {
+        float totalPitch =
+            lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() + (fineParam->get() / 100.0f);
+        return 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
     }
 
 private:
@@ -109,10 +158,13 @@ private:
 
     float phase = 0.0f;
     double currentSampleRate = 44100.0;
+    float lastMidiNote = 69.0f; // Default to A4 (440Hz)
 
     juce::SmoothedValue<float> smoothedFreq;
     juce::AudioParameterChoice* waveformParam;
-    juce::AudioParameterFloat* frequencyParam;
+    juce::AudioParameterInt* octaveParam;
+    juce::AudioParameterInt* coarseParam;
+    juce::AudioParameterFloat* fineParam;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorModule)
 };

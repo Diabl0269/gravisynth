@@ -94,9 +94,9 @@ All audio modules in Gravisynth inherit from `ModuleBase`, which in turn extends
 
 All module parameters should be defined in the constructor using `addParameter()`. Use `juce::AudioParameterFloat`, `juce::AudioParameterInt`, `juce::AudioParameterChoice`, etc.
 
-**Fully Modular Architecture Rule:** To ensure Gravisynth remains a truly modular environment, *every relevant continuous parameter in a module MUST expose a dedicated CV Input Port and a dedicated Bipolar Modulation Amount parameter.* 
+**Fully Modular Architecture Rule:** To ensure Gravisynth remains a truly modular environment, *every relevant continuous parameter in a module MUST expose a dedicated CV Input Port. However, modules MUST NOT explicitly define internal "Modulation Depth" or "Modulation Amount" parameters.* 
 
-Instead of hardcoding dual limiters or complex internal modulation matrices, Grapevine relies on N-to-1 CV summing at the input ports. If a user wishes to modulate a parameter with multiple sources at different depths, they should route those sources through a `VCAModule` (acting as an attenuator) before connecting to the parameter's CV input.
+Instead of hardcoding internal modulation amounts or matrices, Gravisynth delegates all CV scaling to the host environment. The Graph automatically instantiates `Attenuverter` nodes on every CV connection cable. Modulation sources should provide raw normalized signals (e.g. [-1.0, 1.0] or [0.0, 1.0]), and the receiving node should map this raw incoming CV directly to its full native modulation range (e.g. +/- 4 octaves, or +/- 12 semitones). Users control depth dynamically via the smart cables. Do not crowd the module UI with redundant "Mod Amount" knobs!
 
 ```cpp
 MyNewModule::MyNewModule()

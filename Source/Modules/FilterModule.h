@@ -10,9 +10,6 @@ public:
         addParameter(cutoffParam = new juce::AudioParameterFloat("cutoff", "Cutoff", 20.0f, 20000.0f, 440.0f));
         addParameter(resonanceParam = new juce::AudioParameterFloat("resonance", "Resonance", 0.0f, 1.0f, 0.1f));
         addParameter(driveParam = new juce::AudioParameterFloat("drive", "Drive", 1.0f, 10.0f, 1.0f));
-        addParameter(cutoffModParam = new juce::AudioParameterFloat("cutoffMod", "Cutoff Mod", -1.0f, 1.0f, 0.0f));
-        addParameter(resModParam = new juce::AudioParameterFloat("resMod", "Res Mod", -1.0f, 1.0f, 0.0f));
-        addParameter(driveModParam = new juce::AudioParameterFloat("driveMod", "Drive Mod", -1.0f, 1.0f, 0.0f));
 
         enableVisualBuffer(true);
     }
@@ -30,9 +27,6 @@ public:
         smoothedCutoff.setTargetValue(*cutoffParam);
         float baseRes = *resonanceParam;
         float baseDrive = *driveParam;
-        float cutoffModAmt = *cutoffModParam;
-        float resModAmt = *resModParam;
-        float driveModAmt = *driveModParam;
 
         if (buffer.getNumChannels() == 0)
             return;
@@ -54,7 +48,7 @@ public:
             float baseCutoff = smoothedCutoff.getNextValue();
 
             // --- Cutoff Modulation ---
-            float totalCutoffMod = cvCutoffCh ? cvCutoffCh[i] * cutoffModAmt : 0.0f;
+            float totalCutoffMod = cvCutoffCh ? cvCutoffCh[i] : 0.0f;
             totalCutoffMod = juce::jlimit(-1.0f, 1.0f, totalCutoffMod);
 
             float f = baseCutoff;
@@ -67,14 +61,14 @@ public:
             ladder.setCutoffFrequencyHz(f);
 
             // --- Resonance Modulation ---
-            float totalResMod = cvResCh ? cvResCh[i] * resModAmt : 0.0f;
+            float totalResMod = cvResCh ? cvResCh[i] : 0.0f;
             totalResMod = juce::jlimit(-1.0f, 1.0f, totalResMod);
             float res = baseRes + totalResMod;
             res = juce::jlimit(0.0f, 1.0f, res);
             ladder.setResonance(res);
 
             // --- Drive Modulation ---
-            float totalDriveMod = cvDriveCh ? cvDriveCh[i] * driveModAmt : 0.0f;
+            float totalDriveMod = cvDriveCh ? cvDriveCh[i] : 0.0f;
             totalDriveMod = juce::jlimit(-1.0f, 1.0f, totalDriveMod);
             float drive = baseDrive + (totalDriveMod * 9.0f); // 9.0 is the range (10.0 - 1.0)
             drive = juce::jlimit(1.0f, 10.0f, drive);
@@ -100,7 +94,4 @@ private:
     juce::AudioParameterFloat* cutoffParam;
     juce::AudioParameterFloat* resonanceParam;
     juce::AudioParameterFloat* driveParam;
-    juce::AudioParameterFloat* cutoffModParam;
-    juce::AudioParameterFloat* resModParam;
-    juce::AudioParameterFloat* driveModParam;
 };

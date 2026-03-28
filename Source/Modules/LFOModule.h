@@ -7,7 +7,7 @@
 class LFOModule : public ModuleBase {
 public:
     LFOModule()
-        : ModuleBase("LFO", 0, 2) { // 0 Audio Inputs, 2 Control Outputs
+        : ModuleBase("LFO", 0, 1) { // 0 Audio Inputs, 1 Control Output
         // Enable visual buffer for scope display
         enableVisualBuffer(true);
 
@@ -48,7 +48,6 @@ public:
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
         auto* channelData0 = buffer.getWritePointer(0);
-        auto* channelData1 = buffer.getWritePointer(1);
 
         // Process MIDI for Retrig
         if (retrigParam->get()) {
@@ -174,7 +173,6 @@ public:
 
             float outputSample = currentSample * level;
             channelData0[sample] = outputSample;
-            channelData1[sample] = outputSample;
 
             // Push to visual buffer for scope display
             if (auto* vb = getVisualBuffer())

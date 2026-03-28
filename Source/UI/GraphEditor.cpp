@@ -225,7 +225,7 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
                         isCV = true;
                     if (dstName == "VCA" && dPort == 1)
                         isCV = true;
-                    if (dstName == "Oscillator" && dPort == 0)
+                    if (dstName == "Oscillator" && dPort >= 0)
                         isCV = true;
 
                     if (isCV) {
