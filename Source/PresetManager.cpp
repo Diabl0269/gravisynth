@@ -74,121 +74,126 @@ juce::String PresetManager::getPresetJSON(int index) {
     case 1: // Simple Lead
         return R"({
   "nodes": [
-    {"id": 1, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
-    {"id": 2, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Saw", "octave": 0}},
-    {"id": 3, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 2000.0, "resonance": 2.0}},
-    {"id": 4, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
-    {"id": 5, "type": "ADSR", "position": {"x": 650, "y": 450}, "params": {"attack": 0.01, "decay": 0.2, "sustain": 0.7, "release": 0.2}},
-    {"id": 6, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}},
-    {"id": 7, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}},
-    {"id": 8, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}}
+    {"id": 1, "type": "Audio Input", "position": {"x": 10, "y": 10}},
+    {"id": 2, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
+    {"id": 3, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Saw", "octave": 0}},
+    {"id": 4, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 2000.0, "resonance": 2.0}},
+    {"id": 5, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
+    {"id": 6, "type": "ADSR", "position": {"x": 650, "y": 450}, "params": {"attack": 0.01, "decay": 0.2, "sustain": 0.7, "release": 0.2}},
+    {"id": 7, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}},
+    {"id": 8, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}},
+    {"id": 9, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}}
   ],
   "connections": [
-    {"src": 6, "srcPort": -1, "dst": 2, "dstPort": -1},
-    {"src": 6, "srcPort": -1, "dst": 5, "dstPort": -1},
-    {"src": 8, "srcPort": -1, "dst": 2, "dstPort": -1},
-    {"src": 8, "srcPort": -1, "dst": 5, "dstPort": -1},
-    {"src": 2, "srcPort": 0, "dst": 3, "dstPort": 0},
+    {"src": 7, "srcPort": -1, "dst": 3, "dstPort": -1},
+    {"src": 7, "srcPort": -1, "dst": 6, "dstPort": -1},
+    {"src": 9, "srcPort": -1, "dst": 3, "dstPort": -1},
+    {"src": 9, "srcPort": -1, "dst": 6, "dstPort": -1},
     {"src": 3, "srcPort": 0, "dst": 4, "dstPort": 0},
-    {"src": 5, "srcPort": 0, "dst": 7, "dstPort": 0},
-    {"src": 7, "srcPort": 0, "dst": 4, "dstPort": 1},
-    {"src": 4, "srcPort": 0, "dst": 1, "dstPort": 0},
-    {"src": 4, "srcPort": 0, "dst": 1, "dstPort": 1}
+    {"src": 4, "srcPort": 0, "dst": 5, "dstPort": 0},
+    {"src": 6, "srcPort": 0, "dst": 8, "dstPort": 0},
+    {"src": 8, "srcPort": 0, "dst": 5, "dstPort": 1},
+    {"src": 5, "srcPort": 0, "dst": 2, "dstPort": 0},
+    {"src": 5, "srcPort": 0, "dst": 2, "dstPort": 1}
   ]
 })";
 
     case 2: // Ambient Pad
         return R"({
   "nodes": [
-    {"id": 1, "type": "Audio Output", "position": {"x": 1300, "y": 800}},
-    {"id": 2, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Sine", "octave": -1}},
-    {"id": 3, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 800.0, "resonance": 1.0}},
-    {"id": 4, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
-    {"id": 5, "type": "ADSR", "position": {"x": 650, "y": 450}, "params": {"attack": 1.5, "decay": 1.0, "sustain": 0.8, "release": 2.0}},
-    {"id": 6, "type": "Delay", "position": {"x": 1250, "y": 10}, "params": {"time": 0.5, "feedback": 0.6, "mix": 0.4}},
-    {"id": 7, "type": "Reverb", "position": {"x": 1250, "y": 400}, "params": {"roomSize": 0.9, "damping": 0.3, "wet": 0.5}},
-    {"id": 8, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}},
-    {"id": 9, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}},
-    {"id": 10, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}}
+    {"id": 1, "type": "Audio Input", "position": {"x": 10, "y": 10}},
+    {"id": 2, "type": "Audio Output", "position": {"x": 1300, "y": 800}},
+    {"id": 3, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Sine", "octave": -1}},
+    {"id": 4, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 800.0, "resonance": 1.0}},
+    {"id": 5, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
+    {"id": 6, "type": "ADSR", "position": {"x": 650, "y": 450}, "params": {"attack": 1.5, "decay": 1.0, "sustain": 0.8, "release": 2.0}},
+    {"id": 7, "type": "Delay", "position": {"x": 1250, "y": 10}, "params": {"time": 0.5, "feedback": 0.6, "mix": 0.4}},
+    {"id": 8, "type": "Reverb", "position": {"x": 1250, "y": 400}, "params": {"roomSize": 0.9, "damping": 0.3, "wet": 0.5}},
+    {"id": 9, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}},
+    {"id": 10, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}},
+    {"id": 11, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}}
   ],
   "connections": [
-    {"src": 8, "srcPort": -1, "dst": 2, "dstPort": -1},
-    {"src": 8, "srcPort": -1, "dst": 5, "dstPort": -1},
-    {"src": 10, "srcPort": -1, "dst": 2, "dstPort": -1},
-    {"src": 10, "srcPort": -1, "dst": 5, "dstPort": -1},
-    {"src": 2, "srcPort": 0, "dst": 3, "dstPort": 0},
+    {"src": 9, "srcPort": -1, "dst": 3, "dstPort": -1},
+    {"src": 9, "srcPort": -1, "dst": 6, "dstPort": -1},
+    {"src": 11, "srcPort": -1, "dst": 3, "dstPort": -1},
+    {"src": 11, "srcPort": -1, "dst": 6, "dstPort": -1},
     {"src": 3, "srcPort": 0, "dst": 4, "dstPort": 0},
-    {"src": 5, "srcPort": 0, "dst": 9, "dstPort": 0},
-    {"src": 9, "srcPort": 0, "dst": 4, "dstPort": 1},
-    {"src": 4, "srcPort": 0, "dst": 6, "dstPort": 0},
-    {"src": 4, "srcPort": 0, "dst": 6, "dstPort": 1},
-    {"src": 6, "srcPort": 0, "dst": 7, "dstPort": 0},
-    {"src": 6, "srcPort": 1, "dst": 7, "dstPort": 1},
-    {"src": 7, "srcPort": 0, "dst": 1, "dstPort": 0},
-    {"src": 7, "srcPort": 1, "dst": 1, "dstPort": 1}
+    {"src": 4, "srcPort": 0, "dst": 5, "dstPort": 0},
+    {"src": 6, "srcPort": 0, "dst": 10, "dstPort": 0},
+    {"src": 10, "srcPort": 0, "dst": 5, "dstPort": 1},
+    {"src": 5, "srcPort": 0, "dst": 7, "dstPort": 0},
+    {"src": 5, "srcPort": 0, "dst": 7, "dstPort": 1},
+    {"src": 7, "srcPort": 0, "dst": 8, "dstPort": 0},
+    {"src": 7, "srcPort": 1, "dst": 8, "dstPort": 1},
+    {"src": 8, "srcPort": 0, "dst": 2, "dstPort": 0},
+    {"src": 8, "srcPort": 1, "dst": 2, "dstPort": 1}
   ]
 })";
 
     case 3: // Modulated Bass
         return R"({
   "nodes": [
-    {"id": 1, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
-    {"id": 2, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Saw", "octave": -2}},
-    {"id": 3, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 400.0, "resonance": 4.0}},
-    {"id": 4, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
-    {"id": 5, "type": "LFO", "position": {"x": 950, "y": 450}, "params": {"rateHz": 4.0, "shape": "Triangle", "level": 1.0, "bipolar": true}},
-    {"id": 6, "type": "ADSR", "position": {"x": 650, "y": 450}, "params": {"attack": 0.01, "decay": 0.1, "sustain": 0.2, "release": 0.1}},
-    {"id": 7, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}},
-    {"id": 8, "type": "Attenuverter", "position": {"x": 650, "y": 350}, "params": {"amount": 0.5}},
-    {"id": 9, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}},
-    {"id": 10, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}}
+    {"id": 1, "type": "Audio Input", "position": {"x": 10, "y": 10}},
+    {"id": 2, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
+    {"id": 3, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Saw", "octave": -2}},
+    {"id": 4, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 400.0, "resonance": 4.0}},
+    {"id": 5, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
+    {"id": 6, "type": "LFO", "position": {"x": 950, "y": 450}, "params": {"rateHz": 4.0, "shape": "Triangle", "level": 1.0, "bipolar": true}},
+    {"id": 7, "type": "ADSR", "position": {"x": 650, "y": 450}, "params": {"attack": 0.01, "decay": 0.1, "sustain": 0.2, "release": 0.1}},
+    {"id": 8, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}},
+    {"id": 9, "type": "Attenuverter", "position": {"x": 650, "y": 350}, "params": {"amount": 0.5}},
+    {"id": 10, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}},
+    {"id": 11, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}}
   ],
   "connections": [
-    {"src": 7, "srcPort": -1, "dst": 2, "dstPort": -1},
-    {"src": 7, "srcPort": -1, "dst": 6, "dstPort": -1},
-    {"src": 10, "srcPort": -1, "dst": 2, "dstPort": -1},
-    {"src": 10, "srcPort": -1, "dst": 6, "dstPort": -1},
-    {"src": 2, "srcPort": 0, "dst": 3, "dstPort": 0},
+    {"src": 8, "srcPort": -1, "dst": 3, "dstPort": -1},
+    {"src": 8, "srcPort": -1, "dst": 7, "dstPort": -1},
+    {"src": 11, "srcPort": -1, "dst": 3, "dstPort": -1},
+    {"src": 11, "srcPort": -1, "dst": 7, "dstPort": -1},
     {"src": 3, "srcPort": 0, "dst": 4, "dstPort": 0},
-    {"src": 5, "srcPort": 0, "dst": 8, "dstPort": 0},
-    {"src": 8, "srcPort": 0, "dst": 3, "dstPort": 1},
+    {"src": 4, "srcPort": 0, "dst": 5, "dstPort": 0},
     {"src": 6, "srcPort": 0, "dst": 9, "dstPort": 0},
     {"src": 9, "srcPort": 0, "dst": 4, "dstPort": 1},
-    {"src": 4, "srcPort": 0, "dst": 1, "dstPort": 0},
-    {"src": 4, "srcPort": 0, "dst": 1, "dstPort": 1}
+    {"src": 7, "srcPort": 0, "dst": 10, "dstPort": 0},
+    {"src": 10, "srcPort": 0, "dst": 5, "dstPort": 1},
+    {"src": 5, "srcPort": 0, "dst": 2, "dstPort": 0},
+    {"src": 5, "srcPort": 0, "dst": 2, "dstPort": 1}
   ]
 })";
 
     case 4: // Step Sequence
         return R"({
   "nodes": [
-    {"id": 1, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
-    {"id": 2, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false, "bpm": 130.0}},
-    {"id": 3, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Square", "octave": 0}},
-    {"id": 4, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 3000.0, "resonance": 2.0}},
-    {"id": 5, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
-    {"id": 6, "type": "ADSR", "position": {"x": 650, "y": 450}, "params": {"attack": 0.01, "decay": 0.2, "sustain": 0.0, "release": 0.1}},
-    {"id": 7, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}},
-    {"id": 8, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}}
+    {"id": 1, "type": "Audio Input", "position": {"x": 10, "y": 10}},
+    {"id": 2, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
+    {"id": 3, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false, "bpm": 130.0}},
+    {"id": 4, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Square", "octave": 0}},
+    {"id": 5, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 3000.0, "resonance": 2.0}},
+    {"id": 6, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
+    {"id": 7, "type": "ADSR", "position": {"x": 650, "y": 450}, "params": {"attack": 0.01, "decay": 0.2, "sustain": 0.0, "release": 0.1}},
+    {"id": 8, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}},
+    {"id": 9, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}}
   ],
   "connections": [
-    {"src": 2, "srcPort": -1, "dst": 3, "dstPort": -1},
-    {"src": 2, "srcPort": -1, "dst": 6, "dstPort": -1},
-    {"src": 8, "srcPort": -1, "dst": 3, "dstPort": -1},
-    {"src": 8, "srcPort": -1, "dst": 6, "dstPort": -1},
-    {"src": 3, "srcPort": 0, "dst": 4, "dstPort": 0},
+    {"src": 3, "srcPort": -1, "dst": 4, "dstPort": -1},
+    {"src": 3, "srcPort": -1, "dst": 7, "dstPort": -1},
+    {"src": 9, "srcPort": -1, "dst": 4, "dstPort": -1},
+    {"src": 9, "srcPort": -1, "dst": 7, "dstPort": -1},
     {"src": 4, "srcPort": 0, "dst": 5, "dstPort": 0},
-    {"src": 6, "srcPort": 0, "dst": 7, "dstPort": 0},
-    {"src": 7, "srcPort": 0, "dst": 5, "dstPort": 1},
-    {"src": 4, "srcPort": 0, "dst": 1, "dstPort": 0},
-    {"src": 4, "srcPort": 0, "dst": 1, "dstPort": 1}
+    {"src": 5, "srcPort": 0, "dst": 6, "dstPort": 0},
+    {"src": 7, "srcPort": 0, "dst": 8, "dstPort": 0},
+    {"src": 8, "srcPort": 0, "dst": 6, "dstPort": 1},
+    {"src": 6, "srcPort": 0, "dst": 2, "dstPort": 0},
+    {"src": 6, "srcPort": 0, "dst": 2, "dstPort": 1}
   ]
 })";
 
-    case 5: // Polyphonic Keys (Fixed to Monophonic)
+    case 5: // Polyphonic Keys (Fixed Monophonic)
         return R"({
-    "nodes": [
-    {"id": 1, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
+  "nodes": [
+    {"id": 1, "type": "Audio Input", "position": {"x": 10, "y": 10}},
+    {"id": 2, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
     {"id": 3, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Sine", "octave": 0}},
     {"id": 4, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 5000.0, "resonance": 1.0}},
     {"id": 5, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
@@ -196,8 +201,8 @@ juce::String PresetManager::getPresetJSON(int index) {
     {"id": 7, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}},
     {"id": 8, "type": "Amp Env", "position": {"x": 650, "y": 450}, "params": {"attack": 0.1, "decay": 0.1, "sustain": 0.8, "release": 0.5}},
     {"id": 9, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}}
-    ],
-    "connections": [
+  ],
+  "connections": [
     {"src": 6, "srcPort": -1, "dst": 3, "dstPort": -1},
     {"src": 6, "srcPort": -1, "dst": 8, "dstPort": -1},
     {"src": 7, "srcPort": -1, "dst": 3, "dstPort": -1},
@@ -206,10 +211,10 @@ juce::String PresetManager::getPresetJSON(int index) {
     {"src": 4, "srcPort": 0, "dst": 5, "dstPort": 0},
     {"src": 8, "srcPort": 0, "dst": 9, "dstPort": 0},
     {"src": 9, "srcPort": 0, "dst": 5, "dstPort": 1},
-    {"src": 5, "srcPort": 0, "dst": 1, "dstPort": 0},
-    {"src": 5, "srcPort": 0, "dst": 1, "dstPort": 1}
-    ]
-    })";
+    {"src": 5, "srcPort": 0, "dst": 2, "dstPort": 0},
+    {"src": 5, "srcPort": 0, "dst": 2, "dstPort": 1}
+  ]
+})";
 
     default:
         return "";

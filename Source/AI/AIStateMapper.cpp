@@ -302,7 +302,25 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                         dstPort = juce::AudioProcessorGraph::midiChannelIndex;
 
                     if (idMap.count(srcOld) && idMap.count(dstOld)) {
-                        graph.addConnection({{idMap[srcOld], srcPort}, {idMap[dstOld], dstPort}});
+                        auto* srcNode = graph.getNodeForId(idMap[srcOld]);
+                        auto* dstNode = graph.getNodeForId(idMap[dstOld]);
+
+                        if (srcNode && dstNode) {
+                            bool srcOk =
+                                (srcPort == juce::AudioProcessorGraph::midiChannelIndex) ||
+                                (srcPort >= 0 && srcPort < srcNode->getProcessor()->getTotalNumOutputChannels());
+                            bool dstOk =
+                                (dstPort == juce::AudioProcessorGraph::midiChannelIndex) ||
+                                (dstPort >= 0 && dstPort < dstNode->getProcessor()->getTotalNumInputChannels());
+
+                            if (srcOk && dstOk) {
+                                graph.addConnection({{idMap[srcOld], srcPort}, {idMap[dstOld], dstPort}});
+                            } else {
+                                juce::Logger::writeToLog("AIStateMapper: Invalid port indices for connection " +
+                                                         juce::String(srcOld) + ":" + juce::String(srcPort) + " -> " +
+                                                         juce::String(dstOld) + ":" + juce::String(dstPort));
+                            }
+                        }
                     }
                 }
             }
