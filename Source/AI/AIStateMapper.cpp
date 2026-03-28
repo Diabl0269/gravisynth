@@ -9,6 +9,7 @@
 #include "../Modules/MidiKeyboardModule.h"
 #include "../Modules/OscillatorModule.h"
 #include "../Modules/PolyMidiModule.h"
+#include "../Modules/PolySequencerModule.h"
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
 #include <functional> // For std::function
@@ -39,6 +40,7 @@ static const std::unordered_map<juce::String, ModuleFactoryFunc> moduleFactory =
     {"Reverb", []() { return std::make_unique<ReverbModule>(); }},
     {"MIDI Keyboard", []() { return std::make_unique<MidiKeyboardModule>(); }},
     {"Poly MIDI", []() { return std::make_unique<PolyMidiModule>(); }},
+    {"Poly Sequencer", []() { return std::make_unique<PolySequencerModule>(); }},
     {"Attenuverter", []() { return std::make_unique<AttenuverterModule>(); }}};
 
 bool AIStateMapper::validatePatchJSON(const juce::var& json) {
@@ -325,11 +327,11 @@ juce::var AIStateMapper::getPatchSchema() {
 
     nodeProperties->setProperty("id", juce::JSON::parse("{\"type\": \"integer\"}"));
     nodeProperties->setProperty(
-        "type", juce::JSON::parse(
-                    "{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
-                    "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Amp Env\", \"Filter Env\", "
-                    "\"Sequencer\", \"LFO\", "
-                    "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\", \"Poly MIDI\", \"Attenuverter\"]}"));
+        "type",
+        juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
+                          "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Amp Env\", \"Filter Env\", "
+                          "\"Sequencer\", \"LFO\", \"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\", "
+                          "\"Poly MIDI\", \"Poly Sequencer\", \"Attenuverter\"]}"));
     nodeProperties->setProperty("params", juce::JSON::parse("{\"type\": \"object\"}"));
 
     nodeItems->setProperty("properties", juce::var(nodeProperties.get()));

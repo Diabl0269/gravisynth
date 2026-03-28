@@ -185,27 +185,31 @@ juce::String PresetManager::getPresetJSON(int index) {
   ]
 })";
 
-    case 5: // Polyphonic Keys
+    case 5: // Polyphonic Keys (Fixed to Monophonic)
         return R"({
-  "nodes": [
+    "nodes": [
     {"id": 1, "type": "Audio Output", "position": {"x": 1250, "y": 10}},
-    {"id": 2, "type": "Poly MIDI", "position": {"x": 350, "y": 10}},
-    {"id": 3, "type": "Oscillator", "position": {"x": 650, "y": 10}, "params": {"waveform": "Sine", "octave": 0}},
-    {"id": 4, "type": "Filter", "position": {"x": 950, "y": 10}, "params": {"cutoff": 5000.0, "resonance": 1.0}},
-    {"id": 5, "type": "VCA", "position": {"x": 650, "y": 450}, "params": {"gain": 0.5}},
+    {"id": 3, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Sine", "octave": 0}},
+    {"id": 4, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 5000.0, "resonance": 1.0}},
+    {"id": 5, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8}},
     {"id": 6, "type": "MIDI Keyboard", "position": {"x": 10, "y": 850}},
-    {"id": 7, "type": "Poly Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}}
-  ],
-  "connections": [
-    {"src": 6, "srcPort": -1, "dst": 2, "dstPort": -1},
-    {"src": 7, "srcPort": -1, "dst": 2, "dstPort": -1},
-    {"src": 2, "srcPort": 0, "dst": 3, "dstPort": 0},
+    {"id": 7, "type": "Sequencer", "position": {"x": 10, "y": 450}, "params": {"run": false}},
+    {"id": 8, "type": "Amp Env", "position": {"x": 650, "y": 450}, "params": {"attack": 0.1, "decay": 0.1, "sustain": 0.8, "release": 0.5}},
+    {"id": 9, "type": "Attenuverter", "position": {"x": 950, "y": 350}, "params": {"amount": 1.0}}
+    ],
+    "connections": [
+    {"src": 6, "srcPort": -1, "dst": 3, "dstPort": -1},
+    {"src": 6, "srcPort": -1, "dst": 8, "dstPort": -1},
+    {"src": 7, "srcPort": -1, "dst": 3, "dstPort": -1},
+    {"src": 7, "srcPort": -1, "dst": 8, "dstPort": -1},
     {"src": 3, "srcPort": 0, "dst": 4, "dstPort": 0},
     {"src": 4, "srcPort": 0, "dst": 5, "dstPort": 0},
+    {"src": 8, "srcPort": 0, "dst": 9, "dstPort": 0},
+    {"src": 9, "srcPort": 0, "dst": 5, "dstPort": 1},
     {"src": 5, "srcPort": 0, "dst": 1, "dstPort": 0},
     {"src": 5, "srcPort": 0, "dst": 1, "dstPort": 1}
-  ]
-})";
+    ]
+    })";
 
     default:
         return "";
