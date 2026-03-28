@@ -88,8 +88,8 @@ TEST(AIStateMapperTest, InvalidJSONReturnsFalse) {
 TEST(AIStateMapperTest, ParameterValidationClamping) {
     juce::AudioProcessorGraph graph;
     juce::var json = juce::JSON::parse(
-        R"({"nodes":[{"id":1,"type":"Oscillator","params":{"waveform":0,"frequency":2.0}}],"connections":[]})"); // Freq
-                                                                                                                 // > 1.0
+        R"({"nodes":[{"id":1,"type":"Oscillator","params":{"waveform":0,"fine":200.0}}],"connections":[]})"); // fine >
+                                                                                                              // 100.0
 
     gsynth::AIStateMapper::applyJSONToGraph(json, graph, true);
 
@@ -98,19 +98,19 @@ TEST(AIStateMapperTest, ParameterValidationClamping) {
     auto oscProcessor = dynamic_cast<OscillatorModule*>(oscNode->getProcessor());
     ASSERT_NE(oscProcessor, nullptr);
 
-    float frequencyParamValue = -1.0f;
+    float fineParamValue = -1.0f;
     for (auto* param : oscProcessor->getParameters()) {
         if (auto* floatParam = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
-            if (floatParam->paramID == "frequency") {
-                frequencyParamValue = floatParam->getValue();
+            if (floatParam->paramID == "fine") {
+                fineParamValue = floatParam->getValue();
                 break;
             }
         }
     }
-    ASSERT_NE(frequencyParamValue, -1.0f); // Ensure frequency parameter was found
+    ASSERT_NE(fineParamValue, -1.0f); // Ensure fine parameter was found
 
     // Parameter value should be clamped between 0.0 and 1.0
-    ASSERT_NEAR(frequencyParamValue, 0.0f, 0.001f); // Should be clamped to 0.0 (min of range)
+    ASSERT_NEAR(fineParamValue, 1.0f, 0.001f); // Should be clamped to 1.0 (max of range)
 }
 
 TEST(AIStateMapperTest, UnknownModuleTypeLogsErrorAndSkips) {

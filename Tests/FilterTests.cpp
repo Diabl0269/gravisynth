@@ -60,15 +60,11 @@ TEST_F(FilterTest, LowPassAttenuatesHighFreq) {
 
 TEST_F(FilterTest, ModulationScalesCorrectly) {
     auto* cutoffParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[0]);
-    auto* modAmountParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[3]); // cutoffMod
 
     // Set base cutoff to 440Hz
     cutoffParam->setValueNotifyingHost(cutoffParam->getNormalisableRange().convertTo0to1(440.0f));
 
-    // Case 1: Cutoff Mod = 1.0, CV1 = 1.0 -> Should push frequency up significantly
-    modAmountParam->setValueNotifyingHost(modAmountParam->getNormalisableRange().convertTo0to1(1.0f));
-
-    // Set CV1 to 1.0
+    // Set CV1 to 1.0 (Full upward shift)
     auto* cv1 = buffer.getWritePointer(1);
     for (int i = 0; i < buffer.getNumSamples(); ++i) {
         cv1[i] = 1.0f;
@@ -83,13 +79,6 @@ TEST_F(FilterTest, ModulationScalesCorrectly) {
 }
 
 TEST_F(FilterTest, MultiParamModulation) {
-    auto* cutoffModParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[3]);
-    auto* resModParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[4]);
-
-    // Set mod amounts
-    cutoffModParam->setValueNotifyingHost(cutoffModParam->getNormalisableRange().convertTo0to1(0.5f));
-    resModParam->setValueNotifyingHost(resModParam->getNormalisableRange().convertTo0to1(0.8f));
-
     // Set Cutoff CV (ch 1) to 1.0 and Res CV (ch 2) to 1.0
     auto* cv1 = buffer.getWritePointer(1);
     auto* cv2 = buffer.getWritePointer(2);

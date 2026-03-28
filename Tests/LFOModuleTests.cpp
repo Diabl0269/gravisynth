@@ -12,7 +12,7 @@ protected:
 };
 
 TEST_F(LFOModuleTest, WaveformOutput) {
-    juce::AudioBuffer<float> buffer(2, 44100); // 1 second
+    juce::AudioBuffer<float> buffer(1, 44100); // 1 second
     juce::MidiBuffer midi;
 
     // Test Sine
@@ -34,7 +34,7 @@ TEST_F(LFOModuleTest, WaveformOutput) {
 }
 
 TEST_F(LFOModuleTest, WaveformOutputTriangle) {
-    juce::AudioBuffer<float> buffer(2, 44100);
+    juce::AudioBuffer<float> buffer(1, 44100);
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
@@ -56,7 +56,7 @@ TEST_F(LFOModuleTest, WaveformOutputTriangle) {
 }
 
 TEST_F(LFOModuleTest, WaveformOutputSaw) {
-    juce::AudioBuffer<float> buffer(2, 44100);
+    juce::AudioBuffer<float> buffer(1, 44100);
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
@@ -77,7 +77,7 @@ TEST_F(LFOModuleTest, WaveformOutputSaw) {
 }
 
 TEST_F(LFOModuleTest, WaveformOutputSquare) {
-    juce::AudioBuffer<float> buffer(2, 44100);
+    juce::AudioBuffer<float> buffer(1, 44100);
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
@@ -110,7 +110,7 @@ TEST_F(LFOModuleTest, WaveformOutputSquare) {
 }
 
 TEST_F(LFOModuleTest, HzModeUsesRateHzParam) {
-    juce::AudioBuffer<float> buffer(2, 44100);
+    juce::AudioBuffer<float> buffer(1, 44100);
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
@@ -136,14 +136,14 @@ TEST_F(LFOModuleTest, SyncModeAllSubdivisions) {
 
     for (int i = 0; i <= 5; ++i) {
         *syncRate = i;
-        juce::AudioBuffer<float> buffer(2, 512);
+        juce::AudioBuffer<float> buffer(1, 512);
         juce::MidiBuffer midi;
         lfo->processBlock(buffer, midi);
     }
 }
 
 TEST_F(LFOModuleTest, GlideParameter) {
-    juce::AudioBuffer<float> buffer(2, 512);
+    juce::AudioBuffer<float> buffer(1, 512);
     juce::MidiBuffer midi;
     auto params = lfo->getParameters();
     auto* glideParam = dynamic_cast<juce::AudioParameterFloat*>(params[7]);
@@ -178,7 +178,7 @@ TEST_F(LFOModuleTest, GlideParameter) {
 }
 
 TEST_F(LFOModuleTest, LevelParameter) {
-    juce::AudioBuffer<float> buffer(2, 44100);
+    juce::AudioBuffer<float> buffer(1, 44100);
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
@@ -224,7 +224,7 @@ TEST_F(LFOModuleTest, LevelParameter) {
 }
 
 TEST_F(LFOModuleTest, BipolarUnipolar) {
-    juce::AudioBuffer<float> buffer(2, 512);
+    juce::AudioBuffer<float> buffer(1, 512);
     juce::MidiBuffer midi;
 
     auto* bipolarParam = dynamic_cast<juce::AudioParameterBool*>(lfo->getParameters()[2]);
@@ -251,7 +251,7 @@ TEST_F(LFOModuleTest, BipolarUnipolar) {
 }
 
 TEST_F(LFOModuleTest, Retrigger) {
-    juce::AudioBuffer<float> buffer(2, 512);
+    juce::AudioBuffer<float> buffer(1, 512);
     juce::MidiBuffer midi;
 
     auto* retrigParam = dynamic_cast<juce::AudioParameterBool*>(lfo->getParameters()[5]);
@@ -269,7 +269,7 @@ TEST_F(LFOModuleTest, Retrigger) {
 }
 
 TEST_F(LFOModuleTest, SampleAndHold) {
-    juce::AudioBuffer<float> buffer(2, 44100);
+    juce::AudioBuffer<float> buffer(1, 44100);
     juce::MidiBuffer midi;
 
     auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(lfo->getParameters()[0]);
