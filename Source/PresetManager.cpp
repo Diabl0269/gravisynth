@@ -7,7 +7,7 @@ PresetManager::PresetManager() {}
 PresetManager::~PresetManager() {}
 
 juce::StringArray PresetManager::getPresetNames() {
-    return {"Default", "Simple Lead", "Ambient Pad", "Modulated Bass", "Step Sequence", "Polyphonic Keys"};
+    return {"Default", "Simple Lead", "Ambient Pad", "Modulated Bass", "Step Sequence", "Polyphonic Keys (WIP)"};
 }
 
 bool PresetManager::loadPreset(int index, juce::AudioProcessorGraph& graph) {

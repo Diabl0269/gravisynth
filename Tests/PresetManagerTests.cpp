@@ -10,7 +10,7 @@ TEST(PresetManagerTest, ListPresets) {
     ASSERT_TRUE(names.contains("Ambient Pad"));
     ASSERT_TRUE(names.contains("Modulated Bass"));
     ASSERT_TRUE(names.contains("Step Sequence"));
-    ASSERT_TRUE(names.contains("Polyphonic Keys"));
+    ASSERT_TRUE(names.contains("Polyphonic Keys (WIP)"));
 }
 
 TEST(PresetManagerTest, LoadAllPresets) {
