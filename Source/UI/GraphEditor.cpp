@@ -214,31 +214,31 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
             }
 
             if (srcNode && dstNode) {
-                // Determine real source and destination based on drag direction
-                auto* realSrc = dragSourceIsInput ? dstNode : srcNode;
-                auto* realDst = dragSourceIsInput ? srcNode : dstNode;
-                int sPort = dragSourceIsInput ? port->index : dragSourceChannel;
-                int dPort = dragSourceIsInput ? dragSourceChannel : port->index;
-
                 if (dragSourceIsMidi) {
-                    graph.addConnection({{realSrc->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
-                                         {realDst->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
+                    graph.addConnection({{srcNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                                         {dstNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
                 } else {
+                    int sPort = dragSourceIsInput ? port->index : dragSourceChannel;
+                    int dPort = dragSourceIsInput ? dragSourceChannel : port->index;
+
+                    juce::String dstName = dstNode->getProcessor()->getName();
                     bool isCV = false;
-                    if (auto* modBase = dynamic_cast<ModuleBase*>(realDst->getProcessor())) {
-                        auto targets = modBase->getModulationTargets();
-                        for (const auto& t : targets) {
-                            if (t.channelIndex == dPort) {
-                                isCV = true;
-                                break;
-                            }
-                        }
-                    }
+                    if (dstName == "Filter" && dPort >= 1)
+                        isCV = true;
+                    if (dstName == "VCA" && dPort == 1)
+                        isCV = true;
+                    if (dstName == "Oscillator" && dPort >= 0)
+                        isCV = true;
 
                     if (isCV) {
-                        audioEngine.addModRouting(realSrc->nodeID, realDst->nodeID, dPort);
+                        // Create Attenuverter
+                        auto attenNode = graph.addNode(std::make_unique<AttenuverterModule>());
+                        if (attenNode) {
+                            graph.addConnection({{srcNode->nodeID, sPort}, {attenNode->nodeID, 0}});
+                            graph.addConnection({{attenNode->nodeID, 0}, {dstNode->nodeID, dPort}});
+                        }
                     } else {
-                        graph.addConnection({{realSrc->nodeID, sPort}, {realDst->nodeID, dPort}});
+                        graph.addConnection({{srcNode->nodeID, sPort}, {dstNode->nodeID, dPort}});
                     }
                 }
             }
@@ -395,7 +395,18 @@ void GraphEditor::mouseDoubleClick(const juce::MouseEvent& e) {
     auto localPos = content.getLocalPoint(this, e.getPosition());
     auto attenId = getAttenuverterNodeAt(localPos.toFloat());
     if (attenId.uid != 0) {
-        audioEngine.removeModRouting(attenId);
+        auto& graph = audioEngine.getGraph();
+        std::vector<juce::AudioProcessorGraph::Connection> toRemove;
+        for (auto& c : graph.getConnections()) {
+            if (c.source.nodeID == attenId || c.destination.nodeID == attenId) {
+                toRemove.push_back(c);
+            }
+        }
+        for (auto& c : toRemove) {
+            graph.removeConnection(c);
+        }
+        modMatrix.clearRows();
+        graph.removeNode(attenId);
         content.repaint();
     }
 }
@@ -409,11 +420,10 @@ juce::AudioProcessorGraph::NodeID GraphEditor::getAttenuverterNodeAt(juce::Point
         if (!node1 || !node2)
             continue;
 
-        // An attenuverter always has a source connection into its port 0
-        if (dynamic_cast<AttenuverterModule*>(node2->getProcessor()) != nullptr) {
+        auto name2 = node2->getProcessor()->getName();
+        if (name2.startsWith("Attenuverter") || name2.startsWith("Mod Slot")) {
             juce::AudioProcessorGraph::Node* realDstNode = nullptr;
             int realDstPort = 0;
-            // Find the output connection FROM this attenuverter
             for (auto& c : graph.getConnections()) {
                 if (c.source.nodeID == node2->nodeID) {
                     realDstNode = graph.getNodeForId(c.destination.nodeID);
@@ -506,25 +516,11 @@ void GraphEditor::disconnectPort(ModuleComponent* module, int portIndex, bool is
     for (auto& c : graph.getConnections()) {
         if (isInput) {
             if (c.destination.nodeID == nodeId && c.destination.channelIndex == targetChannel) {
-                // If this is coming from an attenuverter, remove the whole routing
-                if (auto* srcNode = graph.getNodeForId(c.source.nodeID)) {
-                    if (dynamic_cast<AttenuverterModule*>(srcNode->getProcessor()) != nullptr) {
-                        audioEngine.removeModRouting(srcNode->nodeID);
-                    } else {
-                        toRemove.push_back(c);
-                    }
-                }
+                toRemove.push_back(c);
             }
         } else {
             if (c.source.nodeID == nodeId && c.source.channelIndex == targetChannel) {
-                // If this is going to an attenuverter, remove the whole routing
-                if (auto* dstNode = graph.getNodeForId(c.destination.nodeID)) {
-                    if (dynamic_cast<AttenuverterModule*>(dstNode->getProcessor()) != nullptr) {
-                        audioEngine.removeModRouting(dstNode->nodeID);
-                    } else {
-                        toRemove.push_back(c);
-                    }
-                }
+                toRemove.push_back(c);
             }
         }
     }
