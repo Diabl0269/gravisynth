@@ -41,8 +41,7 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
         if (!node1 || !node2)
             continue;
 
-        auto name2 = node2->getProcessor()->getName();
-        if (name2.startsWith("Attenuverter") || name2.startsWith("Mod Slot")) {
+        if (node2->getProcessor()->getName() == "Attenuverter") {
             juce::AudioProcessorGraph::Node* realDstNode = nullptr;
             int realDstPort = 0;
             for (auto& c : graph.getConnections()) {
@@ -94,8 +93,7 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
                 }
             }
             continue;
-        } else if (node1->getProcessor()->getName().startsWith("Attenuverter") ||
-                   node1->getProcessor()->getName().startsWith("Mod Slot")) {
+        } else if (node1->getProcessor()->getName() == "Attenuverter") {
             continue;
         }
 
@@ -251,65 +249,50 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
 }
 
 void GraphEditor::updateComponents() {
+    content.getModules().clear();
+    content.removeAllChildren();
+
     auto& graph = audioEngine.getGraph();
-    auto& modules = content.getModules();
 
-    // 1. Remove components for nodes that no longer exist
-    for (int i = modules.size(); --i >= 0;) {
-        auto* comp = modules.getUnchecked(i);
-        bool stillExists = false;
-        for (auto* node : graph.getNodes()) {
-            if (node->getProcessor() == comp->getModule()) {
-                stillExists = true;
-                break;
-            }
-        }
-        if (!stillExists) {
-            content.removeChildComponent(comp);
-            modules.remove(i);
-        }
-    }
-
-    // 2. Add components for new nodes
-    int moduleIndex = 0;
     for (auto* node : graph.getNodes()) {
         auto* processor = node->getProcessor();
-        if (!processor)
-            continue;
+        if (processor) {
+            juce::String name = processor->getName();
+            if (name == "Attenuverter")
+                continue;
 
-        juce::String name = processor->getName();
-        if (name.contains("Attenuverter") || name.contains("Mod Slot"))
-            continue;
+            auto* comp = content.getModules().add(new ModuleComponent(processor, *this));
+            content.addAndMakeVisible(comp);
 
-        // Check if we already have a component for this module
-        ModuleComponent* existingComp = nullptr;
-        for (auto* comp : modules) {
-            if (comp->getModule() == processor) {
-                existingComp = comp;
-                break;
+            auto x = node->properties.getWithDefault("x", -1);
+            auto y = node->properties.getWithDefault("y", -1);
+
+            if (static_cast<int>(x) != -1 && static_cast<int>(y) != -1) {
+                comp->setTopLeftPosition(static_cast<int>(x), static_cast<int>(y));
+            } else {
+                if (name == "Sequencer")
+                    comp->setTopLeftPosition(10, 80);
+                else if (name == "Oscillator")
+                    comp->setTopLeftPosition(540, 50);
+                else if (name == "Amp Env")
+                    comp->setTopLeftPosition(540, 450);
+                else if (name == "Filter")
+                    comp->setTopLeftPosition(830, 50);
+                else if (name == "Filter Env")
+                    comp->setTopLeftPosition(830, 450);
+                else if (name == "LFO")
+                    comp->setTopLeftPosition(10, 500);
+                else if (name == "VCA")
+                    comp->setTopLeftPosition(1120, 50);
+                else if (name.containsIgnoreCase("Output"))
+                    comp->setTopLeftPosition(2250, 300);
+                else if (name.containsIgnoreCase("Input"))
+                    comp->setTopLeftPosition(10, 10);
+                else
+                    comp->setTopLeftPosition(100 + (content.getModules().size() * 30), 400);
             }
         }
-
-        if (existingComp == nullptr) {
-            auto* newComp = modules.add(new ModuleComponent(processor, node->nodeID, *this));
-            content.addAndMakeVisible(newComp);
-            existingComp = newComp;
-        }
-
-        // Always sync position from properties OR deterministic fallback
-        auto x = node->properties.getWithDefault("x", -1);
-        auto y = node->properties.getWithDefault("y", -1);
-
-        if (static_cast<int>(x) != -1 && static_cast<int>(y) != -1) {
-            existingComp->setTopLeftPosition(static_cast<int>(x), static_cast<int>(y));
-        } else {
-            // Determine fallback based on current count to be stable
-            existingComp->setTopLeftPosition(100 + (moduleIndex * 150), 600);
-        }
-
-        moduleIndex++;
     }
-
     repaint();
 }
 
@@ -320,7 +303,7 @@ void GraphEditor::paint(juce::Graphics& g) {
 
 void GraphEditor::resized() {
     if (isMatrixVisible) {
-        modMatrix.setBounds(getWidth() - 600, 0, 600, getHeight());
+        modMatrix.setBounds(getWidth() - 250, 0, 250, getHeight());
     }
     updateTransform();
 }
@@ -334,7 +317,7 @@ void GraphEditor::toggleModMatrixVisibility() {
 void GraphEditor::updateTransform() {
     juce::AffineTransform t;
     t = t.translated(panOffset);
-    float xOffset = isMatrixVisible ? (getWidth() - 600) / 2.0f : getWidth() / 2.0f;
+    float xOffset = isMatrixVisible ? (getWidth() - 250) / 2.0f : getWidth() / 2.0f;
     t = t.scaled(zoomLevel, zoomLevel, xOffset, getHeight() / 2.0f);
 
     content.setBounds(0, 0, 10000, 10000);
@@ -420,8 +403,7 @@ juce::AudioProcessorGraph::NodeID GraphEditor::getAttenuverterNodeAt(juce::Point
         if (!node1 || !node2)
             continue;
 
-        auto name2 = node2->getProcessor()->getName();
-        if (name2.startsWith("Attenuverter") || name2.startsWith("Mod Slot")) {
+        if (node2->getProcessor()->getName() == "Attenuverter") {
             juce::AudioProcessorGraph::Node* realDstNode = nullptr;
             int realDstPort = 0;
             for (auto& c : graph.getConnections()) {
@@ -533,8 +515,45 @@ void GraphEditor::disconnectPort(ModuleComponent* module, int portIndex, bool is
 }
 
 void GraphEditor::timerCallback() {
-    // No longer aggressive GCing attenuverters to allow empty slots in ModMatrix
-    content.repaint();
+    auto& graph = audioEngine.getGraph();
+    std::vector<juce::AudioProcessorGraph::NodeID> toDelete;
+
+    for (auto* n : graph.getNodes()) {
+        if (n->getProcessor()->getName() == "Attenuverter") {
+            int conns = 0;
+            for (auto& c : graph.getConnections()) {
+                if (c.destination.nodeID == n->nodeID) {
+                    conns++;
+                }
+                if (c.source.nodeID == n->nodeID) {
+                    conns++;
+                }
+            }
+
+            if (conns < 2) {
+                toDelete.push_back(n->nodeID);
+            }
+        }
+    }
+
+    for (auto id : toDelete) {
+        std::vector<juce::AudioProcessorGraph::Connection> connsToRemove;
+        for (auto& c : graph.getConnections()) {
+            if (c.source.nodeID == id || c.destination.nodeID == id)
+                connsToRemove.push_back(c);
+        }
+        for (auto& c : connsToRemove)
+            graph.removeConnection(c);
+
+        modMatrix.clearRows();
+        graph.removeNode(id);
+    }
+
+    if (!toDelete.empty()) {
+        updateComponents();
+    }
+
+    content.repaint(); // Ensure graph redrawing catches ModMatrix slider changes
 }
 
 bool GraphEditor::isInterestedInDragSource(const SourceDetails& dragSourceDetails) { return true; }
@@ -660,7 +679,7 @@ void GraphEditor::loadPreset(juce::File file) {
                 newProcessor = std::make_unique<ReverbModule>();
             } else if (type == "MidiKeyboard") {
                 newProcessor = std::make_unique<MidiKeyboardModule>();
-            } else if (type.startsWith("Attenuverter") || type.startsWith("Mod Slot")) {
+            } else if (type == "Attenuverter") {
                 newProcessor = std::make_unique<AttenuverterModule>();
             }
 

@@ -25,7 +25,7 @@ TEST_F(ModuleComponentTest, InitializationAndResizing) {
     AudioEngine engine;
     GraphEditor editor(engine);
     OscillatorModule processor;
-    ModuleComponent moduleComponent(&processor, juce::AudioProcessorGraph::NodeID(), editor);
+    ModuleComponent moduleComponent(&processor, editor);
 
     EXPECT_NO_THROW(moduleComponent.setSize(200, 300));
 }
@@ -34,7 +34,7 @@ TEST_F(ModuleComponentTest, ParameterAttachmentLinksUI) {
     AudioEngine engine;
     GraphEditor editor(engine);
     OscillatorModule processor;
-    ModuleComponent moduleComponent(&processor, juce::AudioProcessorGraph::NodeID(), editor);
+    ModuleComponent moduleComponent(&processor, editor);
 
     juce::Slider* foundSlider = nullptr;
     for (auto* child : moduleComponent.getChildren()) {
@@ -59,7 +59,7 @@ TEST_F(ModuleComponentTest, TimerCallbackDoesNotCrash) {
     AudioEngine engine;
     GraphEditor editor(engine);
     OscillatorModule processor;
-    ModuleComponent moduleComponent(&processor, juce::AudioProcessorGraph::NodeID(), editor);
+    ModuleComponent moduleComponent(&processor, editor);
 
     EXPECT_NO_THROW(moduleComponent.timerCallback());
 }

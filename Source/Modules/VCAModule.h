@@ -40,10 +40,6 @@ public:
         }
     }
 
-    std::vector<ModulationTarget> getModulationTargets() const override { return {{"CV", 1}}; }
-
-    ModulationCategory getModulationCategory() const override { return ModulationCategory::Other; }
-
 private:
     juce::AudioParameterFloat* gainParam;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedGain;

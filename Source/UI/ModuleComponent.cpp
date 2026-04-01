@@ -1,17 +1,9 @@
 #include "ModuleComponent.h"
-#include "../Modules/ADSRModule.h"
-#include "../Modules/AttenuverterModule.h"
-#include "../Modules/FilterModule.h"
-#include "../Modules/LFOModule.h"
-#include "../Modules/MidiKeyboardModule.h"
-#include "../Modules/OscillatorModule.h"
 #include "../Modules/SequencerModule.h"
-#include "../Modules/VCAModule.h"
 #include "GraphEditor.h"
 
-ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGraph::NodeID nodeId, GraphEditor& owner)
+ModuleComponent::ModuleComponent(juce::AudioProcessor* m, GraphEditor& owner)
     : module(m)
-    , nodeId(nodeId)
     , owner(owner) {
 
     if (auto* modBase = dynamic_cast<ModuleBase*>(module)) {
@@ -97,7 +89,7 @@ void ModuleComponent::createControls() {
     }
 
     // Auto-resize
-    if (module->getName().startsWith("Sequencer")) {
+    if (module->getName() == "Sequencer") {
         setSize(510, 380); // 8 cols * 60 + margins, 3 rows
         return;
     }
@@ -106,7 +98,7 @@ void ModuleComponent::createControls() {
 }
 
 void ModuleComponent::updateLayout() {
-    if (module->getName().startsWith("Mod Slot") || module->getName().startsWith("Attenuverter")) {
+    if (module->getName() == "Attenuverter") {
         setSize(40, 40);
         if (sliders.size() > 0) {
             sliders[0]->setBounds(0, 0, 40, 40);
@@ -118,7 +110,7 @@ void ModuleComponent::updateLayout() {
         return;
     }
 
-    if (module->getName().startsWith("Sequencer")) {
+    if (module->getName() == "Sequencer") {
         setSize(510, 380);
         return;
     }
@@ -147,22 +139,24 @@ void ModuleComponent::updateLayout() {
 }
 
 void ModuleComponent::paint(juce::Graphics& g) {
-    if (module->getName().startsWith("Mod Slot") || module->getName().startsWith("Attenuverter")) {
+    if (module->getName() == "Attenuverter") {
         return; // Transparent background, no ports, no header
     }
 
     g.fillAll(juce::Colours::lightgrey);
 
     // Highlight Active Step (Sequencer only)
-    if (auto* seq = dynamic_cast<SequencerModule*>(module)) {
-        int activeStep = seq->currentActiveStep.load();
-        // Coordinates match resized()
-        int startX = 10;
-        int stepWidth = 60;
-        int x = startX + activeStep * stepWidth;
+    if (module->getName() == "Sequencer") {
+        if (auto* seq = dynamic_cast<SequencerModule*>(module)) {
+            int activeStep = seq->currentActiveStep.load();
+            // Coordinates match resized()
+            int startX = 10;
+            int stepWidth = 60;
+            int x = startX + activeStep * stepWidth;
 
-        g.setColour(juce::Colours::yellow.withAlpha(0.3f));
-        g.fillRect(x, 110, stepWidth - 5, 220); // Cover Gate+Pitch+F.Env area
+            g.setColour(juce::Colours::yellow.withAlpha(0.3f));
+            g.fillRect(x, 110, stepWidth - 5, 220); // Cover Gate+Pitch+F.Env area
+        }
     }
 
     g.setColour(juce::Colours::black);
@@ -200,80 +194,60 @@ void ModuleComponent::paint(juce::Graphics& g) {
         g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
 
         juce::String label = "In " + juce::String(i);
-
-        // 1. Check for dynamic CV labels from ModulationTargets
-        bool foundTarget = false;
-        if (auto* modBase = dynamic_cast<ModuleBase*>(module)) {
-            auto targets = modBase->getModulationTargets();
-            for (const auto& target : targets) {
-                if (target.channelIndex == i) {
-                    label = target.name + " CV";
-                    foundTarget = true;
-                    break;
-                }
-            }
+        // Custom labels for Oscillator
+        if (module->getName() == "Oscillator") {
+            if (i == 0)
+                label = "Pitch CV";
+            else if (i == 1)
+                label = "Wave CV";
+            else if (i == 2)
+                label = "Oct CV";
+            else if (i == 3)
+                label = "Crs CV";
+            else if (i == 4)
+                label = "Fine CV";
         }
-
-        // 2. Fallback to hardcoded Audio labels for non-CV ports
-        if (!foundTarget) {
-            if (auto* filter = dynamic_cast<FilterModule*>(module)) {
-                if (i == 0)
-                    label = "Audio";
-            } else if (auto* vca = dynamic_cast<VCAModule*>(module)) {
-                if (i == 0)
-                    label = "Audio";
-            } else if (module->getName().contains("Delay") || module->getName().contains("Distortion") ||
-                       module->getName().contains("Reverb")) {
-                if (i == 0)
-                    label = "Audio L";
-                else if (i == 1)
-                    label = "Audio R";
-            }
+        // Custom labels for Filter
+        if (module->getName() == "Filter") {
+            if (i == 0)
+                label = "Audio";
+            if (i == 1)
+                label = "Cutoff CV";
+            if (i == 2)
+                label = "Res CV";
+            if (i == 3)
+                label = "Drive CV";
+        }
+        if (module->getName() == "VCA") {
+            if (i == 0)
+                label = "Audio";
+            if (i == 1)
+                label = "CV";
         }
 
         g.drawText(label, p.x + 10, p.y - 10, 60, 20, juce::Justification::left, false);
     }
 
     // Outputs
+    // Only draw audio outputs if MIDI out hasn't been drawn in the same general area (to prevent overlap)
+    // For now, we assume MIDI out takes the "first" audio output slot.
+    // A more robust solution would involve explicit port mapping.
     int audioOutStartIndex = midiOutDrawn ? 1 : 0;
-    for (int i = 0; i < numOuts; ++i) {
+    for (int i = audioOutStartIndex; i < numOuts + audioOutStartIndex;
+         ++i) { // Adjust index for display if midi out is present
         auto p = getPortCenter(i, false);
         g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
 
         juce::String label = "Out " + juce::String(i);
-        if (auto* lfo = dynamic_cast<LFOModule*>(module)) {
+        if (module->getName() == "LFO") {
             label = "CV Out " + juce::String(i + 1);
         }
         g.drawText(label, p.x - 70, p.y - 10, 60, 20, juce::Justification::right, false);
     }
-
-    // 4. Output Connection Badge (Serum-style)
-    auto routings = owner.getAudioEngine().getActiveModRoutings();
-    int connectionCount = 0;
-    for (const auto& r : routings) {
-        // ONLY count if destNodeID is valid (meaning it's fully connected)
-        if (r.sourceNodeID == nodeId && r.destNodeID != juce::AudioProcessorGraph::NodeID()) {
-            connectionCount++;
-        }
-    }
-
-    if (connectionCount > 0) {
-        auto portPos = getPortCenter(0, false); // Output port
-        float badgeSize = 22.0f;
-        // Position badge ABOVE the output port circle specifically to avoid horizontal text overlap
-        juce::Rectangle<float> badgeRect(portPos.x - badgeSize / 2.0f, portPos.y - 30.0f, badgeSize, badgeSize);
-
-        g.setColour(juce::Colours::orange);
-        g.fillEllipse(badgeRect);
-
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::Font(14.0f, juce::Font::bold));
-        g.drawText(juce::String(connectionCount), badgeRect.toNearestInt(), juce::Justification::centred);
-    }
 }
 
 juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
-    if (module->getName().startsWith("Mod Slot") || module->getName().startsWith("Attenuverter")) {
+    if (module->getName() == "Attenuverter") {
         return {getWidth() / 2, getHeight() / 2};
     }
 
@@ -295,7 +269,7 @@ juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
 }
 
 std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Point<int> localPoint) {
-    if (module->getName().startsWith("Mod Slot") || module->getName().startsWith("Attenuverter")) {
+    if (module->getName() == "Attenuverter") {
         return std::nullopt; // Users cannot manually drag connections from the smart wire knob
     }
 
@@ -342,7 +316,7 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
 }
 
 void ModuleComponent::resized() {
-    if (module->getName().startsWith("Sequencer")) {
+    if (module->getName() == "Sequencer") {
         // --- Sequencer Specific Layout ---
         int x = 10;
         int y = 30;
@@ -422,7 +396,7 @@ void ModuleComponent::resized() {
     }
 
     // --- MIDI Keyboard Layout ---
-    if (module->getName().contains("MIDI Keyboard") || module->getName().contains("MidiKeyboard")) {
+    if (module->getName() == "MIDI Keyboard") {
         setSize(500, 150); // Appropriate size for a keyboard
         if (keyboardComponent) {
             keyboardComponent->setBounds(10, 50, getWidth() - 20, getHeight() - 60);
@@ -481,111 +455,33 @@ void ModuleComponent::resized() {
 
 void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
     auto port = getPortForPoint(e.getPosition());
-
-    // Helper lambda to build the unified modulation menu
-    auto addModulationSubMenu = [this](juce::PopupMenu& m, const std::vector<AudioEngine::ModRoutingInfo>& routings) {
-        int bypassedCount = 0;
-        int activeCount = 0;
-        std::vector<AudioEngine::ModRoutingInfo> myRoutings;
-
-        for (const auto& r : routings) {
-            if (r.sourceNodeID == nodeId && r.destNodeID != juce::AudioProcessorGraph::NodeID()) {
-                myRoutings.push_back(r);
-                if (r.isBypassed)
-                    bypassedCount++;
-                else
-                    activeCount++;
-            }
-        }
-
-        if (!myRoutings.empty()) {
-            m.addSeparator();
-            m.addSectionHeader("Modulation Destinations");
-
-            for (const auto& r : myRoutings) {
-                auto* dstNode = owner.getGraph().getNodeForId(r.destNodeID);
-                if (!dstNode)
-                    continue;
-
-                juce::String dstName = dstNode->getProcessor()->getName();
-                if (auto* modBase = dynamic_cast<ModuleBase*>(dstNode->getProcessor())) {
-                    auto targets = modBase->getModulationTargets();
-                    if (r.destChannelIndex < (int)targets.size()) {
-                        dstName += " -> " + targets[r.destChannelIndex].name;
-                    }
-                }
-
-                // Tick shows active status
-                m.addItem(juce::PopupMenu::Item(dstName).setTicked(!r.isBypassed).setAction([this, r] {
-                    owner.getAudioEngine().toggleModBypass(r.attenuverterNodeID);
-                    repaint();
-                }));
-            }
-
-            m.addSeparator();
-            if (bypassedCount > 0) {
-                m.addItem("Activate All Destinations", [this, myRoutings] {
-                    for (const auto& r : myRoutings) {
-                        if (r.isBypassed)
-                            owner.getAudioEngine().toggleModBypass(r.attenuverterNodeID);
-                    }
-                    repaint();
-                });
-            }
-            if (activeCount > 0) {
-                m.addItem("Bypass All Destinations", [this, myRoutings] {
-                    for (const auto& r : myRoutings) {
-                        if (!r.isBypassed)
-                            owner.getAudioEngine().toggleModBypass(r.attenuverterNodeID);
-                    }
-                    repaint();
-                });
-            }
-            m.addItem("Remove All Destinations", [this, myRoutings] {
-                for (const auto& r : myRoutings) {
-                    owner.getAudioEngine().removeModRouting(r.attenuverterNodeID);
-                }
-                repaint();
-            });
-        }
-    };
-
     if (port) {
         if (e.mods.isPopupMenu()) {
+            // Right click -> Disconnect
+            // Show menu? Or just disconnect?
+            // User asked for "way to disconnect". Instant disconnect is fast.
+            // Or a menu "Disconnect".
             juce::PopupMenu m;
             m.addItem("Disconnect",
                       [this, port] { owner.disconnectPort(this, port->index, port->isInput, port->isMidi); });
 
-            // If it's an output port, also show destination management
-            if (!port->isInput && !port->isMidi) {
-                addModulationSubMenu(m, owner.getAudioEngine().getActiveModRoutings());
-            }
-
             m.showMenuAsync(juce::PopupMenu::Options());
         } else {
+            // Start Connection Drag
             owner.beginConnectionDrag(this, port->index, port->isInput, port->isMidi, e.getScreenPosition());
         }
-        return;
     } else {
         // Click on Body
-        if (module->getName().startsWith("Mod Slot") || module->getName().startsWith("Attenuverter")) {
-            return;
+        if (module->getName() == "Attenuverter")
+            return; // cannot drag
+
+        if (e.mods.isPopupMenu()) {
+            juce::PopupMenu m;
+            m.addItem("Delete Module", [this] { owner.deleteModule(this); });
+            m.showMenuAsync(juce::PopupMenu::Options());
+        } else {
+            dragger.startDraggingComponent(this, e);
         }
-
-        if (e.mods.isRightButtonDown()) {
-            juce::PopupMenu menu;
-
-            // Shared modulation logic
-            addModulationSubMenu(menu, owner.getAudioEngine().getActiveModRoutings());
-
-            menu.addSeparator();
-            menu.addItem("Delete Module", [this] { owner.deleteModule(this); });
-
-            menu.showMenuAsync(juce::PopupMenu::Options());
-            return;
-        }
-
-        dragger.startDraggingComponent(this, e);
     }
 }
 

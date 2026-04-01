@@ -21,8 +21,6 @@ public:
     void updateComponents();
     void toggleModMatrixVisibility();
     bool isModMatrixVisible() const { return isMatrixVisible; }
-    AudioEngine& getAudioEngine() { return audioEngine; }
-    juce::AudioProcessorGraph& getGraph() { return audioEngine.getGraph(); }
 
     // Interactions
     void beginConnectionDrag(ModuleComponent* sourceModule, int channelIndex, bool isInput, bool isMidi,

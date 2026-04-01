@@ -55,12 +55,9 @@ Gravisynth uses a **hidden Attenuverter architecture** for modulation depth cont
 - **Double-click** to instantly delete the connection.
 
 ### Mod Matrix Panel
-- Interactive, Serum-inspired control center for all modulation routings.
-- **Dynamic Source/Destination**: Pick any module and parameter from dropdowns populated via metadata.
-- **Bipolar Amount Control**: Bipolar sliders for adjusting modulation depth and polarity.
-- **Add/Delete Routings**: Manage the complex synth graph directly from the matrix.
-- **Flat/Grouped Toggle**: Switch between categorized submenus or a fast flat list for sources.
-- Sliders are **bidirectionally synced** with Smart Cable knobs on the graph in real time (30 Hz).
+- Sits on the right edge of the Graph Editor (toggleable).
+- Lists every active CV connection as a labelled row with a bipolar slider.
+- Sliders and smart cable knobs are **bidirectionally synced** in real time via a 30 Hz timer.
 
 ### Panel Toggles
 - **Hide AI / Show AI** — collapses the right-side AI chat panel.

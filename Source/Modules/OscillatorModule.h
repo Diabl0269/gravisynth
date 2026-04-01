@@ -111,12 +111,6 @@ public:
         return 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
     }
 
-    std::vector<ModulationTarget> getModulationTargets() const override {
-        return {{"Pitch", 0}, {"Waveform", 1}, {"Octave", 2}, {"Coarse", 3}, {"Fine", 4}};
-    }
-
-    ModulationCategory getModulationCategory() const override { return ModulationCategory::Oscillator; }
-
 private:
     float generateSample(int waveform, float phase, float dt) const {
         switch (waveform) {
