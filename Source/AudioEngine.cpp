@@ -6,55 +6,117 @@
 #include "Modules/FX/ReverbModule.h"
 #include "Modules/FilterModule.h"
 #include "Modules/LFOModule.h"
+#include "Modules/MidiKeyboardModule.h"
 #include "Modules/OscillatorModule.h"
 #include "Modules/SequencerModule.h"
 #include "Modules/VCAModule.h"
+#include <map>
 
-AudioEngine::AudioEngine()
-    : mainProcessorGraph() {
-    // Register basic formats if needed, though we use internal processors mainly
-}
+AudioEngine::AudioEngine() {}
 
 AudioEngine::~AudioEngine() { shutdown(); }
 
 void AudioEngine::initialise() {
-    deviceManager.initialiseWithDefaultDevices(0, 2); // 0 inputs, 2 outputs
-    deviceManager.addAudioCallback(&processorPlayer);
-    processorPlayer.setProcessor(&mainProcessorGraph);
-
+    deviceManager.initialiseWithDefaultDevices(0, 2);
+    deviceManager.addAudioCallback(this);
     createDefaultPatch();
 }
 
 void AudioEngine::shutdown() {
-    deviceManager.removeAudioCallback(&processorPlayer);
-    processorPlayer.setProcessor(nullptr);
+    deviceManager.removeAudioCallback(this);
+    mainProcessorGraph.clear();
 }
 
-void AudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device) {
-    mainProcessorGraph.prepareToPlay(device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
+std::vector<AudioEngine::ModRoutingInfo> AudioEngine::getActiveModRoutings() const {
+    std::vector<ModRoutingInfo> routings;
+    for (auto* node : mainProcessorGraph.getNodes()) {
+        if (dynamic_cast<AttenuverterModule*>(node->getProcessor()) != nullptr) {
+            ModRoutingInfo info;
+            info.attenuverterNodeID = node->nodeID;
+            for (auto& conn : mainProcessorGraph.getConnections()) {
+                if (conn.destination.nodeID == node->nodeID && conn.destination.channelIndex == 0) {
+                    info.sourceNodeID = conn.source.nodeID;
+                    break;
+                }
+            }
+            for (auto& conn : mainProcessorGraph.getConnections()) {
+                if (conn.source.nodeID == node->nodeID && conn.source.channelIndex == 0) {
+                    info.destNodeID = conn.destination.nodeID;
+                    info.destChannelIndex = conn.destination.channelIndex;
+                    break;
+                }
+            }
+
+            // Get bypass state
+            info.isBypassed = false;
+            if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[1])) {
+                info.isBypassed = bypassParam->get();
+            }
+
+            routings.push_back(info);
+        }
+    }
+    return routings;
 }
 
-void AudioEngine::audioDeviceStopped() { mainProcessorGraph.releaseResources(); }
+void AudioEngine::addModRouting(juce::AudioProcessorGraph::NodeID sourceNodeID,
+                                juce::AudioProcessorGraph::NodeID destNodeID, int destChannelIndex) {
+    auto attenuverterNode = mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>());
+    if (attenuverterNode == nullptr)
+        return;
+    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenuverterNode->getProcessor()->getParameters()[0]))
+        param->setValueNotifyingHost(param->convertTo0to1(1.0f));
+    mainProcessorGraph.addConnection({{sourceNodeID, 0}, {attenuverterNode->nodeID, 0}});
+    mainProcessorGraph.addConnection({{attenuverterNode->nodeID, 0}, {destNodeID, destChannelIndex}});
+}
 
-void AudioEngine::audioDeviceIOCallbackWithContext(const float* const* inputChannelData, int numInputChannels,
-                                                   float* const* outputChannelData, int numOutputChannels,
-                                                   int numSamples, const juce::AudioIODeviceCallbackContext& context) {
-    processorPlayer.audioDeviceIOCallbackWithContext(inputChannelData, numInputChannels, outputChannelData,
-                                                     numOutputChannels, numSamples, context);
+void AudioEngine::addEmptyModRouting() { mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>()); }
+
+void AudioEngine::removeModRouting(juce::AudioProcessorGraph::NodeID attenuverterNodeID) {
+    mainProcessorGraph.removeNode(attenuverterNodeID);
+}
+
+void AudioEngine::toggleModBypass(juce::AudioProcessorGraph::NodeID attenuverterNodeID) {
+    if (auto* node = mainProcessorGraph.getNodeForId(attenuverterNodeID)) {
+        if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[1])) {
+            bypassParam->setValueNotifyingHost(!bypassParam->get());
+        }
+    }
+}
+
+bool AudioEngine::isModBypassed(juce::AudioProcessorGraph::NodeID attenuverterNodeID) const {
+    if (auto* node = mainProcessorGraph.getNodeForId(attenuverterNodeID)) {
+        if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[1])) {
+            return bypassParam->get();
+        }
+    }
+    return false;
+}
+
+void AudioEngine::updateModuleNames() {
+    std::map<juce::String, int> typeCounts;
+    for (auto* node : mainProcessorGraph.getNodes()) {
+        if (auto* module = dynamic_cast<ModuleBase*>(node->getProcessor())) {
+            juce::String baseName = module->getName();
+            int lastSpace = baseName.lastIndexOf(" ");
+            if (lastSpace != -1 && baseName.substring(lastSpace + 1).containsOnly("0123456789"))
+                baseName = baseName.substring(0, lastSpace);
+            if (baseName.startsWith("Attenuverter"))
+                baseName = "Mod Slot";
+            int index = ++typeCounts[baseName];
+            module->setModuleName(baseName + " " + juce::String(index));
+        }
+    }
 }
 
 void AudioEngine::createDefaultPatch() {
     mainProcessorGraph.clear();
-
     using AudioGraphIOProcessor = juce::AudioProcessorGraph::AudioGraphIOProcessor;
-
-    // Add IO Nodes
     auto inputNode =
         mainProcessorGraph.addNode(std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioInputNode));
     auto outputNode =
         mainProcessorGraph.addNode(std::make_unique<AudioGraphIOProcessor>(AudioGraphIOProcessor::audioOutputNode));
 
-    // Add Modules
     auto sequencerNode = mainProcessorGraph.addNode(std::make_unique<SequencerModule>());
     auto oscillatorNode = mainProcessorGraph.addNode(std::make_unique<OscillatorModule>());
     auto filterNode = mainProcessorGraph.addNode(std::make_unique<FilterModule>());
@@ -62,15 +124,12 @@ void AudioEngine::createDefaultPatch() {
     auto adsrNode = mainProcessorGraph.addNode(std::make_unique<ADSRModule>("Amp Env"));
     auto filterAdsrNode = mainProcessorGraph.addNode(std::make_unique<ADSRModule>("Filter Env"));
     auto lfoNode = mainProcessorGraph.addNode(std::make_unique<LFOModule>());
-
     auto distortionNode = mainProcessorGraph.addNode(std::make_unique<DistortionModule>());
     auto delayNode = mainProcessorGraph.addNode(std::make_unique<DelayModule>());
     auto reverbNode = mainProcessorGraph.addNode(std::make_unique<ReverbModule>());
 
-    // Set positions
-    // UI auto-layout handles standard modules.
-    // We can eventually improve graph editor to read this.
-
+    inputNode->properties.set("x", 10.0f);
+    inputNode->properties.set("y", 10.0f);
     sequencerNode->properties.set("x", 10.0f);
     sequencerNode->properties.set("y", 80.0f);
     oscillatorNode->properties.set("x", 540.0f);
@@ -81,73 +140,64 @@ void AudioEngine::createDefaultPatch() {
     vcaNode->properties.set("y", 50.0f);
     adsrNode->properties.set("x", 540.0f);
     adsrNode->properties.set("y", 450.0f);
-    filterAdsrNode->properties.set("x", 845.0f);
-    filterAdsrNode->properties.set("y", 430.0f);
-    lfoNode->properties.set("x", 70.0f);
+    filterAdsrNode->properties.set("x", 830.0f);
+    filterAdsrNode->properties.set("y", 450.0f);
+    lfoNode->properties.set("x", 10.0f);
     lfoNode->properties.set("y", 500.0f);
-
     distortionNode->properties.set("x", 1410.0f);
     distortionNode->properties.set("y", 50.0f);
     delayNode->properties.set("x", 1690.0f);
     delayNode->properties.set("y", 50.0f);
     reverbNode->properties.set("x", 1970.0f);
     reverbNode->properties.set("y", 50.0f);
-
     outputNode->properties.set("x", 2250.0f);
     outputNode->properties.set("y", 300.0f);
-    inputNode->properties.set("x", 10.0f);
-    inputNode->properties.set("y", 10.0f);
 
-    // Connections
-    // Sequencer (Midi) -> Oscillator
+    addModRouting(adsrNode->nodeID, vcaNode->nodeID, 1);
+    addModRouting(filterAdsrNode->nodeID, filterNode->nodeID, 1);
+    for (int i = 0; i < 4; ++i)
+        addEmptyModRouting();
+
     mainProcessorGraph.addConnection({{sequencerNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                       {oscillatorNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
-
-    // Sequencer (Midi) -> ADSR (Amp)
     mainProcessorGraph.addConnection({{sequencerNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                       {adsrNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
-
-    // Sequencer (Midi) -> ADSR (Filter)
     mainProcessorGraph.addConnection({{sequencerNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                       {filterAdsrNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
-
-    // Oscillator (Audio) -> Filter
     mainProcessorGraph.addConnection({{oscillatorNode->nodeID, 0}, {filterNode->nodeID, 0}});
-
-    // Filter (Audio) -> VCA
-    mainProcessorGraph.addConnection({{filterNode->nodeID, 0}, {vcaNode->nodeID, 0}}); // VCA Audio In
-
-    // ADSR (Amp) -> VCA (CV)
-    auto vcaAtten = mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>());
-    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(vcaAtten->getProcessor()->getParameters()[0]))
-        param->setValueNotifyingHost(param->convertTo0to1(1.0f));
-    mainProcessorGraph.addConnection({{adsrNode->nodeID, 0}, {vcaAtten->nodeID, 0}});
-    mainProcessorGraph.addConnection({{vcaAtten->nodeID, 0}, {vcaNode->nodeID, 1}});
-
-    // ADSR (Filter) -> Filter CV
-    auto filterAtten = mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>());
-    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(filterAtten->getProcessor()->getParameters()[0]))
-        param->setValueNotifyingHost(param->convertTo0to1(1.0f));
-    mainProcessorGraph.addConnection({{filterAdsrNode->nodeID, 0}, {filterAtten->nodeID, 0}});
-    mainProcessorGraph.addConnection({{filterAtten->nodeID, 0}, {filterNode->nodeID, 1}});
-
-    // Sequencer MIDI to Filter (for CC 74)
+    mainProcessorGraph.addConnection({{filterNode->nodeID, 0}, {vcaNode->nodeID, 0}});
     mainProcessorGraph.addConnection({{sequencerNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
                                       {filterNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
-
-    // VCA -> Distortion
     mainProcessorGraph.addConnection({{vcaNode->nodeID, 0}, {distortionNode->nodeID, 0}});
     mainProcessorGraph.addConnection({{vcaNode->nodeID, 0}, {distortionNode->nodeID, 1}});
-
-    // Distortion -> Delay
     mainProcessorGraph.addConnection({{distortionNode->nodeID, 0}, {delayNode->nodeID, 0}});
     mainProcessorGraph.addConnection({{distortionNode->nodeID, 1}, {delayNode->nodeID, 1}});
-
-    // Delay -> Reverb
     mainProcessorGraph.addConnection({{delayNode->nodeID, 0}, {reverbNode->nodeID, 0}});
     mainProcessorGraph.addConnection({{delayNode->nodeID, 1}, {reverbNode->nodeID, 1}});
-
-    // Reverb -> Output
     mainProcessorGraph.addConnection({{reverbNode->nodeID, 0}, {outputNode->nodeID, 0}});
     mainProcessorGraph.addConnection({{reverbNode->nodeID, 1}, {outputNode->nodeID, 1}});
 }
+
+void AudioEngine::audioDeviceIOCallbackWithContext(const float* const* inputChannelData, int numInputChannels,
+                                                   float* const* outputChannelData, int numOutputChannels,
+                                                   int numSamples, const juce::AudioIODeviceCallbackContext& context) {
+    juce::ignoreUnused(inputChannelData, numInputChannels, context);
+    for (int i = 0; i < numOutputChannels; ++i) {
+        if (outputChannelData[i])
+            std::fill(outputChannelData[i], outputChannelData[i] + numSamples, 0.0f);
+    }
+    juce::AudioBuffer<float> buffer(const_cast<float**>(outputChannelData), numOutputChannels, numSamples);
+    juce::MidiBuffer midiMessages;
+    mainProcessorGraph.processBlock(buffer, midiMessages);
+}
+
+void AudioEngine::audioDeviceAboutToStart(juce::AudioIODevice* device) {
+    if (device) {
+        mainProcessorGraph.setPlayConfigDetails(device->getActiveInputChannels().countNumberOfSetBits(),
+                                                device->getActiveOutputChannels().countNumberOfSetBits(),
+                                                device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
+        mainProcessorGraph.prepareToPlay(device->getCurrentSampleRate(), device->getCurrentBufferSizeSamples());
+    }
+}
+
+void AudioEngine::audioDeviceStopped() { mainProcessorGraph.releaseResources(); }

@@ -4,6 +4,16 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
+#include <vector>
+
+/// Describes a single CV-controllable input on a module.
+struct ModulationTarget {
+    juce::String name; ///< Human-readable name, e.g. "Cutoff"
+    int channelIndex;  ///< Bus channel index for this CV input
+};
+
+/// Category used for grouping sources in the mod-matrix UI.
+enum class ModulationCategory { Envelope, LFO, Oscillator, Sequencer, Filter, FX, Other };
 
 class ModuleBase : public juce::AudioProcessor {
 public:
@@ -18,6 +28,7 @@ public:
     ~ModuleBase() override = default;
 
     const juce::String getName() const override { return moduleName; }
+    void setModuleName(const juce::String& name) { moduleName = name; }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override = 0;
     void releaseResources() override {}
@@ -72,6 +83,12 @@ public:
         else if (!enable)
             visualBuffer = nullptr;
     }
+
+    /// Override to declare which input channels accept CV modulation.
+    virtual std::vector<ModulationTarget> getModulationTargets() const { return {}; }
+
+    /// Override to categorise this module for grouped source menus.
+    virtual ModulationCategory getModulationCategory() const { return ModulationCategory::Other; }
 
 private:
     juce::String moduleName;

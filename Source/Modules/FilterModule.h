@@ -88,6 +88,12 @@ public:
         }
     }
 
+    std::vector<ModulationTarget> getModulationTargets() const override {
+        return {{"Cutoff", 1}, {"Resonance", 2}, {"Drive", 3}};
+    }
+
+    ModulationCategory getModulationCategory() const override { return ModulationCategory::Filter; }
+
 private:
     juce::dsp::LadderFilter<float> ladder;
     juce::SmoothedValue<float> smoothedCutoff;

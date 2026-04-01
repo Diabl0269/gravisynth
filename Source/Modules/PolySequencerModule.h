@@ -166,6 +166,8 @@ public:
         }
     }
 
+    ModulationCategory getModulationCategory() const override { return ModulationCategory::Sequencer; }
+
 private:
     double localSampleRate = 44100.0;
     int samplesUntilNextBeat = 0;

@@ -1,5 +1,6 @@
 #include "AIStateMapper.h"
 #include "../Modules/ADSRModule.h"
+#include "../Modules/AttenuverterModule.h"
 #include "../Modules/FX/DelayModule.h"
 #include "../Modules/FX/DistortionModule.h"
 #include "../Modules/FX/ReverbModule.h"
@@ -33,6 +34,7 @@ static const std::unordered_map<juce::String, ModuleFactoryFunc> moduleFactory =
     {"Distortion", []() { return std::make_unique<DistortionModule>(); }},
     {"Delay", []() { return std::make_unique<DelayModule>(); }},
     {"Reverb", []() { return std::make_unique<ReverbModule>(); }},
+    {"Attenuverter", []() { return std::make_unique<AttenuverterModule>(); }},
     {"MIDI Keyboard", []() { return std::make_unique<MidiKeyboardModule>(); }}};
 
 bool AIStateMapper::validatePatchJSON(const juce::var& json) {
@@ -306,7 +308,7 @@ juce::var AIStateMapper::getPatchSchema() {
     nodeProperties->setProperty(
         "type", juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
                                   "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Sequencer\", \"LFO\", "
-                                  "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\"]}"));
+                                  "\"Distortion\", \"Delay\", \"Reverb\", \"Attenuverter\", \"MIDI Keyboard\"]}"));
     nodeProperties->setProperty("params", juce::JSON::parse("{\"type\": \"object\"}"));
 
     nodeItems->setProperty("properties", juce::var(nodeProperties.get()));

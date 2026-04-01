@@ -80,10 +80,10 @@ Key patterns:
 - **PolyMidiModule**: 8-voice MIDI manager with LRU allocation.
 - **PolySequencerModule**: Polyphonic step sequencer.
 
-### FX Modules
-- **DelayModule**: Interpolated feedback delay.
-- **DistortionModule**: Oversampled soft-clipping distortion.
-- **ReverbModule**: Stereo algorithmic reverb.
+### FX Modules (CV Modulatable)
+- **DelayModule**: Interpolated feedback delay with CV control for Time, Feedback, and Mix.
+- **DistortionModule**: Oversampled soft-clipping distortion with CV control for Drive and Mix.
+- **ReverbModule**: Stereo algorithmic reverb with CV control for Room Size, Damping, Wet, Dry, and Width.
 
 ## AI Integration
 
