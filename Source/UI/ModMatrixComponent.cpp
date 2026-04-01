@@ -149,7 +149,6 @@ void ModMatrixComponent::updateRowsFromGraph() {
     }
 
     // Refresh combo items if the number of nodes in graph changed
-    static int lastNodeCount = 0;
     int currentNodeCount = audioEngine.getGraph().getNumNodes();
     if (currentNodeCount != lastNodeCount) {
         audioEngine.updateModuleNames();
