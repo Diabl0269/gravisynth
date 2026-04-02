@@ -24,6 +24,24 @@ public:
     juce::AudioProcessorGraph& getGraph() { return mainProcessorGraph; }
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
+    struct ModRoutingInfo {
+        juce::AudioProcessorGraph::NodeID attenuverterNodeID;
+        juce::AudioProcessorGraph::NodeID sourceNodeID;
+        int sourceChannelIndex;
+        juce::AudioProcessorGraph::NodeID destNodeID;
+        int destChannelIndex;
+        bool isBypassed;
+    };
+
+    std::vector<ModRoutingInfo> getActiveModRoutings() const;
+    void addModRouting(juce::AudioProcessorGraph::NodeID sourceNodeID, int sourceChannelIndex,
+                       juce::AudioProcessorGraph::NodeID destNodeID, int destChannelIndex);
+    void addEmptyModRouting();
+    void removeModRouting(juce::AudioProcessorGraph::NodeID attenuverterNodeID);
+    void toggleModBypass(juce::AudioProcessorGraph::NodeID attenuverterNodeID);
+    bool isModBypassed(juce::AudioProcessorGraph::NodeID attenuverterNodeID) const;
+    void updateModuleNames();
+
 private:
     juce::AudioDeviceManager deviceManager;
     juce::AudioProcessorGraph mainProcessorGraph;
