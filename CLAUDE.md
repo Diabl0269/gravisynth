@@ -16,10 +16,11 @@ The project follows a modular architecture with:
 
 ### Key Components
 
-- **ModuleBase**: Abstract base class for all audio modules, defining common interfaces
-- **AudioEngine**: Manages audio device I/O and the audio processor graph
-- **GraphEditor**: Visual editor for connecting modules
-- **Module Components**: UI representations of each audio module
+- **ModuleBase**: Abstract base class for all audio modules with `ModuleType` enum, `ModulationTarget` metadata, and `VisualBuffer` support
+- **AudioEngine**: Manages audio device I/O, the audio processor graph, and modulation matrix routing
+- **GraphEditor**: Visual editor for connecting modules with zoom/pan and drag-to-connect
+- **ModuleComponent**: Auto-UI generation from module parameters with type-safe layout switching via `ModuleType` enum
+- **AttenuverterModule**: Intermediary module for modulation routing with bypass and CV amount control
 
 ### Audio Modules
 
@@ -62,14 +63,18 @@ bash scripts/coverage.sh
 
 - Unit tests for individual modules using GoogleTest
 - Tests cover audio processing behavior, parameter handling, and MIDI interaction
-- Code coverage enforcement (currently at 38.28%, target is 90%)
-- CI/CD pipeline enforces linting, building, testing, and coverage
+- Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
+- Integration tests (signal chains, modulation routing)
+- Code coverage enforcement (threshold: 69%, CI pipeline enforces)
+- CI runs on Ubuntu + macOS with linting, building, testing, and coverage
 
 ## Key Files to Understand
 
-- `CMakeLists.txt`: Main build configuration
-- `Source/AudioEngine.h/cpp`: Audio processing engine and device management
-- `Source/Modules/ModuleBase.h`: Base class for all audio modules
-- `Source/Modules/OscillatorModule.h`: Example oscillator implementation
-- `Source/MainComponent.h/cpp`: Main application UI
-- `Tests/OscillatorTests.cpp`: Example unit test structure
+- `CMakeLists.txt`: Main build configuration (version 0.13.2)
+- `Source/AudioEngine.h/cpp`: Audio processing engine, device management, and modulation matrix
+- `Source/Modules/ModuleBase.h`: Base class with `ModuleType` enum, `ModulationTarget`, `ModulationCategory`
+- `Source/Modules/OscillatorModule.h`: Oscillator with PolyBLEP/PolyBLAMP anti-aliasing and waveform crossfade
+- `Source/Modules/VisualBuffer.h`: Thread-safe circular buffer using `std::atomic<float>`
+- `Source/UI/ModuleComponent.cpp`: Auto-UI with type-safe `ModuleType` switching (no string comparisons)
+- `Source/UI/GraphEditor.cpp`: Graph editor with attenuverter knob rendering and modulation routing
+- `Tests/`: 149 tests across 27 suites (unit, edge case, integration)

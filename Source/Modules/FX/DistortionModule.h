@@ -91,6 +91,7 @@ public:
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"Drive", 2}, {"Mix", 3}}; }
 
     ModulationCategory getModulationCategory() const override { return ModulationCategory::FX; }
+    ModuleType getModuleType() const override { return ModuleType::Distortion; }
 
     double getLatencyInSamples() const { return oversampling ? oversampling->getLatencyInSamples() : 0.0; }
 

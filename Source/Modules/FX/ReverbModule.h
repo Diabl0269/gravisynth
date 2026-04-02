@@ -41,6 +41,7 @@ public:
         return {{"Size", 2}, {"Damping", 3}, {"Wet", 4}, {"Dry", 5}, {"Width", 6}};
     }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::FX; }
+    ModuleType getModuleType() const override { return ModuleType::Reverb; }
 
 private:
     juce::Reverb reverb;

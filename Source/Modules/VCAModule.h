@@ -41,6 +41,7 @@ public:
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"CV", 1}}; }
+    ModuleType getModuleType() const override { return ModuleType::VCA; }
 
 private:
     juce::AudioParameterFloat* gainParam;

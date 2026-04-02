@@ -109,6 +109,17 @@ jobs:
     - name: Build
       run: cmake --build build --config Release
 
+    # Run Tests
+    - name: Run Tests
+      run: |
+        cmake --build build --config Release --target GravisynthTests
+        if [ "$RUNNER_OS" == "Windows" ]; then
+          ./build/Tests/Release/GravisynthTests.exe
+        else
+          ./build/Tests/GravisynthTests
+        fi
+      shell: bash
+
     # Package Linux
     - name: Package Linux Artifact
       if: runner.os == 'Linux'

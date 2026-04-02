@@ -47,6 +47,7 @@ public:
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"Amount", 1}}; }
+    ModuleType getModuleType() const override { return ModuleType::Attenuverter; }
 
 private:
     juce::AudioParameterFloat* amountParam;

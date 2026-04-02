@@ -58,6 +58,7 @@ public:
     }
 
     juce::MidiKeyboardState& getKeyboardState() { return keyboardState; }
+    ModuleType getModuleType() const override { return ModuleType::MidiKeyboard; }
 
 private:
     juce::MidiKeyboardState keyboardState;

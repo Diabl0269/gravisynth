@@ -41,8 +41,7 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
         if (!node1 || !node2)
             continue;
 
-        auto name2 = node2->getProcessor()->getName();
-        if (name2.startsWith("Attenuverter") || name2.startsWith("Mod Slot")) {
+        if (dynamic_cast<AttenuverterModule*>(node2->getProcessor()) != nullptr) {
             juce::AudioProcessorGraph::Node* realDstNode = nullptr;
             int realDstPort = 0;
             for (auto& c : graph.getConnections()) {
@@ -94,8 +93,7 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
                 }
             }
             continue;
-        } else if (node1->getProcessor()->getName().startsWith("Attenuverter") ||
-                   node1->getProcessor()->getName().startsWith("Mod Slot")) {
+        } else if (dynamic_cast<AttenuverterModule*>(node1->getProcessor()) != nullptr) {
             continue;
         }
 
@@ -277,8 +275,7 @@ void GraphEditor::updateComponents() {
         if (!processor)
             continue;
 
-        juce::String name = processor->getName();
-        if (name.contains("Attenuverter") || name.contains("Mod Slot"))
+        if (dynamic_cast<AttenuverterModule*>(processor) != nullptr)
             continue;
 
         // Check if we already have a component for this module

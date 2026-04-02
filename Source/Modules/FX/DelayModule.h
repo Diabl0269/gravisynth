@@ -37,40 +37,39 @@ public:
         int bufferSize = buffer.getNumSamples();
         int delayBufferSize = delayBuffer.getNumSamples();
 
-        for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-            auto* data = buffer.getWritePointer(ch);
-            auto* delayData = delayBuffer.getWritePointer(ch % delayBuffer.getNumChannels());
+        int numChannels = juce::jmin(buffer.getNumChannels(), delayBuffer.getNumChannels());
+        int localWritePos = writePos;
 
-            int localWritePos = writePos;
+        for (int i = 0; i < bufferSize; ++i) {
+            float delayTimeMs = smoothedTime.getNextValue();
+            float feedback = smoothedFeedback.getNextValue();
+            float mix = smoothedMix.getNextValue();
+            float delaySamplesF = delayTimeMs * 0.001f * static_cast<float>(sampleRate);
 
-            for (int i = 0; i < bufferSize; ++i) {
-                bool isFirstChannel = (ch == 0);
-                float delayTimeMs = isFirstChannel ? smoothedTime.getNextValue() : smoothedTime.getCurrentValue();
-                float feedback = isFirstChannel ? smoothedFeedback.getNextValue() : smoothedFeedback.getCurrentValue();
-                float mix = isFirstChannel ? smoothedMix.getNextValue() : smoothedMix.getCurrentValue();
+            for (int ch = 0; ch < numChannels; ++ch) {
+                auto* data = buffer.getWritePointer(ch);
+                auto* delayData = delayBuffer.getWritePointer(ch);
 
                 float input = data[i];
-
-                float delaySamplesF = delayTimeMs * 0.001f * static_cast<float>(sampleRate);
                 float readPosF =
                     static_cast<float>(localWritePos) - delaySamplesF + static_cast<float>(delayBufferSize);
                 float delayedSample = linearInterpolate(delayData, delayBufferSize, readPosF);
 
                 delayData[localWritePos] = input + (delayedSample * feedback);
-                localWritePos = (localWritePos + 1) % delayBufferSize;
-
                 data[i] = (delayedSample * mix) + (input * (1.0f - mix));
             }
 
-            if (ch == buffer.getNumChannels() - 1)
-                writePos = localWritePos;
+            localWritePos = (localWritePos + 1) % delayBufferSize;
         }
+
+        writePos = localWritePos;
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override {
         return {{"Time", 2}, {"Feedback", 3}, {"Mix", 4}};
     }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::FX; }
+    ModuleType getModuleType() const override { return ModuleType::Delay; }
 
 private:
     static float linearInterpolate(const float* buffer, int bufferSize, float fractionalPos) {

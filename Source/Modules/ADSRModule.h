@@ -53,6 +53,7 @@ public:
     }
 
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Envelope; }
+    ModuleType getModuleType() const override { return ModuleType::ADSR; }
 
 private:
     juce::ADSR adsr;

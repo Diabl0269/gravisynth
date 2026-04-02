@@ -87,3 +87,23 @@ jobs:
         path: |
           default.profdata
           default.profraw
+
+  build-and-test-macos:
+    name: Build and Test (macOS)
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: brew install cmake ninja
+
+    - name: Configure CMake
+      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build
+      run: cmake --build build
+
+    - name: Run Tests
+      working-directory: ./build/Tests
+      run: ./GravisynthTests

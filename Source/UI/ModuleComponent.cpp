@@ -2,6 +2,12 @@
 #include "../Modules/SequencerModule.h"
 #include "GraphEditor.h"
 
+static ModuleType getType(juce::AudioProcessor* module) {
+    if (auto* mb = dynamic_cast<ModuleBase*>(module))
+        return mb->getModuleType();
+    return ModuleType::Oscillator;
+}
+
 ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGraph::NodeID nodeId, GraphEditor& owner)
     : module(m)
     , nodeId(nodeId)
@@ -51,7 +57,7 @@ void ModuleComponent::createControls() {
             } else if (auto* floatParam = dynamic_cast<juce::AudioParameterFloat*>(param)) {
                 auto* slider = sliders.add(new juce::Slider());
                 slider->setComponentID(param->getName(100)); // ID for lookup
-                if (module->getName().contains("ADSR") || module->getName().contains("Env")) {
+                if (getType(module) == ModuleType::ADSR) {
                     slider->setSliderStyle(juce::Slider::LinearVertical);
                     slider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
                 } else {
@@ -90,7 +96,7 @@ void ModuleComponent::createControls() {
     }
 
     // Auto-resize
-    if (module->getName() == "Sequencer") {
+    if (getType(module) == ModuleType::Sequencer) {
         setSize(510, 380); // 8 cols * 60 + margins, 3 rows
         return;
     }
@@ -99,7 +105,7 @@ void ModuleComponent::createControls() {
 }
 
 void ModuleComponent::updateLayout() {
-    if (module->getName() == "Attenuverter") {
+    if (getType(module) == ModuleType::Attenuverter) {
         setSize(40, 40);
         if (sliders.size() > 0) {
             sliders[0]->setBounds(0, 0, 40, 40);
@@ -111,12 +117,12 @@ void ModuleComponent::updateLayout() {
         return;
     }
 
-    if (module->getName() == "Sequencer") {
+    if (getType(module) == ModuleType::Sequencer) {
         setSize(510, 380);
         return;
     }
 
-    if (module->getName().contains("ADSR") || module->getName().contains("Env")) {
+    if (getType(module) == ModuleType::ADSR) {
         setSize(220 + 60, 180); // 180 is height from ADSR Layout
         return;
     }
@@ -140,14 +146,14 @@ void ModuleComponent::updateLayout() {
 }
 
 void ModuleComponent::paint(juce::Graphics& g) {
-    if (module->getName() == "Attenuverter") {
+    if (getType(module) == ModuleType::Attenuverter) {
         return; // Transparent background, no ports, no header
     }
 
     g.fillAll(juce::Colours::lightgrey);
 
     // Highlight Active Step (Sequencer only)
-    if (module->getName() == "Sequencer") {
+    if (getType(module) == ModuleType::Sequencer) {
         if (auto* seq = dynamic_cast<SequencerModule*>(module)) {
             int activeStep = seq->currentActiveStep.load();
             // Coordinates match resized()
@@ -196,7 +202,7 @@ void ModuleComponent::paint(juce::Graphics& g) {
 
         juce::String label = "In " + juce::String(i);
         // Custom labels for Oscillator
-        if (module->getName() == "Oscillator") {
+        if (getType(module) == ModuleType::Oscillator) {
             if (i == 0)
                 label = "Pitch CV";
             else if (i == 1)
@@ -209,7 +215,7 @@ void ModuleComponent::paint(juce::Graphics& g) {
                 label = "Fine CV";
         }
         // Custom labels for Filter
-        if (module->getName() == "Filter") {
+        if (getType(module) == ModuleType::Filter) {
             if (i == 0)
                 label = "Audio";
             if (i == 1)
@@ -219,7 +225,7 @@ void ModuleComponent::paint(juce::Graphics& g) {
             if (i == 3)
                 label = "Drive CV";
         }
-        if (module->getName() == "VCA") {
+        if (getType(module) == ModuleType::VCA) {
             if (i == 0)
                 label = "Audio";
             if (i == 1)
@@ -240,7 +246,7 @@ void ModuleComponent::paint(juce::Graphics& g) {
         g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
 
         juce::String label = "Out " + juce::String(i);
-        if (module->getName() == "LFO") {
+        if (getType(module) == ModuleType::LFO) {
             label = "CV Out " + juce::String(i + 1);
         }
         g.drawText(label, p.x - 70, p.y - 10, 60, 20, juce::Justification::right, false);
@@ -248,7 +254,7 @@ void ModuleComponent::paint(juce::Graphics& g) {
 }
 
 juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
-    if (module->getName() == "Attenuverter") {
+    if (getType(module) == ModuleType::Attenuverter) {
         return {getWidth() / 2, getHeight() / 2};
     }
 
@@ -270,7 +276,7 @@ juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
 }
 
 std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Point<int> localPoint) {
-    if (module->getName() == "Attenuverter") {
+    if (getType(module) == ModuleType::Attenuverter) {
         return std::nullopt; // Users cannot manually drag connections from the smart wire knob
     }
 
@@ -317,7 +323,7 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
 }
 
 void ModuleComponent::resized() {
-    if (module->getName() == "Sequencer") {
+    if (getType(module) == ModuleType::Sequencer) {
         // --- Sequencer Specific Layout ---
         int x = 10;
         int y = 30;
@@ -379,7 +385,7 @@ void ModuleComponent::resized() {
     }
 
     // --- ADSR Layout ---
-    if (module->getName().contains("ADSR") || module->getName().contains("Env")) {
+    if (getType(module) == ModuleType::ADSR) {
         int margin = 30;                // Side margins for ports
         setSize(220 + margin * 2, 180); // Increase width
         int y = 30;
@@ -397,7 +403,7 @@ void ModuleComponent::resized() {
     }
 
     // --- MIDI Keyboard Layout ---
-    if (module->getName() == "MIDI Keyboard") {
+    if (getType(module) == ModuleType::MidiKeyboard) {
         setSize(500, 150); // Appropriate size for a keyboard
         if (keyboardComponent) {
             keyboardComponent->setBounds(10, 50, getWidth() - 20, getHeight() - 60);
@@ -473,7 +479,7 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
         }
     } else {
         // Click on Body
-        if (module->getName() == "Attenuverter")
+        if (getType(module) == ModuleType::Attenuverter)
             return; // cannot drag
 
         if (e.mods.isPopupMenu()) {

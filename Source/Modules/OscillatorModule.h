@@ -77,7 +77,8 @@ public:
             }
 
             if (cvPitch != 0.0f) {
-                float totalMod = cvPitch * 2.0f; // up to 2 octaves shift
+                float clampedCV = juce::jlimit(-5.0f, 5.0f, cvPitch);
+                float totalMod = clampedCV * 2.0f; // up to 2 octaves shift
                 freq = freq * std::exp2(totalMod);
             }
             freq = juce::jlimit(20.0f, 20000.0f, freq);
@@ -89,7 +90,24 @@ public:
             }
 
             float dt = static_cast<float>(freq / currentSampleRate);
-            float sample = generateSample(waveform, phase, dt);
+            float sample;
+
+            if (waveform != previousWaveform) {
+                fadingFromWaveform = previousWaveform;
+                crossfadeSamplesRemaining = CROSSFADE_SAMPLES;
+                previousWaveform = waveform;
+            }
+
+            if (crossfadeSamplesRemaining > 0) {
+                float alpha = static_cast<float>(crossfadeSamplesRemaining) / CROSSFADE_SAMPLES;
+                float oldSample = generateSample(fadingFromWaveform, phase, dt);
+                float newSample = generateSample(waveform, phase, dt);
+                sample = oldSample * alpha + newSample * (1.0f - alpha);
+                --crossfadeSamplesRemaining;
+            } else {
+                sample = generateSample(waveform, phase, dt);
+            }
+
             ch0[i] = sample;
 
             phase += dt;
@@ -115,6 +133,7 @@ public:
         return {{"Pitch", 0}, {"Waveform", 1}, {"Octave", 2}, {"Coarse", 3}, {"Fine", 4}};
     }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Oscillator; }
+    ModuleType getModuleType() const override { return ModuleType::Oscillator; }
 
 private:
     float generateSample(int waveform, float phase, float dt) const {
@@ -126,7 +145,7 @@ private:
         case 2:
             return generateSaw(phase, dt);
         case 3:
-            return generateTriangle(phase);
+            return generateTriangle(phase, dt);
         default:
             return 0.0f;
         }
@@ -147,7 +166,26 @@ private:
         return sample;
     }
 
-    static float generateTriangle(float phase) { return 4.0f * std::abs(phase - 0.5f) - 1.0f; }
+    static float generateTriangle(float phase, float dt) {
+        float sample = 4.0f * std::abs(phase - 0.5f) - 1.0f;
+        // PolyBLAMP: integrated polyBLEP applied at discontinuities (phase=0 and phase=0.5)
+        sample += polyBlamp(phase, dt);
+        sample -= polyBlamp(std::fmod(phase + 0.5f, 1.0f), dt);
+        return sample;
+    }
+
+    static float polyBlamp(float t, float dt) {
+        if (t < dt) {
+            float n = t / dt;
+            // Third-order polynomial: integrated polyBLEP
+            return -dt * (n * n * n / 3.0f - n * n / 2.0f + 1.0f / 6.0f) * 4.0f;
+        }
+        if (t > 1.0f - dt) {
+            float n = (t - 1.0f) / dt;
+            return dt * (n * n * n / 3.0f + n * n / 2.0f + 1.0f / 6.0f) * 4.0f;
+        }
+        return 0.0f;
+    }
 
     static float polyBlep(float t, float dt) {
         if (t < dt) {
@@ -164,6 +202,12 @@ private:
     float phase = 0.0f;
     double currentSampleRate = 44100.0;
     float lastMidiNote = 69.0f; // Default to A4 (440Hz)
+
+    // Waveform crossfade tracking
+    int previousWaveform = 0;
+    int fadingFromWaveform = 0;
+    int crossfadeSamplesRemaining = 0;
+    static constexpr int CROSSFADE_SAMPLES = 64;
 
     juce::SmoothedValue<float> smoothedFreq;
     juce::AudioParameterChoice* waveformParam;

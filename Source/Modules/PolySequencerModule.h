@@ -167,6 +167,7 @@ public:
     }
 
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Sequencer; }
+    ModuleType getModuleType() const override { return ModuleType::PolySequencer; }
 
 private:
     double localSampleRate = 44100.0;
