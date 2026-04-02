@@ -31,6 +31,7 @@ add_executable(GravisynthTests
     PolySequencerModuleTests.cpp
     AIIntegrationServiceTests.cpp
     ModMatrixTests.cpp
+    FXModuleTests.cpp
     ../Source/MainComponent.cpp
     ../Source/UI/GraphEditor.cpp
     ../Source/UI/ModMatrixComponent.cpp
