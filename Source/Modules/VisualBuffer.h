@@ -13,14 +13,14 @@ public:
 
     VisualBuffer(int size = DEFAULT_SIZE)
         : bufferSize(size)
-        , buffer(size, 0.0f) {
+        , buffer(size) {
         writePos.store(0);
     }
 
     /** Pushes a single sample into the circular buffer. */
     void pushSample(float sample) {
         int pos = writePos.load();
-        buffer[pos] = sample;
+        buffer[pos].store(sample, std::memory_order_relaxed);
         writePos.store((pos + 1) % bufferSize);
     }
 
@@ -33,7 +33,7 @@ public:
         for (int i = 0; i < size; ++i) {
             // Read starting from current write position (oldest sample)
             int readIdx = (pos + i) % bufferSize;
-            dest[i] = buffer[readIdx];
+            dest[i] = buffer[readIdx].load(std::memory_order_relaxed);
         }
     }
 
@@ -41,7 +41,7 @@ public:
 
 private:
     int bufferSize;
-    std::vector<float> buffer;
+    std::vector<std::atomic<float>> buffer;
     std::atomic<int> writePos;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(VisualBuffer)
