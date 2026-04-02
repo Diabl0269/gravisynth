@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Gravisynth VERSION 0.0.1)
+project(Gravisynth VERSION 0.13.2)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 20)
@@ -96,7 +96,7 @@ endif()
 # Create the application target
 juce_add_gui_app(Gravisynth
     PRODUCT_NAME "Gravisynth"
-    VERSION "0.0.1"
+    VERSION "0.13.2"
     BUNDLE_ID "com.gravisynth.app"
 )
 
