@@ -58,7 +58,6 @@ public:
                 // But let's just use the current smoothed values + CV
                 int sampleIdx = (int)i / (int)oversampling->getOversamplingFactor();
                 float driveMod = cvDrive ? cvDrive[std::min(sampleIdx, numSamples - 1)] : 0.0f;
-                float mixMod = cvMix ? cvMix[std::min(sampleIdx, numSamples - 1)] : 0.0f;
 
                 float drive = juce::jlimit(1.0f, 20.0f, smoothedDrive.getNextValue() + (driveMod * 10.0f));
 

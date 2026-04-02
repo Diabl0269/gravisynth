@@ -149,7 +149,6 @@ void ModMatrixComponent::updateRowsFromGraph() {
     }
 
     // Refresh combo items if the number of nodes in graph changed
-    static int lastNodeCount = 0;
     int currentNodeCount = audioEngine.getGraph().getNumNodes();
     if (currentNodeCount != lastNodeCount) {
         audioEngine.updateModuleNames();
@@ -273,8 +272,13 @@ void ModMatrixComponent::ModRow::populateCombos() {
                 auto* module = static_cast<ModuleBase*>(node->getProcessor());
                 juce::String displayName = module->getName();
 
-                if (module->getTotalNumOutputChannels() > 0)
-                    sourceCombo.addItem(displayName, (int)node->nodeID.uid);
+                for (int i = 0; i < module->getTotalNumOutputChannels(); ++i) {
+                    int itemId = (int)((node->nodeID.uid << 8) | (uint32_t)i);
+                    juce::String label = displayName;
+                    if (module->getTotalNumOutputChannels() > 1)
+                        label += " Out " + juce::String(i + 1);
+                    sourceCombo.addItem(label, itemId);
+                }
 
                 auto targets = module->getModulationTargets();
                 for (const auto& target : targets) {
@@ -299,8 +303,19 @@ void ModMatrixComponent::ModRow::populateCombos() {
                 juce::String displayName = module->getName();
 
                 if (module->getTotalNumOutputChannels() > 0) {
-                    catSourceSub.addItem((int)node->nodeID.uid, displayName);
-                    sourceCombo.addItem(displayName, (int)node->nodeID.uid);
+                    if (module->getTotalNumOutputChannels() == 1) {
+                        int itemId = (int)((node->nodeID.uid << 8) | 0);
+                        catSourceSub.addItem(itemId, displayName);
+                        sourceCombo.addItem(displayName, itemId);
+                    } else {
+                        juce::PopupMenu instSourceSub;
+                        for (int i = 0; i < module->getTotalNumOutputChannels(); ++i) {
+                            int itemId = (int)((node->nodeID.uid << 8) | (uint32_t)i);
+                            instSourceSub.addItem(itemId, "Out " + juce::String(i + 1));
+                            sourceCombo.addItem(displayName + " Out " + juce::String(i + 1), itemId);
+                        }
+                        catSourceSub.addSubMenu(displayName, instSourceSub);
+                    }
                     sourceItems++;
                 }
 
@@ -329,20 +344,24 @@ void ModMatrixComponent::ModRow::populateCombos() {
 }
 
 void ModMatrixComponent::ModRow::refresh(const AudioEngine::ModRoutingInfo& info) {
-    sourceCombo.setSelectedId((int)info.sourceNodeID.uid, juce::dontSendNotification);
+    int srcId = (int)((info.sourceNodeID.uid << 8) | (uint32_t)info.sourceChannelIndex);
+    sourceCombo.setSelectedId(srcId, juce::dontSendNotification);
     int destId = (int)((info.destNodeID.uid << 8) | (uint32_t)info.destChannelIndex);
     destCombo.setSelectedId(destId, juce::dontSendNotification);
 }
 
 void ModMatrixComponent::ModRow::comboBoxChanged(juce::ComboBox* comboBox) {
     if (comboBox == &sourceCombo || comboBox == &destCombo) {
-        uint32_t srcId = (uint32_t)sourceCombo.getSelectedId();
+        uint32_t srcEncoded = (uint32_t)sourceCombo.getSelectedId();
         uint32_t destEncoded = (uint32_t)destCombo.getSelectedId();
+
+        uint32_t srcNodeId = srcEncoded >> 8;
+        int srcChannel = (int)(srcEncoded & 0xFF);
 
         uint32_t dstNodeId = destEncoded >> 8;
         int dstChannel = (int)(destEncoded & 0xFF);
 
-        if (srcId != 0 || dstNodeId != 0) {
+        if (srcNodeId != 0 || dstNodeId != 0) {
             auto& graph = owner.audioEngine.getGraph();
 
             for (auto& conn : graph.getConnections()) {
@@ -351,8 +370,8 @@ void ModMatrixComponent::ModRow::comboBoxChanged(juce::ComboBox* comboBox) {
                     break;
                 }
             }
-            if (srcId != 0)
-                graph.addConnection({{juce::AudioProcessorGraph::NodeID(srcId), 0}, {attenuverterId, 0}});
+            if (srcNodeId != 0)
+                graph.addConnection({{juce::AudioProcessorGraph::NodeID(srcNodeId), srcChannel}, {attenuverterId, 0}});
 
             for (auto& conn : graph.getConnections()) {
                 if (conn.source.nodeID == attenuverterId && conn.source.channelIndex == 0) {

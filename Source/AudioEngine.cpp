@@ -33,9 +33,11 @@ std::vector<AudioEngine::ModRoutingInfo> AudioEngine::getActiveModRoutings() con
         if (dynamic_cast<AttenuverterModule*>(node->getProcessor()) != nullptr) {
             ModRoutingInfo info;
             info.attenuverterNodeID = node->nodeID;
+            info.sourceChannelIndex = 0;
             for (auto& conn : mainProcessorGraph.getConnections()) {
                 if (conn.destination.nodeID == node->nodeID && conn.destination.channelIndex == 0) {
                     info.sourceNodeID = conn.source.nodeID;
+                    info.sourceChannelIndex = conn.source.channelIndex;
                     break;
                 }
             }
@@ -59,14 +61,14 @@ std::vector<AudioEngine::ModRoutingInfo> AudioEngine::getActiveModRoutings() con
     return routings;
 }
 
-void AudioEngine::addModRouting(juce::AudioProcessorGraph::NodeID sourceNodeID,
+void AudioEngine::addModRouting(juce::AudioProcessorGraph::NodeID sourceNodeID, int sourceChannelIndex,
                                 juce::AudioProcessorGraph::NodeID destNodeID, int destChannelIndex) {
     auto attenuverterNode = mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>());
     if (attenuverterNode == nullptr)
         return;
     if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenuverterNode->getProcessor()->getParameters()[0]))
         param->setValueNotifyingHost(param->convertTo0to1(1.0f));
-    mainProcessorGraph.addConnection({{sourceNodeID, 0}, {attenuverterNode->nodeID, 0}});
+    mainProcessorGraph.addConnection({{sourceNodeID, sourceChannelIndex}, {attenuverterNode->nodeID, 0}});
     mainProcessorGraph.addConnection({{attenuverterNode->nodeID, 0}, {destNodeID, destChannelIndex}});
 }
 
@@ -153,8 +155,8 @@ void AudioEngine::createDefaultPatch() {
     outputNode->properties.set("x", 2250.0f);
     outputNode->properties.set("y", 300.0f);
 
-    addModRouting(adsrNode->nodeID, vcaNode->nodeID, 1);
-    addModRouting(filterAdsrNode->nodeID, filterNode->nodeID, 1);
+    addModRouting(adsrNode->nodeID, 0, vcaNode->nodeID, 1);
+    addModRouting(filterAdsrNode->nodeID, 0, filterNode->nodeID, 1);
     for (int i = 0; i < 4; ++i)
         addEmptyModRouting();
 

@@ -24,7 +24,7 @@ TEST_F(ModMatrixTest, AddModRoutingWorks) {
     ASSERT_NE(lfoNode, nullptr);
     ASSERT_NE(filterNode, nullptr);
 
-    engine.addModRouting(lfoNode->nodeID, filterNode->nodeID, 1); // 1 = Cutoff
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1); // 1 = Cutoff
 
     auto routings = engine.getActiveModRoutings();
     ASSERT_EQ(routings.size(), 1);
@@ -40,7 +40,7 @@ TEST_F(ModMatrixTest, RemoveModRoutingWorks) {
     auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
     auto filterNode = graph.addNode(std::make_unique<FilterModule>());
 
-    engine.addModRouting(lfoNode->nodeID, filterNode->nodeID, 1);
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1);
     auto routings = engine.getActiveModRoutings();
     ASSERT_EQ(routings.size(), 1);
 
@@ -68,13 +68,13 @@ TEST_F(ModMatrixTest, SidechainModulationWorks) {
     auto filterNode = graph.addNode(std::make_unique<FilterModule>());
 
     // 1. Primary Routing: LFO -> Attenuverter A -> Filter Cutoff
-    engine.addModRouting(lfoNode->nodeID, filterNode->nodeID, 1);
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1);
     auto routings = engine.getActiveModRoutings();
     ASSERT_EQ(routings.size(), 1);
     auto attenuverterA = routings[0].attenuverterNodeID;
 
     // 2. Sidechain Routing: Env -> Attenuverter B -> Attenuverter A (Amount)
-    engine.addModRouting(envNode->nodeID, attenuverterA, 1); // 1 = Amount target
+    engine.addModRouting(envNode->nodeID, 0, attenuverterA, 1); // 1 = Amount target
     routings = engine.getActiveModRoutings();
     ASSERT_EQ(routings.size(), 2);
 
@@ -100,7 +100,7 @@ TEST_F(ModMatrixTest, BypassModRoutingWorks) {
     auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
     auto filterNode = graph.addNode(std::make_unique<FilterModule>());
 
-    engine.addModRouting(lfoNode->nodeID, filterNode->nodeID, 1);
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1);
     auto routings = engine.getActiveModRoutings();
     ASSERT_EQ(routings.size(), 1);
     auto attNodeID = routings[0].attenuverterNodeID;
