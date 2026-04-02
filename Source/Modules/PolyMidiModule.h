@@ -74,6 +74,7 @@ public:
         }
         return mask;
     }
+    ModuleType getModuleType() const override { return ModuleType::PolyMidi; }
 
 private:
     static constexpr int MAX_VOICES = 8;

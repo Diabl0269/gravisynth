@@ -13,6 +13,22 @@ struct ModulationTarget {
 
 enum class ModulationCategory { Envelope, LFO, Oscillator, Sequencer, Filter, FX, Other };
 
+enum class ModuleType {
+    Oscillator,
+    Filter,
+    VCA,
+    ADSR,
+    LFO,
+    Sequencer,
+    PolySequencer,
+    MidiKeyboard,
+    PolyMidi,
+    Attenuverter,
+    Delay,
+    Distortion,
+    Reverb
+};
+
 class ModuleBase : public juce::AudioProcessor {
 public:
     ModuleBase(const juce::String& name, int numInputs, int numOutputs)
@@ -77,6 +93,7 @@ public:
 
     virtual std::vector<ModulationTarget> getModulationTargets() const { return {}; }
     virtual ModulationCategory getModulationCategory() const { return ModulationCategory::Other; }
+    virtual ModuleType getModuleType() const = 0;
 
     VisualBuffer* getVisualBuffer() { return visualBuffer.get(); }
     void enableVisualBuffer(bool enable) {

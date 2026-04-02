@@ -77,7 +77,8 @@ public:
             }
 
             if (cvPitch != 0.0f) {
-                float totalMod = cvPitch * 2.0f; // up to 2 octaves shift
+                float clampedCV = juce::jlimit(-5.0f, 5.0f, cvPitch);
+                float totalMod = clampedCV * 2.0f; // up to 2 octaves shift
                 freq = freq * std::exp2(totalMod);
             }
             freq = juce::jlimit(20.0f, 20000.0f, freq);
@@ -132,6 +133,7 @@ public:
         return {{"Pitch", 0}, {"Waveform", 1}, {"Octave", 2}, {"Coarse", 3}, {"Fine", 4}};
     }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Oscillator; }
+    ModuleType getModuleType() const override { return ModuleType::Oscillator; }
 
 private:
     float generateSample(int waveform, float phase, float dt) const {

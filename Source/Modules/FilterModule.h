@@ -92,6 +92,7 @@ public:
         return {{"Cutoff", 1}, {"Resonance", 2}, {"Drive", 3}};
     }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Filter; }
+    ModuleType getModuleType() const override { return ModuleType::Filter; }
 
 private:
     juce::dsp::LadderFilter<float> ladder;

@@ -69,6 +69,7 @@ public:
         return {{"Time", 2}, {"Feedback", 3}, {"Mix", 4}};
     }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::FX; }
+    ModuleType getModuleType() const override { return ModuleType::Delay; }
 
 private:
     static float linearInterpolate(const float* buffer, int bufferSize, float fractionalPos) {

@@ -11,6 +11,7 @@ public:
 
     void prepareToPlay(double, int) override {}
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override {}
+    ModuleType getModuleType() const override { return ModuleType::Oscillator; }
 };
 
 class ModuleBaseTest : public ::testing::Test {
