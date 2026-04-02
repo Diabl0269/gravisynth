@@ -241,9 +241,9 @@ TEST_F(ModMatrixTest, GetActiveModRoutingsWithMultipleRoutings) {
     ASSERT_NE(oscNode, nullptr);
 
     // Add multiple routings (using valid channel indices for each module)
-    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1); // LFO -> Filter Cutoff
-    engine.addModRouting(oscNode->nodeID, 0, vcaNode->nodeID, 1);   // Osc -> VCA CV
-    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 2); // LFO -> Filter Resonance
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1);
+    engine.addModRouting(oscNode->nodeID, 0, vcaNode->nodeID, 1);
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 2);
 
     auto routings = engine.getActiveModRoutings();
 
