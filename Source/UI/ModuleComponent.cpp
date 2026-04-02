@@ -2,8 +2,9 @@
 #include "../Modules/SequencerModule.h"
 #include "GraphEditor.h"
 
-ModuleComponent::ModuleComponent(juce::AudioProcessor* m, GraphEditor& owner)
+ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGraph::NodeID nodeId, GraphEditor& owner)
     : module(m)
+    , nodeId(nodeId)
     , owner(owner) {
 
     if (auto* modBase = dynamic_cast<ModuleBase*>(module)) {

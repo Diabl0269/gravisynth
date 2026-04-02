@@ -183,6 +183,8 @@ public:
     bool acceptsMidi() const override { return true; }
     bool producesMidi() const override { return false; }
 
+    ModulationCategory getModulationCategory() const override { return ModulationCategory::LFO; }
+
 private:
     juce::AudioParameterChoice* shapeParam;
     juce::AudioParameterBool* modeParam; // Sync (true)

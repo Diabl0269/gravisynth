@@ -13,7 +13,7 @@ class ModuleComponent
     : public juce::Component
     , public juce::Timer {
 public:
-    ModuleComponent(juce::AudioProcessor* module, GraphEditor& owner);
+    ModuleComponent(juce::AudioProcessor* module, juce::AudioProcessorGraph::NodeID nodeId, GraphEditor& owner);
     ~ModuleComponent() override;
 
     void paint(juce::Graphics&) override;
@@ -40,6 +40,7 @@ public:
 
 private:
     juce::AudioProcessor* module;
+    juce::AudioProcessorGraph::NodeID nodeId;
     GraphEditor& owner;
     juce::ComponentDragger dragger;
 

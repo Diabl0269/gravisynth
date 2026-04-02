@@ -52,6 +52,8 @@ public:
         adsr.applyEnvelopeToBuffer(buffer, 0, buffer.getNumSamples());
     }
 
+    ModulationCategory getModulationCategory() const override { return ModulationCategory::Envelope; }
+
 private:
     juce::ADSR adsr;
     juce::ADSR::Parameters adsrParams;

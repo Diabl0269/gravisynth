@@ -36,6 +36,8 @@ public:
         }
     }
 
+    std::vector<ModulationTarget> getModulationTargets() const override { return {{"Amount", 1}}; }
+
 private:
     juce::AudioParameterFloat* amountParam;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedAmount;
