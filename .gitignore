@@ -34,4 +34,5 @@ coverage/
 *.txt
 .claudignore
 .gemini/
+.claude/settings.local.json
 worktrees/

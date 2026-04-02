@@ -67,6 +67,11 @@ public:
         }
     }
 
+    std::vector<ModulationTarget> getModulationTargets() const override {
+        return {{"Time", 2}, {"Feedback", 3}, {"Mix", 4}};
+    }
+    ModulationCategory getModulationCategory() const override { return ModulationCategory::FX; }
+
 private:
     static float linearInterpolate(const float* buffer, int bufferSize, float fractionalPos) {
         while (fractionalPos < 0.0f)

@@ -4,6 +4,14 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
+#include <vector>
+
+struct ModulationTarget {
+    juce::String name;
+    int channelIndex;
+};
+
+enum class ModulationCategory { Envelope, LFO, Oscillator, Sequencer, Filter, FX, Other };
 
 class ModuleBase : public juce::AudioProcessor {
 public:
@@ -64,6 +72,11 @@ public:
             }
         }
     }
+
+    void setModuleName(const juce::String& name) { moduleName = name; }
+
+    virtual std::vector<ModulationTarget> getModulationTargets() const { return {}; }
+    virtual ModulationCategory getModulationCategory() const { return ModulationCategory::Other; }
 
     VisualBuffer* getVisualBuffer() { return visualBuffer.get(); }
     void enableVisualBuffer(bool enable) {
