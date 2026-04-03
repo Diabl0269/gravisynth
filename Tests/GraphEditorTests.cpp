@@ -10,14 +10,7 @@ class DummyDragSource : public juce::Component {};
 
 class GraphEditorTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        // Skip on headless CI where ALSA/display aren't available.
-        // MainComponentTests already covers GraphEditor through MainComponent.
-        if (getenv("CI") != nullptr) {
-            GTEST_SKIP() << "Skipping UI tests on headless CI";
-        }
-        juce::MessageManager::getInstance();
-    }
+    void SetUp() override { juce::MessageManager::getInstance(); }
 
     void TearDown() override {
         if (!IsSkipped()) {

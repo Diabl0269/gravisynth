@@ -34,6 +34,7 @@ add_executable(GravisynthTests
     FXModuleTests.cpp
     EdgeCaseTests.cpp
     IntegrationTests.cpp
+    PresetManagerTests.cpp
     ../Source/MainComponent.cpp
     ../Source/UI/GraphEditor.cpp
     ../Source/UI/ModMatrixComponent.cpp

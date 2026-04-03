@@ -32,6 +32,8 @@ endif()
 add_library(GravisynthCore STATIC
     Source/AudioEngine.cpp
     Source/AudioEngine.h
+    Source/PresetManager.cpp
+    Source/PresetManager.h
     # Modules
     Source/Modules/ModuleBase.h
     Source/Modules/OscillatorModule.h
@@ -113,6 +115,7 @@ target_sources(Gravisynth PRIVATE
     Source/UI/GraphEditor.h
     Source/UI/ModuleComponent.cpp
     Source/UI/ModuleComponent.h
+    Source/UI/FrequencyResponseComponent.h
     Source/UI/ModMatrixComponent.cpp
     Source/UI/ModMatrixComponent.h
 )
