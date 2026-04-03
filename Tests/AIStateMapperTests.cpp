@@ -177,13 +177,10 @@ TEST(AIStateMapperTest, SchemaGeneration) {
 
 TEST(AIStateMapperTest, FactorySupportsAllModuleTypes) {
     // Verify all expected module types can be created
-    juce::StringArray expectedTypes = {
-        "Audio Input", "Audio Output", "Midi Input",
-        "Oscillator", "Filter", "VCA", "ADSR",
-        "Sequencer", "LFO", "Distortion", "Delay", "Reverb",
-        "MIDI Keyboard", "Amp Env", "Filter Env",
-        "Poly MIDI", "Poly Sequencer", "Attenuverter"
-    };
+    juce::StringArray expectedTypes = {"Audio Input", "Audio Output",   "Midi Input",    "Oscillator", "Filter",
+                                       "VCA",         "ADSR",           "Sequencer",     "LFO",        "Distortion",
+                                       "Delay",       "Reverb",         "MIDI Keyboard", "Amp Env",    "Filter Env",
+                                       "Poly MIDI",   "Poly Sequencer", "Attenuverter"};
     for (const auto& type : expectedTypes) {
         auto module = gsynth::AIStateMapper::createModule(type);
         EXPECT_NE(module, nullptr) << "Failed to create module: " << type.toStdString();
@@ -192,9 +189,8 @@ TEST(AIStateMapperTest, FactorySupportsAllModuleTypes) {
 
 TEST(AIStateMapperTest, MidiConnectionsSerialized) {
     juce::AudioProcessorGraph graph;
-    auto midiIn = graph.addNode(
-        std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
-            juce::AudioProcessorGraph::AudioGraphIOProcessor::midiInputNode));
+    auto midiIn = graph.addNode(std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+        juce::AudioProcessorGraph::AudioGraphIOProcessor::midiInputNode));
     auto oscModule = gsynth::AIStateMapper::createModule("Oscillator");
     auto oscNode = graph.addNode(std::move(oscModule));
 

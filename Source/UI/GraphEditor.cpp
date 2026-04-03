@@ -1,4 +1,5 @@
 #include "GraphEditor.h"
+#include "../AI/AIStateMapper.h"
 #include "../Modules/ADSRModule.h"
 #include "../Modules/AttenuverterModule.h"
 #include "../Modules/FX/DelayModule.h"
@@ -11,7 +12,6 @@
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
 #include "ModuleComponent.h"
-#include "../AI/AIStateMapper.h"
 
 GraphEditor::GraphEditor(AudioEngine& engine)
     : audioEngine(engine)

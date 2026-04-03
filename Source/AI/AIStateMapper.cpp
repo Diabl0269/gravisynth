@@ -304,8 +304,10 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                     int dstPort = cObj->getProperty("dstPort");
 
                     // Map -1 back to MIDI channel index
-                    if (srcPort == -1) srcPort = juce::AudioProcessorGraph::midiChannelIndex;
-                    if (dstPort == -1) dstPort = juce::AudioProcessorGraph::midiChannelIndex;
+                    if (srcPort == -1)
+                        srcPort = juce::AudioProcessorGraph::midiChannelIndex;
+                    if (dstPort == -1)
+                        dstPort = juce::AudioProcessorGraph::midiChannelIndex;
 
                     auto* srcNode = graph.getNodeForId(idMap[srcOld]);
                     auto* dstNode = graph.getNodeForId(idMap[dstOld]);
@@ -340,10 +342,11 @@ juce::var AIStateMapper::getPatchSchema() {
 
     nodeProperties->setProperty("id", juce::JSON::parse("{\"type\": \"integer\"}"));
     nodeProperties->setProperty(
-        "type", juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
-                                  "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Sequencer\", \"LFO\", "
-                                  "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\", \"Amp Env\", \"Filter Env\", "
-                                  "\"Poly MIDI\", \"Poly Sequencer\", \"Attenuverter\"]}"));
+        "type",
+        juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
+                          "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Sequencer\", \"LFO\", "
+                          "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\", \"Amp Env\", \"Filter Env\", "
+                          "\"Poly MIDI\", \"Poly Sequencer\", \"Attenuverter\"]}"));
     nodeProperties->setProperty("params", juce::JSON::parse("{\"type\": \"object\"}"));
 
     nodeItems->setProperty("properties", juce::var(nodeProperties.get()));

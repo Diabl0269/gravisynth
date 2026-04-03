@@ -18,9 +18,7 @@ juce::Array<PresetInfo> PresetManager::getPresetList() {
     return presets;
 }
 
-juce::StringArray PresetManager::getCategories() {
-    return {"Init", "Lead", "Pad", "Bass", "Sequence", "Keys"};
-}
+juce::StringArray PresetManager::getCategories() { return {"Init", "Lead", "Pad", "Bass", "Sequence", "Keys"}; }
 
 bool PresetManager::loadPreset(int index, juce::AudioProcessorGraph& graph) {
     juce::String jsonStr = getPresetJSON(index);
@@ -31,9 +29,7 @@ bool PresetManager::loadPreset(int index, juce::AudioProcessorGraph& graph) {
     return AIStateMapper::applyJSONToGraph(json, graph, true);
 }
 
-bool PresetManager::loadDefaultPreset(juce::AudioProcessorGraph& graph) {
-    return loadPreset(0, graph);
-}
+bool PresetManager::loadDefaultPreset(juce::AudioProcessorGraph& graph) { return loadPreset(0, graph); }
 
 juce::String PresetManager::getPresetJSON(int index) {
     // UI Layout Strategy (1600x900 screen):

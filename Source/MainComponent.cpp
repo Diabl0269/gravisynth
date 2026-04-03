@@ -62,26 +62,23 @@ MainComponent::MainComponent()
         }
         menu.addSeparator();
         menu.addItem(1000, "Load from file...");
-        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&loadButton),
-                           [this](int result) {
-                               if (result == 1000) {
-                                   fileChooser = std::make_unique<juce::FileChooser>(
-                                       "Load Preset",
-                                       juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
-                                   auto flags = juce::FileBrowserComponent::openMode |
-                                                juce::FileBrowserComponent::canSelectFiles;
-                                   fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
-                                       auto file = fc.getResult();
-                                       if (file != juce::File{}) {
-                                           graphEditor.loadPreset(file);
-                                       }
-                                   });
-                               } else if (result > 0) {
-                                   if (gsynth::PresetManager::loadPreset(result - 1, audioEngine.getGraph())) {
-                                       graphEditor.updateComponents();
-                                   }
-                               }
-                           });
+        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&loadButton), [this](int result) {
+            if (result == 1000) {
+                fileChooser = std::make_unique<juce::FileChooser>(
+                    "Load Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
+                auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+                fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
+                    auto file = fc.getResult();
+                    if (file != juce::File{}) {
+                        graphEditor.loadPreset(file);
+                    }
+                });
+            } else if (result > 0) {
+                if (gsynth::PresetManager::loadPreset(result - 1, audioEngine.getGraph())) {
+                    graphEditor.updateComponents();
+                }
+            }
+        });
     };
 
     addAndMakeVisible(toggleAiPanelButton);

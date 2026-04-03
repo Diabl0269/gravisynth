@@ -12,10 +12,8 @@ TEST(PresetManagerTest, LoadAllPresets) {
     juce::AudioProcessorGraph graph;
     for (int i = 0; i < gsynth::PresetManager::getPresetNames().size(); ++i) {
         graph.clear();
-        EXPECT_TRUE(gsynth::PresetManager::loadPreset(i, graph))
-            << "Failed to load preset " << i;
-        EXPECT_GT(graph.getNumNodes(), 0)
-            << "Preset " << i << " loaded with no nodes";
+        EXPECT_TRUE(gsynth::PresetManager::loadPreset(i, graph)) << "Failed to load preset " << i;
+        EXPECT_GT(graph.getNumNodes(), 0) << "Preset " << i << " loaded with no nodes";
     }
 }
 
@@ -38,8 +36,8 @@ TEST(PresetManagerTest, PresetCategoriesAreValid) {
     ASSERT_GT(categories.size(), 0);
     for (const auto& preset : presets) {
         EXPECT_TRUE(categories.contains(preset.category))
-            << "Preset '" << preset.name.toStdString()
-            << "' has unknown category '" << preset.category.toStdString() << "'";
+            << "Preset '" << preset.name.toStdString() << "' has unknown category '" << preset.category.toStdString()
+            << "'";
     }
 }
 
@@ -69,8 +67,7 @@ TEST(PresetManagerTest, AllPresetsHaveConnections) {
     for (int i = 0; i < gsynth::PresetManager::getPresetNames().size(); ++i) {
         graph.clear();
         gsynth::PresetManager::loadPreset(i, graph);
-        EXPECT_GT(graph.getConnections().size(), 0)
-            << "Preset " << i << " has no connections";
+        EXPECT_GT(graph.getConnections().size(), 0) << "Preset " << i << " has no connections";
     }
 }
 

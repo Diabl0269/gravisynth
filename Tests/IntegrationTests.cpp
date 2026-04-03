@@ -1,10 +1,10 @@
+#include "AI/AIStateMapper.h"
 #include "AudioEngine.h"
 #include "Modules/ADSRModule.h"
 #include "Modules/FilterModule.h"
 #include "Modules/LFOModule.h"
 #include "Modules/OscillatorModule.h"
 #include "Modules/VCAModule.h"
-#include "AI/AIStateMapper.h"
 #include "PresetManager.h"
 #include <gtest/gtest.h>
 
@@ -150,8 +150,7 @@ TEST_F(IntegrationTest, AllPresetsLoadAndHaveSignalPath) {
             if (node->getProcessor()->getName() == "Audio Output")
                 hasAudioOutput = true;
         }
-        EXPECT_TRUE(hasAudioOutput)
-            << "Preset '" << presetNames[i].toStdString() << "' missing Audio Output";
+        EXPECT_TRUE(hasAudioOutput) << "Preset '" << presetNames[i].toStdString() << "' missing Audio Output";
 
         // Every preset should have connections
         EXPECT_GT(graph.getConnections().size(), 0)
