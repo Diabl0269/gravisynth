@@ -128,8 +128,7 @@ TEST_F(IntegrationTest, SaveLoadRoundTripPreservesState) {
     // Verify node types match
     for (int i = 0; i < originalNodeCount; ++i) {
         auto origNode = graph.getNodes().getUnchecked(i);
-        EXPECT_FALSE(origNode->getProcessor()->getName().isEmpty())
-            << "Node at index " << i << " has empty name";
+        EXPECT_FALSE(origNode->getProcessor()->getName().isEmpty()) << "Node at index " << i << " has empty name";
     }
 }
 
