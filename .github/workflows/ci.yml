@@ -41,7 +41,8 @@ jobs:
           pkg-config \
           llvm \
           clang \
-          clang-format
+          clang-format \
+          xvfb
 
     - name: Lint Check
       run: |
@@ -60,24 +61,11 @@ jobs:
     - name: Run Tests
       working-directory: ./build/Tests
       run: |
-        # Set profile file for coverage
         export LLVM_PROFILE_FILE="default.profraw"
-        ./GravisynthTests
+        xvfb-run ./GravisynthTests
 
     - name: Check Coverage
-      run: |
-        # Must match the script logic but adapted for CI environment if needed
-        # Or just run the script if it's portable. 
-        # The script assumes 'Default' profdata naming and paths.
-        # Let's ensure the script is executable and run it.
-        chmod +x scripts/coverage.sh
-        # Override paths in script or rely on it running from root? 
-        # The script runs build steps again, which is redundant but safe.
-        # Ideally we skip build in script if already built.
-        # But let's just run the coverage check part manually to avoid rebuilding or assume script handles it.
-        # Actually, let's use the script but maybe optimize it later. For now, running it is easiest.
-        # Wait, the script *builds* too. That's fine for now.
-        bash scripts/coverage.sh
+      run: xvfb-run bash scripts/coverage.sh
         
     - name: Upload Coverage Artifact (Optional)
       if: always()
