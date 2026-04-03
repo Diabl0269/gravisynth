@@ -43,12 +43,26 @@ public:
         int baseWaveform = waveformParam->getIndex();
         int numSamples = buffer.getNumSamples();
 
-        const float* cvPitchCh = (buffer.getNumChannels() > 0) ? buffer.getReadPointer(0) : nullptr;
-        const float* cvWaveformCh = (buffer.getNumChannels() > 1) ? buffer.getReadPointer(1) : nullptr;
+        // Channel 0 is shared between CV pitch input and audio output.
+        // Save CV input data before overwriting with output to prevent feedback.
+        juce::HeapBlock<float> cvPitchSaved(numSamples);
+        juce::HeapBlock<float> cvWaveformSaved(numSamples);
+        if (buffer.getNumChannels() > 0)
+            juce::FloatVectorOperations::copy(cvPitchSaved, buffer.getReadPointer(0), numSamples);
+        else
+            juce::FloatVectorOperations::clear(cvPitchSaved, numSamples);
+        if (buffer.getNumChannels() > 1)
+            juce::FloatVectorOperations::copy(cvWaveformSaved, buffer.getReadPointer(1), numSamples);
+        else
+            juce::FloatVectorOperations::clear(cvWaveformSaved, numSamples);
+
+        const float* cvPitchCh = cvPitchSaved;
+        const float* cvWaveformCh = (buffer.getNumChannels() > 1) ? cvWaveformSaved.get() : nullptr;
         const float* cvOctaveCh = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
         const float* cvCoarseCh = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
         const float* cvFineCh = (buffer.getNumChannels() > 4) ? buffer.getReadPointer(4) : nullptr;
 
+        buffer.clear();
         auto* ch0 = buffer.getWritePointer(0);
 
         for (int i = 0; i < numSamples; ++i) {

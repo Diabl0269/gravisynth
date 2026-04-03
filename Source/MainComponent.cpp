@@ -36,7 +36,7 @@ MainComponent::MainComponent()
     saveButton.setButtonText("Save Preset");
     saveButton.onClick = [this] {
         fileChooser = std::make_unique<juce::FileChooser>(
-            "Save Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.xml");
+            "Save Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
         auto flags = juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles;
         fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
             auto file = fc.getResult();
@@ -47,17 +47,41 @@ MainComponent::MainComponent()
     };
 
     addAndMakeVisible(loadButton);
-    loadButton.setButtonText("Load Preset");
+    loadButton.setButtonText("Load Presets");
     loadButton.onClick = [this] {
-        fileChooser = std::make_unique<juce::FileChooser>(
-            "Load Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.xml");
-        auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
-        fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
-            auto file = fc.getResult();
-            if (file != juce::File{}) {
-                graphEditor.loadPreset(file);
+        juce::PopupMenu menu;
+        auto presets = gsynth::PresetManager::getPresetList();
+        auto categories = gsynth::PresetManager::getCategories();
+        for (const auto& cat : categories) {
+            juce::PopupMenu subMenu;
+            for (int i = 0; i < presets.size(); ++i) {
+                if (presets[i].category == cat)
+                    subMenu.addItem(i + 1, presets[i].name);
             }
-        });
+            menu.addSubMenu(cat, subMenu);
+        }
+        menu.addSeparator();
+        menu.addItem(1000, "Load from file...");
+        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&loadButton),
+                           [this](int result) {
+                               if (result == 1000) {
+                                   fileChooser = std::make_unique<juce::FileChooser>(
+                                       "Load Preset",
+                                       juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
+                                   auto flags = juce::FileBrowserComponent::openMode |
+                                                juce::FileBrowserComponent::canSelectFiles;
+                                   fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
+                                       auto file = fc.getResult();
+                                       if (file != juce::File{}) {
+                                           graphEditor.loadPreset(file);
+                                       }
+                                   });
+                               } else if (result > 0) {
+                                   if (gsynth::PresetManager::loadPreset(result - 1, audioEngine.getGraph())) {
+                                       graphEditor.updateComponents();
+                                   }
+                               }
+                           });
     };
 
     addAndMakeVisible(toggleAiPanelButton);
@@ -204,7 +228,7 @@ void MainComponent::resized() {
     auto header = bounds.removeFromTop(30);
 
     saveButton.setBounds(header.removeFromLeft(100).reduced(2));
-    loadButton.setBounds(header.removeFromLeft(100).reduced(2));
+    loadButton.setBounds(header.removeFromLeft(120).reduced(2));
     settingsButton.setBounds(header.removeFromLeft(100).reduced(2));
 
     // Position toggle buttons on the right side of the header

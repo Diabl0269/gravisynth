@@ -10,6 +10,7 @@
 #include "Modules/OscillatorModule.h"
 #include "Modules/SequencerModule.h"
 #include "Modules/VCAModule.h"
+#include "PresetManager.h"
 #include <map>
 
 AudioEngine::AudioEngine() {}
@@ -19,7 +20,9 @@ AudioEngine::~AudioEngine() { shutdown(); }
 void AudioEngine::initialise() {
     deviceManager.initialiseWithDefaultDevices(0, 2);
     deviceManager.addAudioCallback(this);
-    createDefaultPatch();
+    if (!gsynth::PresetManager::loadDefaultPreset(mainProcessorGraph)) {
+        createDefaultPatch(); // Fallback
+    }
 }
 
 void AudioEngine::shutdown() {

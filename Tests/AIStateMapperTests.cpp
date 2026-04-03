@@ -1,4 +1,5 @@
 #include "../Source/AI/AIStateMapper.h"
+#include "../Source/Modules/AttenuverterModule.h"
 #include "../Source/Modules/FilterModule.h"
 #include "../Source/Modules/OscillatorModule.h"
 #include "../Source/Modules/VCAModule.h"
@@ -172,4 +173,100 @@ TEST(AIStateMapperTest, SchemaGeneration) {
     ASSERT_TRUE(schema.contains("Filter"));
     ASSERT_TRUE(schema.contains("waveform"));
     ASSERT_TRUE(schema.contains("cutoff"));
+}
+
+TEST(AIStateMapperTest, FactorySupportsAllModuleTypes) {
+    // Verify all expected module types can be created
+    juce::StringArray expectedTypes = {
+        "Audio Input", "Audio Output", "Midi Input",
+        "Oscillator", "Filter", "VCA", "ADSR",
+        "Sequencer", "LFO", "Distortion", "Delay", "Reverb",
+        "MIDI Keyboard", "Amp Env", "Filter Env",
+        "Poly MIDI", "Poly Sequencer", "Attenuverter"
+    };
+    for (const auto& type : expectedTypes) {
+        auto module = gsynth::AIStateMapper::createModule(type);
+        EXPECT_NE(module, nullptr) << "Failed to create module: " << type.toStdString();
+    }
+}
+
+TEST(AIStateMapperTest, MidiConnectionsSerialized) {
+    juce::AudioProcessorGraph graph;
+    auto midiIn = graph.addNode(
+        std::make_unique<juce::AudioProcessorGraph::AudioGraphIOProcessor>(
+            juce::AudioProcessorGraph::AudioGraphIOProcessor::midiInputNode));
+    auto oscModule = gsynth::AIStateMapper::createModule("Oscillator");
+    auto oscNode = graph.addNode(std::move(oscModule));
+
+    graph.addConnection({{midiIn->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                         {oscNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
+
+    auto json = gsynth::AIStateMapper::graphToJSON(graph);
+
+    // Verify MIDI ports are serialized as -1
+    auto* connections = json.getDynamicObject()->getProperty("connections").getArray();
+    ASSERT_NE(connections, nullptr);
+    ASSERT_GT(connections->size(), 0);
+    auto* conn = (*connections)[0].getDynamicObject();
+    EXPECT_EQ((int)conn->getProperty("srcPort"), -1);
+    EXPECT_EQ((int)conn->getProperty("dstPort"), -1);
+}
+
+TEST(AIStateMapperTest, ParameterValuesAreUnnormalized) {
+    // Create a graph with an oscillator, set a param to a known denormalized value
+    juce::AudioProcessorGraph graph;
+    auto osc = std::make_unique<OscillatorModule>();
+    // Set fine tuning to 50.0 (range is -100 to 100)
+    for (auto* param : osc->getParameters()) {
+        if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+            if (p->paramID == "fine") {
+                auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param);
+                ranged->setValueNotifyingHost(ranged->getNormalisableRange().convertTo0to1(50.0f));
+            }
+        }
+    }
+    auto node = graph.addNode(std::move(osc));
+
+    auto json = gsynth::AIStateMapper::graphToJSON(graph);
+
+    // Check the serialized value is denormalized (50.0, not 0.75)
+    auto* nodes = json.getDynamicObject()->getProperty("nodes").getArray();
+    ASSERT_NE(nodes, nullptr);
+    auto* nodeObj = (*nodes)[0].getDynamicObject();
+    auto* params = nodeObj->getProperty("params").getDynamicObject();
+    float fineValue = (float)params->getProperty("fine");
+    EXPECT_NEAR(fineValue, 50.0f, 1.0f);
+}
+
+TEST(AIStateMapperTest, RoundTripPreservesParameters) {
+    // Build a graph, serialize, deserialize, check parameters match
+    juce::AudioProcessorGraph originalGraph;
+    auto osc = std::make_unique<OscillatorModule>();
+    for (auto* param : osc->getParameters()) {
+        if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+            if (p->paramID == "fine") {
+                auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param);
+                ranged->setValueNotifyingHost(ranged->getNormalisableRange().convertTo0to1(25.0f));
+            }
+        }
+    }
+    originalGraph.addNode(std::move(osc));
+
+    // Round trip
+    auto json = gsynth::AIStateMapper::graphToJSON(originalGraph);
+    juce::AudioProcessorGraph newGraph;
+    gsynth::AIStateMapper::applyJSONToGraph(json, newGraph, true);
+
+    // Check parameter value survived
+    ASSERT_EQ(newGraph.getNumNodes(), 1);
+    auto* newOsc = newGraph.getNodes().getUnchecked(0)->getProcessor();
+    for (auto* param : newOsc->getParameters()) {
+        if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+            if (p->paramID == "fine") {
+                auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param);
+                float value = ranged->getNormalisableRange().convertFrom0to1(ranged->getValue());
+                EXPECT_NEAR(value, 25.0f, 1.0f);
+            }
+        }
+    }
 }
