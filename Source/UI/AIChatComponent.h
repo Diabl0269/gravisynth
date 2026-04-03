@@ -13,7 +13,11 @@ namespace gsynth {
 class AIChatComponent
     : public juce::Component
     , private juce::TextEditor::Listener
-    , public juce::Timer {
+    , public juce::Timer
+#ifndef NDEBUG
+    , private juce::Logger
+#endif
+{
 public:
     AIChatComponent(AIIntegrationService& service);
     ~AIChatComponent() override;
@@ -48,6 +52,19 @@ private:
         bool isExpanded = false;
     };
     std::vector<MessageData> messages;
+
+#ifndef NDEBUG
+    juce::TextEditor debugConsole;
+    juce::TextButton toggleDebugButton;
+    bool debugConsoleVisible = false;
+    void logMessage(const juce::String& message) override;
+
+public:
+    void appendDebugLog(const juce::String& msg);
+
+private:
+#endif
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AIChatComponent)
 };
 

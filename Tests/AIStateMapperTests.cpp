@@ -173,3 +173,111 @@ TEST(AIStateMapperTest, SchemaGeneration) {
     ASSERT_TRUE(schema.contains("waveform"));
     ASSERT_TRUE(schema.contains("cutoff"));
 }
+
+TEST(AIStateMapperTest, MergeMode_PrePopulatesIdMapForCrossConnections) {
+    juce::AudioProcessorGraph graph;
+
+    // Add an existing VCA node (regular module with proper channel config)
+    auto vcaNode = graph.addNode(std::make_unique<VCAModule>());
+    ASSERT_NE(vcaNode, nullptr);
+    int existingVcaId = (int)vcaNode->nodeID.uid;
+
+    // Delta JSON: add an Oscillator and connect it to the existing VCA
+    juce::String jsonStr = "{\"nodes\":[{\"id\":9001,\"type\":\"Oscillator\",\"params\":{\"frequency\":440.0}}],"
+                           "\"connections\":[{\"src\":9001,\"srcPort\":0,\"dst\":" +
+                           juce::String(existingVcaId) + ",\"dstPort\":0}]}";
+    juce::var json = juce::JSON::parse(jsonStr);
+
+    bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, false);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(graph.getNumNodes(), 2); // 1 existing + 1 new
+    ASSERT_EQ(graph.getConnections().size(), 1); // Cross-connection should exist
+}
+
+TEST(AIStateMapperTest, MergeMode_RemoveNodes) {
+    juce::AudioProcessorGraph graph;
+
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+    auto vcaNode = graph.addNode(std::make_unique<VCAModule>());
+
+    // Connect osc -> filter -> vca
+    graph.addConnection({{oscNode->nodeID, 0}, {filterNode->nodeID, 0}});
+    graph.addConnection({{filterNode->nodeID, 0}, {vcaNode->nodeID, 0}});
+
+    ASSERT_EQ(graph.getNumNodes(), 3);
+    ASSERT_EQ(graph.getConnections().size(), 2);
+
+    // Remove the filter node
+    int filterNodeId = (int)filterNode->nodeID.uid;
+    juce::String jsonStr =
+        "{\"remove\":[" + juce::String(filterNodeId) + "],\"nodes\":[],\"connections\":[]}";
+    juce::var json = juce::JSON::parse(jsonStr);
+
+    bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, false);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(graph.getNumNodes(), 2); // Filter removed
+    ASSERT_EQ(graph.getConnections().size(), 0); // Connections involving filter removed by JUCE
+}
+
+TEST(AIStateMapperTest, MergeMode_UpdateExistingNodeParams) {
+    juce::AudioProcessorGraph graph;
+
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+    ASSERT_NE(oscNode, nullptr);
+    int oscId = (int)oscNode->nodeID.uid;
+
+    // Delta JSON: update frequency on existing oscillator (same ID, same type)
+    juce::String jsonStr = "{\"nodes\":[{\"id\":" + juce::String(oscId) +
+                           ",\"type\":\"Oscillator\",\"params\":{\"frequency\":880.0}}],\"connections\":[]}";
+    juce::var json = juce::JSON::parse(jsonStr);
+
+    bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, false);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(graph.getNumNodes(), 1); // No new node created, existing one updated
+
+    // Verify parameter was updated
+    auto* processor = oscNode->getProcessor();
+    for (auto* param : processor->getParameters()) {
+        if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+            if (p->paramID == "frequency") {
+                float denormalized =
+                    dynamic_cast<juce::RangedAudioParameter*>(param)->getNormalisableRange().convertFrom0to1(
+                        param->getValue());
+                ASSERT_NEAR(denormalized, 880.0f, 1.0f);
+                break;
+            }
+        }
+    }
+}
+
+TEST(AIStateMapperTest, MergeMode_TypeMismatchCreatesNewNode) {
+    juce::AudioProcessorGraph graph;
+
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+    ASSERT_NE(oscNode, nullptr);
+    int oscId = (int)oscNode->nodeID.uid;
+
+    // Delta JSON: same ID but different type — should create a new node
+    juce::String jsonStr = "{\"nodes\":[{\"id\":" + juce::String(oscId) +
+                           ",\"type\":\"Filter\",\"params\":{\"cutoff\":1000.0}}],\"connections\":[]}";
+    juce::var json = juce::JSON::parse(jsonStr);
+
+    bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, false);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(graph.getNumNodes(), 2); // Original Oscillator + new Filter
+}
+
+TEST(AIStateMapperTest, ValidateJSON_AllowsRemoveOnly) {
+    juce::AudioProcessorGraph graph;
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+    int oscId = (int)oscNode->nodeID.uid;
+
+    // JSON with "remove" but no "nodes"
+    juce::String jsonStr = "{\"remove\":[" + juce::String(oscId) + "]}";
+    juce::var json = juce::JSON::parse(jsonStr);
+
+    bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, false);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(graph.getNumNodes(), 0);
+}

@@ -1,4 +1,5 @@
 #include "AI/AIIntegrationService.h"
+#include "Modules/OscillatorModule.h"
 #include <gtest/gtest.h>
 
 namespace gsynth {
@@ -105,6 +106,30 @@ TEST_F(AIIntegrationServiceTest, ModelManagement) {
 
     service->setModel("test-model");
     EXPECT_EQ(service->getCurrentModel(), "test-model");
+}
+
+TEST_F(AIIntegrationServiceTest, ApplyPatch_MergeMode_PreservesExisting) {
+    // Add an existing node to the graph
+    graph->addNode(std::make_unique<OscillatorModule>());
+    ASSERT_EQ(graph->getNumNodes(), 1);
+
+    // Apply a delta patch in merge mode
+    juce::String deltaJson = "{\"nodes\":[{\"id\":100,\"type\":\"Filter\",\"params\":{}}],\"connections\":[]}";
+    bool success = service->applyPatch(deltaJson, true);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(graph->getNumNodes(), 2); // Original Oscillator + new Filter
+}
+
+TEST_F(AIIntegrationServiceTest, ApplyPatch_DefaultReplace_ClearsGraph) {
+    // Add an existing node to the graph
+    graph->addNode(std::make_unique<OscillatorModule>());
+    ASSERT_EQ(graph->getNumNodes(), 1);
+
+    // Apply a full patch without merge mode (default)
+    juce::String fullJson = "{\"nodes\":[{\"id\":100,\"type\":\"Filter\",\"params\":{}}],\"connections\":[]}";
+    bool success = service->applyPatch(fullJson);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(graph->getNumNodes(), 1); // Only the Filter from JSON, Oscillator cleared
 }
 
 } // namespace gsynth

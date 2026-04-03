@@ -43,6 +43,8 @@ private:
      * @return index if found, -1 otherwise.
      */
     static int findChoiceIndex(juce::AudioParameterChoice* p, const juce::String& choiceText);
+
+    static void applyParamsToProcessor(juce::AudioProcessor* processor, const juce::DynamicObject* paramsObj);
 };
 
 } // namespace gsynth
