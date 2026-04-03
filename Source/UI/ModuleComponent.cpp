@@ -19,13 +19,25 @@ ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGr
             addAndMakeVisible(scopeComponent.get());
 
             scopeToggle = std::make_unique<juce::ToggleButton>("Show Scope");
-            scopeToggle->setToggleState(true, juce::dontSendNotification);
+            bool isFilter = (getType(module) == ModuleType::Filter);
+            scopeToggle->setToggleState(!isFilter, juce::dontSendNotification);
+            scopeComponent->setVisible(!isFilter);
             scopeToggle->onClick = [this] {
                 scopeComponent->setVisible(scopeToggle->getToggleState());
                 updateLayout();
             };
             addAndMakeVisible(scopeToggle.get());
         }
+    }
+
+    if (auto* filterMod = dynamic_cast<FilterModule*>(module)) {
+        freqResponseComponent = std::make_unique<FrequencyResponseComponent>(*filterMod);
+        addAndMakeVisible(freqResponseComponent.get());
+
+        spectrumToggle = std::make_unique<juce::ToggleButton>("Show Spectrum");
+        spectrumToggle->setToggleState(false, juce::dontSendNotification);
+        spectrumToggle->onClick = [this] { freqResponseComponent->setShowSpectrum(spectrumToggle->getToggleState()); };
+        addAndMakeVisible(spectrumToggle.get());
     }
 
     createControls();
@@ -128,6 +140,10 @@ void ModuleComponent::updateLayout() {
     }
 
     int contentHeight = 40; // Header
+    // Account for port label space on modules with many inputs
+    int numInputs = module->getTotalNumInputChannels();
+    if (numInputs > 2)
+        contentHeight = std::max(contentHeight, 30 + numInputs * 20 + 10);
     contentHeight += comboBoxes.size() * 50;
     contentHeight += toggles.size() * 30;
 
@@ -140,6 +156,12 @@ void ModuleComponent::updateLayout() {
 
     if (scopeComponent && scopeComponent->isVisible())
         contentHeight += 110;
+
+    if (freqResponseComponent)
+        contentHeight += 130;
+
+    if (spectrumToggle)
+        contentHeight += 30;
 
     setSize(280, std::max(100, contentHeight + 20));
     resized();
@@ -416,6 +438,10 @@ void ModuleComponent::resized() {
     // Increase top y if MIDI IN is present to avoid overlap
     if (module->acceptsMidi())
         y += 30;
+    // Push content below input port labels
+    int numInputs = module->getTotalNumInputChannels();
+    if (numInputs > 2)
+        y = std::max(y, 30 + numInputs * 20 + 10);
 
     int margin = 70; // Wider margin for labels
     int contentWidth = getWidth() - (margin * 2);
@@ -449,6 +475,16 @@ void ModuleComponent::resized() {
     // Update y to the end of sliders for scope toggle/scope
     int finalSlidersRow = (sliders.size() + 1) / 2;
     y += finalSlidersRow * (sliderHeight + 20);
+
+    if (freqResponseComponent) {
+        freqResponseComponent->setBounds(10, y, getWidth() - 20, 120);
+        y += 130;
+    }
+
+    if (spectrumToggle) {
+        spectrumToggle->setBounds(margin, y, contentWidth, 24);
+        y += 30;
+    }
 
     if (scopeToggle) {
         scopeToggle->setBounds(margin, y, contentWidth, 24);

@@ -90,3 +90,60 @@ TEST_F(FilterTest, MultiParamModulation) {
     // Process
     filter.processBlock(buffer, midiMessages);
 }
+
+TEST_F(FilterTest, FilterTypeParameterExists) {
+    auto* typeParam = dynamic_cast<juce::AudioParameterChoice*>(filter.getParameters()[3]);
+    ASSERT_NE(typeParam, nullptr);
+    EXPECT_EQ(typeParam->choices.size(), 7);
+}
+
+TEST_F(FilterTest, AllFilterTypesProcessWithoutCrash) {
+    for (int type = 0; type < 7; ++type) {
+        filter.prepareToPlay(44100.0, 512);
+        auto* typeParam = dynamic_cast<juce::AudioParameterChoice*>(filter.getParameters()[3]);
+        ASSERT_NE(typeParam, nullptr);
+
+        float normalized = (type == 0) ? 0.0f : static_cast<float>(type) / 6.0f;
+        typeParam->setValueNotifyingHost(normalized);
+
+        buffer.clear();
+        auto* data = buffer.getWritePointer(0);
+        juce::Random r;
+        for (int i = 0; i < 512; ++i)
+            data[i] = r.nextFloat() * 2.0f - 1.0f;
+
+        EXPECT_NO_THROW(filter.processBlock(buffer, midiMessages));
+    }
+}
+
+TEST_F(FilterTest, HPFAttenuatesLowFreq) {
+    // Set to HPF24 (index 2)
+    auto* typeParam = dynamic_cast<juce::AudioParameterChoice*>(filter.getParameters()[3]);
+    ASSERT_NE(typeParam, nullptr);
+    typeParam->setValueNotifyingHost(2.0f / 6.0f);
+
+    // Set cutoff high
+    auto* cutoffParam = dynamic_cast<juce::AudioParameterFloat*>(filter.getParameters()[0]);
+    ASSERT_NE(cutoffParam, nullptr);
+    cutoffParam->setValueNotifyingHost(0.9f);
+
+    // Fill with DC (low freq content)
+    auto* data = buffer.getWritePointer(0);
+    for (int i = 0; i < 512; ++i)
+        data[i] = 1.0f;
+
+    float inputRMS = buffer.getRMSLevel(0, 0, 512);
+    filter.processBlock(buffer, midiMessages);
+    float outputRMS = buffer.getRMSLevel(0, 0, 512);
+
+    EXPECT_LT(outputRMS, inputRMS);
+}
+
+TEST_F(FilterTest, NotchProcessesWithoutCrash) {
+    // Set to Notch (index 6)
+    auto* typeParam = dynamic_cast<juce::AudioParameterChoice*>(filter.getParameters()[3]);
+    ASSERT_NE(typeParam, nullptr);
+    typeParam->setValueNotifyingHost(1.0f);
+
+    filter.processBlock(buffer, midiMessages);
+}
