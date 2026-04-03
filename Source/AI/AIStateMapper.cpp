@@ -14,6 +14,7 @@
 #include "../Modules/VCAModule.h"
 #include <functional> // For std::function
 #include <map>
+#include <set>
 #include <unordered_map> // For the factory map
 
 namespace gsynth {
@@ -62,8 +63,8 @@ bool AIStateMapper::validatePatchJSON(const juce::var& json) {
             return false;
         }
         // Further validation of each node could go here (e.g., checking for id and type)
-    } else {
-        juce::Logger::writeToLog("validatePatchJSON: 'nodes' property is missing.");
+    } else if (!rootObj->hasProperty("remove")) {
+        juce::Logger::writeToLog("validatePatchJSON: 'nodes' and 'remove' properties are both missing.");
         return false;
     }
 
@@ -200,6 +201,55 @@ int AIStateMapper::findChoiceIndex(juce::AudioParameterChoice* p, const juce::St
     return -1;
 }
 
+void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, const juce::DynamicObject* paramsObj) {
+    for (auto* param : processor->getParameters()) {
+        if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param)) {
+            if (paramsObj->hasProperty(p->paramID)) {
+                auto jsonValue = paramsObj->getProperty(p->paramID);
+
+                if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(p)) {
+                    if (jsonValue.isString()) {
+                        int index = findChoiceIndex(choice, jsonValue.toString());
+                        if (index >= 0) {
+                            p->setValueNotifyingHost(p->getNormalisableRange().convertTo0to1((float)index));
+                        }
+                    } else {
+                        float val = (float)jsonValue;
+                        p->setValueNotifyingHost(p->getNormalisableRange().convertTo0to1(val));
+                    }
+                } else if (auto* b = dynamic_cast<juce::AudioParameterBool*>(p)) {
+                    b->setValueNotifyingHost((bool)jsonValue ? 1.0f : 0.0f);
+                } else {
+                    float val = (float)jsonValue;
+                    auto range = p->getNormalisableRange();
+
+                    // Detect likely normalized 0-1 values from AI models that ignore range instructions.
+                    // If the actual range extends beyond [0,1] but the value is within [0,1],
+                    // the AI probably sent a normalized value — convert it to the actual range.
+                    bool rangeIsUnitInterval = (range.start >= 0.0f && range.end <= 1.0f);
+                    bool wasConverted = false;
+                    if (!rangeIsUnitInterval && val >= 0.0f && val <= 1.0f) {
+                        float originalVal = val;
+                        val = range.convertFrom0to1(val);
+                        wasConverted = true;
+                        juce::Logger::writeToLog("AIStateMapper: param '" + p->paramID + "' value " +
+                                                 juce::String(originalVal) + " detected as normalized, converted to " +
+                                                 juce::String(val) + " (range " + juce::String(range.start) + " to " +
+                                                 juce::String(range.end) + ")");
+                    }
+
+                    val = range.snapToLegalValue(val);
+                    float normalizedValue = range.convertTo0to1(val);
+                    juce::Logger::writeToLog("AIStateMapper: setting '" + p->paramID + "' = " + juce::String(val) +
+                                             " (normalized: " + juce::String(normalizedValue) + ")" +
+                                             (wasConverted ? " [auto-corrected]" : ""));
+                    p->setValueNotifyingHost(normalizedValue);
+                }
+            }
+        }
+    }
+}
+
 bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting) {
     if (!json.isObject()) {
         juce::Logger::writeToLog("applyJSONToGraph: JSON is not an object.");
@@ -220,10 +270,33 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
     const juce::ScopedLock sl(graph.getCallbackLock());
 
     if (clearExisting) {
-        graph.clear(); // Clear existing graph as requested
+        graph.clear();
     }
 
     std::map<int, juce::AudioProcessorGraph::NodeID> idMap;
+    std::set<juce::AudioProcessorGraph::NodeID> newlyCreatedNodes;
+
+    // Pre-populate idMap with existing nodes when merging
+    if (!clearExisting) {
+        for (auto* node : graph.getNodes()) {
+            idMap[(int)node->nodeID.uid] = node->nodeID;
+        }
+    }
+
+    // Process removals before adding new nodes
+    if (rootObj->hasProperty("remove")) {
+        auto* removeList = rootObj->getProperty("remove").getArray();
+        if (removeList) {
+            for (const auto& idVar : *removeList) {
+                int nodeIdToRemove = (int)idVar;
+                auto juceNodeId = juce::AudioProcessorGraph::NodeID((juce::uint32)nodeIdToRemove);
+                if (graph.getNodeForId(juceNodeId) != nullptr) {
+                    graph.removeNode(juceNodeId);
+                }
+                idMap.erase(nodeIdToRemove);
+            }
+        }
+    }
 
     // 1. Create Nodes
     if (rootObj->hasProperty("nodes")) {
@@ -234,51 +307,42 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                     int oldId = nObj->getProperty("id");
                     juce::String type = nObj->getProperty("type");
 
-                    auto processor = createModule(type);
-                    if (processor) {
-                        // Set parameters
-                        if (nObj->hasProperty("params")) {
-                            if (auto* pObj = nObj->getProperty("params").getDynamicObject()) {
-                                for (auto* param : processor->getParameters()) {
-                                    if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param)) {
-                                        if (pObj->hasProperty(p->paramID)) {
-                                            auto jsonValue = pObj->getProperty(p->paramID);
-
-                                            if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(p)) {
-                                                if (jsonValue.isString()) {
-                                                    int index = findChoiceIndex(choice, jsonValue.toString());
-                                                    if (index >= 0) {
-                                                        p->setValueNotifyingHost(
-                                                            p->getNormalisableRange().convertTo0to1((float)index));
-                                                    }
-                                                } else {
-                                                    float val = (float)jsonValue;
-                                                    p->setValueNotifyingHost(
-                                                        p->getNormalisableRange().convertTo0to1(val));
-                                                }
-                                            } else if (auto* b = dynamic_cast<juce::AudioParameterBool*>(p)) {
-                                                b->setValueNotifyingHost((bool)jsonValue ? 1.0f : 0.0f);
-                                            } else {
-                                                float val = (float)jsonValue;
-                                                // Convert the value from the JSON (unnormalized) to the parameter's
-                                                // normalized range
-                                                val = p->getNormalisableRange().snapToLegalValue(
-                                                    val); // Snap to legal value first
-                                                float normalizedValue = p->getNormalisableRange().convertTo0to1(val);
-                                                p->setValueNotifyingHost(normalizedValue);
-                                            }
-                                        } else {
-                                            juce::Logger::writeToLog("AIStateMapper: Parameter '" + p->paramID +
-                                                                     "' not found in JSON for module '" + type + "'");
-                                        }
+                    // In merge mode, check if this node already exists
+                    if (!clearExisting && idMap.count(oldId)) {
+                        auto existingNodeId = idMap[oldId];
+                        if (auto* existingNode = graph.getNodeForId(existingNodeId)) {
+                            if (existingNode->getProcessor()->getName() == type) {
+                                // Update parameters on existing node
+                                if (nObj->hasProperty("params")) {
+                                    if (auto* pObj = nObj->getProperty("params").getDynamicObject()) {
+                                        applyParamsToProcessor(existingNode->getProcessor(), pObj);
                                     }
                                 }
+                                // Update position if provided
+                                if (nObj->hasProperty("position")) {
+                                    if (auto* posObj = nObj->getProperty("position").getDynamicObject()) {
+                                        existingNode->properties.set("x", posObj->getProperty("x"));
+                                        existingNode->properties.set("y", posObj->getProperty("y"));
+                                    }
+                                }
+                                continue; // Skip node creation
+                            }
+                        }
+                    }
+
+                    auto processor = createModule(type);
+                    if (processor) {
+                        // Set parameters using helper
+                        if (nObj->hasProperty("params")) {
+                            if (auto* pObj = nObj->getProperty("params").getDynamicObject()) {
+                                applyParamsToProcessor(processor.get(), pObj);
                             }
                         }
 
                         auto node = graph.addNode(std::move(processor));
                         if (node) {
                             idMap[oldId] = node->nodeID;
+                            newlyCreatedNodes.insert(node->nodeID);
                             if (nObj->hasProperty("position")) {
                                 if (auto* posObj = nObj->getProperty("position").getDynamicObject()) {
                                     node->properties.set("x", posObj->getProperty("x"));
@@ -319,6 +383,87 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                             graph.addConnection({{idMap[srcOld], srcPort}, {idMap[dstOld], dstPort}});
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // 3. Auto-connect: in merge mode, connect new unconnected audio nodes to Audio Output
+    if (!clearExisting && !newlyCreatedNodes.empty()) {
+        // Find the Audio Output node
+        juce::AudioProcessorGraph::Node* audioOutputNode = nullptr;
+        for (auto* node : graph.getNodes()) {
+            if (node->getProcessor()->getName() == "Audio Output") {
+                audioOutputNode = node;
+                break;
+            }
+        }
+
+        if (audioOutputNode != nullptr) {
+            // Types that produce audio and should auto-connect to output
+            static const std::set<juce::String> audioNodeTypes = {"Oscillator", "Filter", "VCA",     "Distortion",
+                                                                  "Delay",      "Reverb", "Amp Env", "Filter Env"};
+
+            for (auto newNodeId : newlyCreatedNodes) {
+                auto* node = graph.getNodeForId(newNodeId);
+                if (node == nullptr)
+                    continue;
+
+                juce::String typeName = node->getProcessor()->getName();
+                if (audioNodeTypes.find(typeName) == audioNodeTypes.end())
+                    continue;
+
+                // Check if this node already has outgoing audio connections
+                bool hasOutgoing = false;
+                for (const auto& conn : graph.getConnections()) {
+                    if (conn.source.nodeID == newNodeId && !conn.source.isMIDI()) {
+                        hasOutgoing = true;
+                        break;
+                    }
+                }
+
+                if (!hasOutgoing && node->getProcessor()->getTotalNumOutputChannels() > 0) {
+                    graph.addConnection({{newNodeId, 0}, {audioOutputNode->nodeID, 0}});
+                }
+            }
+        }
+
+        // Auto-connect MIDI: find existing MIDI sources and connect to new MIDI-accepting nodes
+        // Types that accept MIDI input
+        static const std::set<juce::String> midiAcceptingTypes = {"Oscillator", "Sequencer", "Poly Sequencer",
+                                                                  "Poly MIDI"};
+
+        // Find all existing MIDI source nodes (nodes that have outgoing MIDI connections)
+        std::set<juce::AudioProcessorGraph::NodeID> midiSources;
+        for (const auto& conn : graph.getConnections()) {
+            if (conn.source.isMIDI() && newlyCreatedNodes.find(conn.source.nodeID) == newlyCreatedNodes.end()) {
+                midiSources.insert(conn.source.nodeID);
+            }
+        }
+
+        if (!midiSources.empty()) {
+            auto midiSourceId = *midiSources.begin(); // Use the first MIDI source found
+            for (auto newNodeId : newlyCreatedNodes) {
+                auto* node = graph.getNodeForId(newNodeId);
+                if (node == nullptr)
+                    continue;
+
+                juce::String typeName = node->getProcessor()->getName();
+                if (midiAcceptingTypes.find(typeName) == midiAcceptingTypes.end())
+                    continue;
+
+                // Check if this node already has incoming MIDI
+                bool hasMidiInput = false;
+                for (const auto& conn : graph.getConnections()) {
+                    if (conn.destination.nodeID == newNodeId && conn.destination.isMIDI()) {
+                        hasMidiInput = true;
+                        break;
+                    }
+                }
+
+                if (!hasMidiInput && node->getProcessor()->acceptsMidi()) {
+                    graph.addConnection({{midiSourceId, juce::AudioProcessorGraph::midiChannelIndex},
+                                         {newNodeId, juce::AudioProcessorGraph::midiChannelIndex}});
                 }
             }
         }
@@ -370,6 +515,15 @@ juce::var AIStateMapper::getPatchSchema() {
     connItems->setProperty("required", juce::Array<juce::var>({"src", "srcPort", "dst", "dstPort"}));
     connections->setProperty("items", juce::var(connItems.get()));
     properties->setProperty("connections", juce::var(connections.get()));
+
+    // 3. Mode (optional)
+    properties->setProperty("mode", juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"replace\", \"merge\"]}"));
+
+    // 4. Remove (optional)
+    juce::DynamicObject::Ptr removeArr = new juce::DynamicObject();
+    removeArr->setProperty("type", "array");
+    removeArr->setProperty("items", juce::JSON::parse("{\"type\": \"integer\"}"));
+    properties->setProperty("remove", juce::var(removeArr.get()));
 
     schema->setProperty("properties", juce::var(properties.get()));
     schema->setProperty("required", juce::Array<juce::var>({"nodes", "connections"}));

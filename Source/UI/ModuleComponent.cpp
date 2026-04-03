@@ -235,6 +235,8 @@ void ModuleComponent::paint(juce::Graphics& g) {
                 label = "Crs CV";
             else if (i == 4)
                 label = "Fine CV";
+            else if (i == 5)
+                label = "Level CV";
         }
         // Custom labels for Filter
         if (getType(module) == ModuleType::Filter) {

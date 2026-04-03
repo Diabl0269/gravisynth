@@ -26,14 +26,15 @@ juce::StringArray extractJSONBlocks(const juce::String& text) {
 //==============================================================================
 class AIChatComponent::PatchCard : public juce::Component {
 public:
-    PatchCard(const juce::String& json, std::function<void()> applyCallback)
+    PatchCard(const juce::String& json, std::function<void()> applyCallback, bool isMerge)
         : patchJson(json)
         , onApply(applyCallback) {
 
         addAndMakeVisible(headerLabel);
-        headerLabel.setText("Suggested Patch", juce::dontSendNotification);
+        headerLabel.setText(isMerge ? "Patch Update" : "New Patch", juce::dontSendNotification);
         headerLabel.setFont(juce::Font(14.0f, juce::Font::bold));
-        headerLabel.setColour(juce::Label::textColourId, juce::Colours::lightgreen);
+        headerLabel.setColour(juce::Label::textColourId,
+                              isMerge ? juce::Colours::lightyellow : juce::Colours::lightgreen);
 
         addAndMakeVisible(expandButton);
         expandButton.setButtonText("Expand JSON");
@@ -46,8 +47,9 @@ public:
         };
 
         addAndMakeVisible(applyButton);
-        applyButton.setButtonText("Apply Patch");
-        applyButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgreen);
+        applyButton.setButtonText(isMerge ? "Merge" : "New Patch");
+        applyButton.setColour(juce::TextButton::buttonColourId,
+                              isMerge ? juce::Colour(0xFF8B6914) : juce::Colours::darkgreen);
         applyButton.onClick = onApply;
 
         addAndMakeVisible(jsonDisplay);
@@ -63,9 +65,9 @@ public:
         auto header = b.removeFromTop(25);
         headerLabel.setBounds(header.removeFromLeft(120));
 
-        auto buttons = header.removeFromRight(160);
+        auto buttons = header.removeFromRight(180);
         applyButton.setBounds(buttons.removeFromRight(80).reduced(2));
-        expandButton.setBounds(buttons.removeFromRight(80).reduced(2));
+        expandButton.setBounds(buttons.removeFromRight(90).reduced(2));
 
         if (isExpanded) {
             b.removeFromTop(5);
@@ -92,7 +94,7 @@ private:
 //==============================================================================
 class AIChatComponent::MessageBubble : public juce::Component {
 public:
-    MessageBubble(const MessageData& data, std::function<void(const juce::String&)> applyPatch) {
+    MessageBubble(const MessageData& data, std::function<void(const juce::String&)> applyPatch, bool isMerge) {
         role = data.role;
         text = data.text;
 
@@ -102,8 +104,8 @@ public:
         textLabel.setJustificationType(juce::Justification::topLeft);
 
         if (data.jsonPatch.isNotEmpty()) {
-            patchCard = std::make_unique<PatchCard>(data.jsonPatch,
-                                                    [applyPatch, json = data.jsonPatch]() { applyPatch(json); });
+            patchCard = std::make_unique<PatchCard>(
+                data.jsonPatch, [applyPatch, json = data.jsonPatch]() { applyPatch(json); }, isMerge);
             addAndMakeVisible(*patchCard);
         }
     }
@@ -167,6 +169,30 @@ private:
 AIChatComponent::AIChatComponent(AIIntegrationService& service)
     : aiService(service) {
 
+#ifdef NDEBUG
+    juce::Logger::writeToLog("AIChatComponent initialized (Release)");
+#else
+    juce::Logger::writeToLog("AIChatComponent initialized (Debug)");
+
+    // Add debug components first so tests that iterate children find main components last
+    debugConsole.setMultiLine(true);
+    debugConsole.setReadOnly(true);
+    debugConsole.setColour(juce::TextEditor::backgroundColourId, juce::Colours::black);
+    debugConsole.setColour(juce::TextEditor::textColourId, juce::Colours::lime);
+    debugConsole.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 11.0f, juce::Font::plain));
+    debugConsole.setVisible(false);
+    addChildComponent(debugConsole);
+
+    toggleDebugButton.setButtonText("Debug");
+    toggleDebugButton.onClick = [this]() {
+        debugConsoleVisible = !debugConsoleVisible;
+        debugConsole.setVisible(debugConsoleVisible);
+        resized();
+    };
+    addAndMakeVisible(toggleDebugButton);
+    juce::Logger::setCurrentLogger(this);
+#endif
+
     addAndMakeVisible(viewport);
     viewport.setScrollBarsShown(true, false);
     viewport.setViewedComponent(&messageList);
@@ -180,12 +206,6 @@ AIChatComponent::AIChatComponent(AIIntegrationService& service)
     addAndMakeVisible(sendButton);
     sendButton.setButtonText("Send");
     sendButton.onClick = [this]() { sendButtonClicked(); };
-
-#ifdef NDEBUG
-    juce::Logger::writeToLog("AIChatComponent initialized (Release)");
-#else
-    juce::Logger::writeToLog("AIChatComponent initialized (Debug)");
-#endif
 
     addAndMakeVisible(modelPicker);
     modelPicker.onChange = [this]() { aiService.setModel(modelPicker.getText()); };
@@ -213,7 +233,11 @@ AIChatComponent::AIChatComponent(AIIntegrationService& service)
     updateChatDisplay();
 }
 
-AIChatComponent::~AIChatComponent() {}
+AIChatComponent::~AIChatComponent() {
+#ifndef NDEBUG
+    juce::Logger::setCurrentLogger(nullptr);
+#endif
+}
 
 void AIChatComponent::timerCallback() {
     // If the timer fires, the request has timed out
@@ -241,8 +265,19 @@ void AIChatComponent::resized() {
     bottomArea.removeFromBottom(5);
     auto modelRow = bottomArea.removeFromBottom(25);
     modelPicker.setBounds(modelRow.removeFromLeft(200));
+#ifndef NDEBUG
+    toggleDebugButton.setBounds(modelRow.removeFromRight(60));
+#endif
 
     b.removeFromBottom(10);
+
+#ifndef NDEBUG
+    if (debugConsoleVisible) {
+        debugConsole.setBounds(b.removeFromBottom(150));
+        b.removeFromBottom(5);
+    }
+#endif
+
     viewport.setBounds(b);
 
     // Layout message bubbles and loader
@@ -331,7 +366,7 @@ void AIChatComponent::sendButtonClicked() {
 
                     messages.push_back({"assistant", cleanText.trim(), json});
                 } else {
-                    messages.push_back({"assistant", "Error: Failed to get response from AI.", ""});
+                    messages.push_back({"assistant", "Error: " + response, ""});
                 }
 
                 updateChatDisplay();
@@ -344,8 +379,55 @@ void AIChatComponent::sendButtonClicked() {
 void AIChatComponent::updateChatDisplay() {
     messageList.deleteAllChildren();
 
-    for (const auto& data : messages) {
-        auto* bubble = new MessageBubble(data, [this](const juce::String& json) { aiService.applyPatch(json); });
+    for (size_t i = 0; i < messages.size(); ++i) {
+        const auto& data = messages[i];
+
+        // Determine merge mode for this message's patch (used for button text + apply behavior)
+        bool isMerge = false;
+        if (data.jsonPatch.isNotEmpty()) {
+            juce::var parsed = juce::JSON::parse(data.jsonPatch);
+            if (auto* obj = parsed.getDynamicObject()) {
+                juce::String mode = obj->getProperty("mode").toString();
+                if (mode == "merge") {
+                    isMerge = true;
+                } else if (mode.isEmpty()) {
+                    // AI didn't specify mode — infer from user intent + graph state
+                    juce::String userText;
+                    for (int j = (int)i - 1; j >= 0; --j) {
+                        if (messages[(size_t)j].role == "user") {
+                            userText = messages[(size_t)j].text;
+                            break;
+                        }
+                    }
+                    juce::var ctx = juce::JSON::parse(aiService.getPatchContext());
+                    bool graphHasNodes = false;
+                    if (auto* ctxObj = ctx.getDynamicObject()) {
+                        if (auto* nodes = ctxObj->getProperty("nodes").getArray())
+                            graphHasNodes = !nodes->isEmpty();
+                    }
+                    if (graphHasNodes && userText.isNotEmpty()) {
+                        isMerge = userText.containsIgnoreCase("add") || userText.containsIgnoreCase("change") ||
+                                  userText.containsIgnoreCase("modify") || userText.containsIgnoreCase("tweak") ||
+                                  userText.containsIgnoreCase("adjust") || userText.containsIgnoreCase("remove") ||
+                                  userText.containsIgnoreCase("delete") || userText.containsIgnoreCase("make it") ||
+                                  userText.containsIgnoreCase("more") || userText.containsIgnoreCase("less") ||
+                                  userText.containsIgnoreCase("brighter") || userText.containsIgnoreCase("warmer") ||
+                                  userText.containsIgnoreCase("darker");
+                    }
+                }
+            }
+        }
+
+        auto* bubble = new MessageBubble(
+            data,
+            [this, isMerge](const juce::String& json) {
+                juce::Logger::writeToLog("--- Applying patch (merge=" + juce::String(isMerge ? "true" : "false") +
+                                         ") ---");
+                juce::Logger::writeToLog("JSON: " + json);
+                aiService.applyPatch(json, isMerge);
+                juce::Logger::writeToLog("--- Patch applied ---");
+            },
+            isMerge);
         messageList.addAndMakeVisible(bubble);
     }
 
@@ -376,18 +458,31 @@ void AIChatComponent::refreshModels() {
                 modelPicker.addItem(models[i], i + 1);
             }
 
-            // Try to select the current model
+            // Select the current model, or default to first available
             juce::String current = aiService.getCurrentModel();
-            int index = models.indexOf(current);
-            if (index != -1)
+            int index = current.isNotEmpty() ? models.indexOf(current) : -1;
+            if (index != -1) {
                 modelPicker.setSelectedId(index + 1, juce::dontSendNotification);
-            else
+            } else {
                 modelPicker.setSelectedId(1, juce::dontSendNotification);
+                aiService.setModel(models[0]);
+            }
         } else {
             modelPicker.addItem("Error fetching models", 1);
             modelPicker.setSelectedId(1, juce::dontSendNotification);
         }
     });
 }
+
+#ifndef NDEBUG
+void AIChatComponent::appendDebugLog(const juce::String& msg) {
+    juce::MessageManager::callAsync([this, msg]() {
+        debugConsole.moveCaretToEnd();
+        debugConsole.insertTextAtCaret(msg + "\n");
+    });
+}
+
+void AIChatComponent::logMessage(const juce::String& message) { appendDebugLog(message); }
+#endif
 
 } // namespace gsynth

@@ -43,7 +43,7 @@ public:
     /**
      * @brief Applies a JSON patch to the graph.
      */
-    bool applyPatch(const juce::String& jsonString);
+    bool applyPatch(const juce::String& jsonString, bool mergeMode = false);
 
     /**
      * @brief Returns the current graph state as a JSON string for context.

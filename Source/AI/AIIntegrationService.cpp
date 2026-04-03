@@ -13,9 +13,21 @@ void AIIntegrationService::setProvider(std::unique_ptr<AIProvider> newProvider) 
 
 void AIIntegrationService::sendMessage(const juce::String& text, AIProvider::CompletionCallback callback,
                                        bool useStructuredOutput) {
-    // Before sending, we could inject the current patch context as a developer message or hidden part of prompt
-    // For now, let's just add the user text.
-    chatHistory.push_back({"user", text});
+    // Inject current graph state only for patch-related requests
+    juce::String messageContent = text;
+    if (useStructuredOutput) {
+        juce::var graphJson = AIStateMapper::graphToJSON(audioGraph);
+        if (auto* obj = graphJson.getDynamicObject()) {
+            if (auto* nodeArr = obj->getProperty("nodes").getArray()) {
+                if (!nodeArr->isEmpty()) {
+                    messageContent = "Current patch state:\n```json\n" + juce::JSON::toString(graphJson) +
+                                     "\n```\n\nUser request: " + text;
+                }
+            }
+        }
+    }
+
+    chatHistory.push_back({"user", messageContent});
 
     if (provider) {
         auto weakThis = juce::WeakReference<AIIntegrationService>(this);
@@ -43,10 +55,10 @@ void AIIntegrationService::sendMessage(const juce::String& text, AIProvider::Com
     }
 }
 
-bool AIIntegrationService::applyPatch(const juce::String& jsonString) {
+bool AIIntegrationService::applyPatch(const juce::String& jsonString, bool mergeMode) {
     juce::String extractedJson = extractJsonFromResponse(jsonString);
     juce::var json = juce::JSON::parse(extractedJson);
-    if (AIStateMapper::applyJSONToGraph(json, audioGraph)) {
+    if (AIStateMapper::applyJSONToGraph(json, audioGraph, !mergeMode)) {
         listeners.call([](Listener& l) { l.aiPatchApplied(); });
         return true;
     }
@@ -110,7 +122,11 @@ void AIIntegrationService::initSystemPrompt() {
         "### IMPORTANT INSTRUCTIONS FOR PATCHES:\n"
         "- **Parameter IDs are Case-Sensitive**: Use the exact `Parameter ID` from the table above (e.g., use "
         "`cutoff`, not `Cutoff`).\n"
-        "- **Values**: Use raw, unnormalized values within the specified ranges.\n"
+        "- **Values**: Use raw, unnormalized values within the specified ranges. Do NOT use normalized 0-1 values. "
+        "For example, Oscillator `octave` range is -4 to 4 (default 0), `coarse` is -12 to 12 (default 0), "
+        "`fine` is -100 to 100 (default 0).\n"
+        "- **Omit default parameters**: Only include parameters you want to change. Omitted parameters keep their "
+        "defaults. Do NOT send parameters with value 0.5 unless you specifically want that value.\n"
         "- **Choice Parameters**: Use the exact string name (e.g., `\"waveform\": \"Saw\"`).\n"
         "- **Connections**: Ensure `srcPort` and `dstPort` are valid for the given module type. Most modules use port "
         "0 for their primary audio/midi signal.\n"
@@ -125,7 +141,28 @@ void AIIntegrationService::initSystemPrompt() {
         "    { \"src\": 1, \"srcPort\": 0, \"dst\": 2, \"dstPort\": 0 }\n"
         "  ]\n"
         "}\n"
-        "```";
+        "```\n"
+        "\n### DELTA / MERGE MODE:\n"
+        "When the user's message includes their current patch state (as JSON) and they ask to ADD, MODIFY, or REMOVE "
+        "elements, respond with only the CHANGES (delta), not the entire patch. Include `\"mode\": \"merge\"` in your "
+        "JSON.\n"
+        "- **Adding nodes**: Include only NEW nodes in `nodes`. Use existing node IDs (from the current patch state) "
+        "in "
+        "`connections` to wire new nodes to existing ones.\n"
+        "- **Modifying parameters**: Include the existing node (same ID, same type) with only the changed params.\n"
+        "- **Removing nodes**: Use `\"remove\": [nodeId]` to delete nodes by their ID from the current patch.\n"
+        "- **Full replacement**: When creating from scratch or when no current patch exists, use `\"mode\": "
+        "\"replace\"` "
+        "(or omit `mode`).\n"
+        "\nDelta example (adding an LFO to existing patch with node 1003):\n"
+        "```json\n"
+        "{\"mode\": \"merge\", \"nodes\": [{\"id\": 9001, \"type\": \"LFO\", \"params\": {\"rate\": 2.0}}], "
+        "\"connections\": [{\"src\": 9001, \"srcPort\": 0, \"dst\": 1003, \"dstPort\": 1}]}\n"
+        "```\n"
+        "\nRemoval example:\n"
+        "```json\n"
+        "{\"mode\": \"merge\", \"remove\": [1003], \"nodes\": [], \"connections\": []}\n"
+        "`​``";
 
     chatHistory.push_back({"system", systemMsg});
 }

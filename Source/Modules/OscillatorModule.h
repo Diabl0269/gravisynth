@@ -6,13 +6,14 @@
 class OscillatorModule : public ModuleBase {
 public:
     OscillatorModule()
-        : ModuleBase("Oscillator", 5, 1) // 1 pitch mod, 4 param mod inputs, 1 output
+        : ModuleBase("Oscillator", 6, 1) // 1 pitch mod, 5 param mod inputs, 1 output
     {
         addParameter(waveformParam = new juce::AudioParameterChoice("waveform", "Waveform",
                                                                     {"Sine", "Square", "Saw", "Triangle"}, 0));
         addParameter(octaveParam = new juce::AudioParameterInt("octave", "Octave", -4, 4, 0));
         addParameter(coarseParam = new juce::AudioParameterInt("coarse", "Coarse", -12, 12, 0));
         addParameter(fineParam = new juce::AudioParameterFloat("fine", "Fine", -100.0f, 100.0f, 0.0f));
+        addParameter(levelParam = new juce::AudioParameterFloat("level", "Level", 0.0f, 1.0f, 1.0f));
 
         enableVisualBuffer(true);
     }
@@ -21,6 +22,12 @@ public:
         juce::ignoreUnused(samplesPerBlock);
         currentSampleRate = sampleRate;
         smoothedFreq.reset(sampleRate, 0.005); // 5ms glide
+        // Initialize to default frequency to avoid pitch sweep from 0 on first processBlock
+        float initPitch =
+            lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() + (fineParam->get() / 100.0f);
+        float initFreq = 440.0f * std::pow(2.0f, (initPitch - 69.0f) / 12.0f);
+        smoothedFreq.setCurrentAndTargetValue(initFreq);
+        debugLogCounter = 0;
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
@@ -35,6 +42,12 @@ public:
         if (buffer.getNumChannels() == 0)
             return;
 
+        // Clear input-only CV channels (1+) to prevent JUCE buffer pool garbage
+        // being misread as CV modulation. Connected sources refill before processBlock.
+        for (int ch = 1; ch < buffer.getNumChannels(); ++ch) {
+            buffer.clear(ch, 0, buffer.getNumSamples());
+        }
+
         float totalPitch =
             lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() + (fineParam->get() / 100.0f);
         float targetFreq = 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
@@ -42,6 +55,12 @@ public:
 
         int baseWaveform = waveformParam->getIndex();
         int numSamples = buffer.getNumSamples();
+
+        // Clear input-only CV channels (1+) to prevent JUCE buffer pool garbage
+        // being misread as CV modulation. Connected sources refill before processBlock.
+        for (int ch = 1; ch < buffer.getNumChannels(); ++ch) {
+            buffer.clear(ch, 0, numSamples);
+        }
 
         // Channel 0 is shared between CV pitch input and audio output.
         // Save CV input data before overwriting with output to prevent feedback.
@@ -61,9 +80,26 @@ public:
         const float* cvOctaveCh = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
         const float* cvCoarseCh = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
         const float* cvFineCh = (buffer.getNumChannels() > 4) ? buffer.getReadPointer(4) : nullptr;
+        const float* cvLevelCh = (buffer.getNumChannels() > 5) ? buffer.getReadPointer(5) : nullptr;
 
         buffer.clear();
         auto* ch0 = buffer.getWritePointer(0);
+
+#ifndef NDEBUG
+        // Log pitch debug info sparingly: first 5 calls, then every ~10 seconds
+        bool shouldLog = (debugLogCounter < 5) || (debugLogCounter % 5000 == 0);
+        if (shouldLog && numSamples > 0) {
+            float cvSample0 = cvPitchCh ? cvPitchCh[0] : -999.0f;
+            float cvOctSample0 = cvOctaveCh ? cvOctaveCh[0] : -999.0f;
+            juce::Logger::writeToLog(
+                "OSC [" + getName() + "] #" + juce::String(debugLogCounter) +
+                " freq=" + juce::String(smoothedFreq.getTargetValue(), 1) + " midi=" + juce::String(lastMidiNote) +
+                " oct=" + juce::String(octaveParam->get()) + " coarse=" + juce::String(coarseParam->get()) +
+                " fine=" + juce::String(fineParam->get(), 1) + " cv0=" + juce::String(cvSample0, 4) +
+                " cvOct=" + juce::String(cvOctSample0, 4));
+        }
+        ++debugLogCounter;
+#endif
 
         for (int i = 0; i < numSamples; ++i) {
             float baseFreq = smoothedFreq.getNextValue();
@@ -122,7 +158,10 @@ public:
                 sample = generateSample(waveform, phase, dt);
             }
 
-            ch0[i] = sample;
+            float level = levelParam->get();
+            if (cvLevelCh)
+                level = juce::jlimit(0.0f, 1.0f, level + cvLevelCh[i]);
+            ch0[i] = sample * level;
 
             phase += dt;
             if (phase >= 1.0f)
@@ -144,7 +183,7 @@ public:
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override {
-        return {{"Pitch", 0}, {"Waveform", 1}, {"Octave", 2}, {"Coarse", 3}, {"Fine", 4}};
+        return {{"Pitch", 0}, {"Waveform", 1}, {"Octave", 2}, {"Coarse", 3}, {"Fine", 4}, {"Level", 5}};
     }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Oscillator; }
     ModuleType getModuleType() const override { return ModuleType::Oscillator; }
@@ -224,10 +263,12 @@ private:
     static constexpr int CROSSFADE_SAMPLES = 64;
 
     juce::SmoothedValue<float> smoothedFreq;
+    int debugLogCounter = 0;
     juce::AudioParameterChoice* waveformParam;
     juce::AudioParameterInt* octaveParam;
     juce::AudioParameterInt* coarseParam;
     juce::AudioParameterFloat* fineParam;
+    juce::AudioParameterFloat* levelParam;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorModule)
 };

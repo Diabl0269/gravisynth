@@ -51,7 +51,7 @@ public:
 
 private:
     juce::String ollamaHost;
-    juce::String currentModel = "qwen3-coder-next:latest";
+    juce::String currentModel;
     InputStreamFactory createStream; // Member variable for the stream factory
     bool isTestMode = false;
 
