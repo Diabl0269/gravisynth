@@ -2,9 +2,9 @@
 
 #include "../Modules/FilterModule.h"
 #include "../Modules/VisualBuffer.h"
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_dsp/juce_dsp.h>
 #include <cmath>
+#include <juce_dsp/juce_dsp.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 class FrequencyResponseComponent
     : public juce::Component
@@ -20,7 +20,10 @@ public:
 
     ~FrequencyResponseComponent() override { stopTimer(); }
 
-    void setShowSpectrum(bool show) { showSpectrum = show; repaint(); }
+    void setShowSpectrum(bool show) {
+        showSpectrum = show;
+        repaint();
+    }
     bool getShowSpectrum() const { return showSpectrum; }
 
     void timerCallback() override {
@@ -29,8 +32,7 @@ public:
         float drive = filterModule.getCurrentDrive();
         int filterType = filterModule.getCurrentFilterType();
 
-        if (cutoff != lastCutoff || resonance != lastResonance ||
-            drive != lastDrive || filterType != lastFilterType) {
+        if (cutoff != lastCutoff || resonance != lastResonance || drive != lastDrive || filterType != lastFilterType) {
             lastCutoff = cutoff;
             lastResonance = resonance;
             lastDrive = drive;
@@ -130,10 +132,9 @@ public:
         fillPath.closeSubPath();
 
         // Gradient fill under curve
-        juce::ColourGradient gradient(
-            juce::Colour(0x6000b4d8), 0.0f, 0.0f,    // semi-transparent cyan at top
-            juce::Colour(0x1000b4d8), 0.0f, h,         // nearly transparent at bottom
-            false);
+        juce::ColourGradient gradient(juce::Colour(0x6000b4d8), 0.0f, 0.0f, // semi-transparent cyan at top
+                                      juce::Colour(0x1000b4d8), 0.0f, h,    // nearly transparent at bottom
+                                      false);
         g.setGradientFill(gradient);
         g.fillPath(fillPath);
 
@@ -142,8 +143,7 @@ public:
         g.strokePath(curvePath, juce::PathStrokeType(2.0f));
 
         // Draw live spectrum (green) — uses its own dB range for visibility
-        if (showSpectrum)
-        {
+        if (showSpectrum) {
             constexpr float specMinDb = -80.0f;
             constexpr float specMaxDb = 0.0f;
 
@@ -171,10 +171,8 @@ public:
             specFill.closeSubPath();
 
             // Semi-transparent green fill
-            juce::ColourGradient specGradient(
-                juce::Colour(0x3066cc66), 0.0f, 0.0f,
-                juce::Colour(0x0866cc66), 0.0f, h,
-                false);
+            juce::ColourGradient specGradient(juce::Colour(0x3066cc66), 0.0f, 0.0f, juce::Colour(0x0866cc66), 0.0f, h,
+                                              false);
             g.setGradientFill(specGradient);
             g.fillPath(specFill);
 
@@ -231,7 +229,8 @@ private:
         float resonance = lastResonance;
         int filterType = lastFilterType;
 
-        if (cutoff < 20.0f) cutoff = 20.0f;
+        if (cutoff < 20.0f)
+            cutoff = 20.0f;
 
         float Q = 0.707f + resonance * 15.0f;
 
@@ -252,15 +251,24 @@ private:
 
         switch (filterType) {
         case 0: // LPF24
-            { float lpf12 = 1.0f / denom; return lpf12 * lpf12; }
+        {
+            float lpf12 = 1.0f / denom;
+            return lpf12 * lpf12;
+        }
         case 1: // LPF12
             return 1.0f / denom;
         case 2: // HPF24
-            { float hpf12 = w2 / denom; return hpf12 * hpf12; }
+        {
+            float hpf12 = w2 / denom;
+            return hpf12 * hpf12;
+        }
         case 3: // HPF12
             return w2 / denom;
         case 4: // BPF24
-            { float bpf12 = (w * invQ) / denom; return bpf12 * bpf12; }
+        {
+            float bpf12 = (w * invQ) / denom;
+            return bpf12 * bpf12;
+        }
         case 5: // BPF12
             return (w * invQ) / denom;
         case 6: // Notch

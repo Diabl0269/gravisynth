@@ -11,7 +11,9 @@ public:
         addParameter(cutoffParam = new juce::AudioParameterFloat("cutoff", "Cutoff", 20.0f, 20000.0f, 440.0f));
         addParameter(resonanceParam = new juce::AudioParameterFloat("resonance", "Resonance", 0.0f, 1.0f, 0.1f));
         addParameter(driveParam = new juce::AudioParameterFloat("drive", "Drive", 1.0f, 10.0f, 1.0f));
-        addParameter(filterTypeParam = new juce::AudioParameterChoice("filterType", "Filter Type", juce::StringArray{"LPF24", "LPF12", "HPF24", "HPF12", "BPF24", "BPF12", "Notch"}, 0));
+        addParameter(filterTypeParam = new juce::AudioParameterChoice(
+                         "filterType", "Filter Type",
+                         juce::StringArray{"LPF24", "LPF12", "HPF24", "HPF12", "BPF24", "BPF12", "Notch"}, 0));
 
         enableVisualBuffer(true);
     }
@@ -59,12 +61,14 @@ public:
         bool resCVActive = false;
         if (cvCutoffCh) {
             float rms = 0.0f;
-            for (int i = 0; i < numSamples; ++i) rms += cvCutoffCh[i] * cvCutoffCh[i];
+            for (int i = 0; i < numSamples; ++i)
+                rms += cvCutoffCh[i] * cvCutoffCh[i];
             cutoffCVActive = (rms / numSamples) > 1e-6f;
         }
         if (cvResCh) {
             float rms = 0.0f;
-            for (int i = 0; i < numSamples; ++i) rms += cvResCh[i] * cvResCh[i];
+            for (int i = 0; i < numSamples; ++i)
+                rms += cvResCh[i] * cvResCh[i];
             resCVActive = (rms / numSamples) > 1e-6f;
         }
 
@@ -143,13 +147,9 @@ private:
         if (typeIndex >= 0 && typeIndex <= 5) {
             isNotchMode = false;
             juce::dsp::LadderFilterMode modes[] = {
-                juce::dsp::LadderFilterMode::LPF24,
-                juce::dsp::LadderFilterMode::LPF12,
-                juce::dsp::LadderFilterMode::HPF24,
-                juce::dsp::LadderFilterMode::HPF12,
-                juce::dsp::LadderFilterMode::BPF24,
-                juce::dsp::LadderFilterMode::BPF12
-            };
+                juce::dsp::LadderFilterMode::LPF24, juce::dsp::LadderFilterMode::LPF12,
+                juce::dsp::LadderFilterMode::HPF24, juce::dsp::LadderFilterMode::HPF12,
+                juce::dsp::LadderFilterMode::BPF24, juce::dsp::LadderFilterMode::BPF12};
             ladder.setMode(modes[typeIndex]);
         } else if (typeIndex == 6) {
             isNotchMode = true;

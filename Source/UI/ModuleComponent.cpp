@@ -36,9 +36,7 @@ ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGr
 
         spectrumToggle = std::make_unique<juce::ToggleButton>("Show Spectrum");
         spectrumToggle->setToggleState(false, juce::dontSendNotification);
-        spectrumToggle->onClick = [this] {
-            freqResponseComponent->setShowSpectrum(spectrumToggle->getToggleState());
-        };
+        spectrumToggle->onClick = [this] { freqResponseComponent->setShowSpectrum(spectrumToggle->getToggleState()); };
         addAndMakeVisible(spectrumToggle.get());
     }
 
