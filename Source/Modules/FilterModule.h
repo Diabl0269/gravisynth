@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ModuleBase.h"
+#include <atomic>
 #include <juce_dsp/juce_dsp.h>
 
 class FilterModule : public ModuleBase {
@@ -10,6 +11,7 @@ public:
         addParameter(cutoffParam = new juce::AudioParameterFloat("cutoff", "Cutoff", 20.0f, 20000.0f, 440.0f));
         addParameter(resonanceParam = new juce::AudioParameterFloat("resonance", "Resonance", 0.0f, 1.0f, 0.1f));
         addParameter(driveParam = new juce::AudioParameterFloat("drive", "Drive", 1.0f, 10.0f, 1.0f));
+        addParameter(filterTypeParam = new juce::AudioParameterChoice("filterType", "Filter Type", juce::StringArray{"LPF24", "LPF12", "HPF24", "HPF12", "BPF24", "BPF12", "Notch"}, 0));
 
         enableVisualBuffer(true);
     }
@@ -18,15 +20,22 @@ public:
         juce::dsp::ProcessSpec spec = {sampleRate, static_cast<juce::uint32>(samplesPerBlock),
                                        (juce::uint32)getTotalNumInputChannels()};
         ladder.prepare(spec);
-        ladder.setMode(juce::dsp::LadderFilterMode::LPF24);
+        lastSampleRate = sampleRate;
+        applyFilterType(filterTypeParam->getIndex());
         ladder.setEnabled(true);
+        svfForNotch.prepare(spec);
         smoothedCutoff.reset(sampleRate, 0.005); // 5ms smoothing
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/) override {
         smoothedCutoff.setTargetValue(*cutoffParam);
+        applyFilterType(filterTypeParam->getIndex());
         float baseRes = *resonanceParam;
         float baseDrive = *driveParam;
+
+        // Always update atomics with base param values (overridden per-sample if CV active)
+        modulatedCutoff.store(*cutoffParam, std::memory_order_relaxed);
+        modulatedResonance.store(baseRes, std::memory_order_relaxed);
 
         if (buffer.getNumChannels() == 0)
             return;
@@ -43,6 +52,21 @@ public:
 
         juce::dsp::AudioBlock<float> block(buffer);
         auto singleChannelBlock = block.getSingleChannelBlock(0);
+        auto* audioData = buffer.getWritePointer(0);
+
+        // Check if CV channels have actual signal (not just unconnected noise)
+        bool cutoffCVActive = false;
+        bool resCVActive = false;
+        if (cvCutoffCh) {
+            float rms = 0.0f;
+            for (int i = 0; i < numSamples; ++i) rms += cvCutoffCh[i] * cvCutoffCh[i];
+            cutoffCVActive = (rms / numSamples) > 1e-6f;
+        }
+        if (cvResCh) {
+            float rms = 0.0f;
+            for (int i = 0; i < numSamples; ++i) rms += cvResCh[i] * cvResCh[i];
+            resCVActive = (rms / numSamples) > 1e-6f;
+        }
 
         for (int i = 0; i < numSamples; ++i) {
             float baseCutoff = smoothedCutoff.getNextValue();
@@ -58,6 +82,8 @@ public:
                 f = baseCutoff * std::pow(20.0f / baseCutoff, -totalCutoffMod);
             }
             f = juce::jlimit(20.0f, 20000.0f, f);
+            if (cutoffCVActive)
+                modulatedCutoff.store(f, std::memory_order_relaxed);
             ladder.setCutoffFrequencyHz(f);
 
             // --- Resonance Modulation ---
@@ -65,6 +91,8 @@ public:
             totalResMod = juce::jlimit(-1.0f, 1.0f, totalResMod);
             float res = baseRes + totalResMod;
             res = juce::jlimit(0.0f, 1.0f, res);
+            if (resCVActive)
+                modulatedResonance.store(res, std::memory_order_relaxed);
             ladder.setResonance(res);
 
             // --- Drive Modulation ---
@@ -74,9 +102,18 @@ public:
             drive = juce::jlimit(1.0f, 10.0f, drive);
             ladder.setDrive(drive);
 
-            auto sampleBlock = singleChannelBlock.getSubBlock(i, 1);
-            juce::dsp::ProcessContextReplacing<float> context(sampleBlock);
-            ladder.process(context);
+            if (isNotchMode) {
+                svfForNotch.setCutoffFrequency(f);
+                svfForNotch.setResonance(0.707f + res * 15.0f);
+                svfForNotch.setType(juce::dsp::StateVariableTPTFilterType::bandpass);
+                float input = audioData[i];
+                float filtered = svfForNotch.processSample(0, input);
+                audioData[i] = input - filtered;
+            } else {
+                auto sampleBlock = singleChannelBlock.getSubBlock(i, 1);
+                juce::dsp::ProcessContextReplacing<float> context(sampleBlock);
+                ladder.process(context);
+            }
         }
 
         // Push to visual buffer
@@ -94,10 +131,40 @@ public:
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Filter; }
     ModuleType getModuleType() const override { return ModuleType::Filter; }
 
+    float getCurrentCutoff() const { return modulatedCutoff.load(std::memory_order_relaxed); }
+    float getCurrentResonance() const { return *resonanceParam; }
+    float getModulatedResonance() const { return modulatedResonance.load(std::memory_order_relaxed); }
+    float getCurrentDrive() const { return *driveParam; }
+    int getCurrentFilterType() const { return filterTypeParam->getIndex(); }
+    double getLastSampleRate() const { return lastSampleRate; }
+
 private:
+    void applyFilterType(int typeIndex) {
+        if (typeIndex >= 0 && typeIndex <= 5) {
+            isNotchMode = false;
+            juce::dsp::LadderFilterMode modes[] = {
+                juce::dsp::LadderFilterMode::LPF24,
+                juce::dsp::LadderFilterMode::LPF12,
+                juce::dsp::LadderFilterMode::HPF24,
+                juce::dsp::LadderFilterMode::HPF12,
+                juce::dsp::LadderFilterMode::BPF24,
+                juce::dsp::LadderFilterMode::BPF12
+            };
+            ladder.setMode(modes[typeIndex]);
+        } else if (typeIndex == 6) {
+            isNotchMode = true;
+        }
+    }
+
     juce::dsp::LadderFilter<float> ladder;
+    juce::dsp::StateVariableTPTFilter<float> svfForNotch;
+    bool isNotchMode = false;
+    double lastSampleRate = 44100.0;
     juce::SmoothedValue<float> smoothedCutoff;
     juce::AudioParameterFloat* cutoffParam;
     juce::AudioParameterFloat* resonanceParam;
     juce::AudioParameterFloat* driveParam;
+    juce::AudioParameterChoice* filterTypeParam;
+    std::atomic<float> modulatedCutoff{440.0f};
+    std::atomic<float> modulatedResonance{0.1f};
 };

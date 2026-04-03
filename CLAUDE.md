@@ -25,7 +25,7 @@ The project follows a modular architecture with:
 ### Audio Modules
 
 - Oscillator: Waveform generator (Sine, Saw, Square, Triangle)
-- Filter: Resonant low-pass filter with cutoff/resonance control
+- Filter: Multi-mode filter with 7 types (LPF24, LPF12, HPF24, HPF12, BPF24, BPF12, Notch), cutoff/resonance control, and frequency response visualizer
 - VCA: Voltage Controlled Amplifier for dynamic control
 - ADSR: Envelope generator for amplitude/filter modulation
 - LFO: Low Frequency Oscillator for modulation
@@ -66,8 +66,8 @@ bash scripts/coverage.sh
 - Tests cover audio processing behavior, parameter handling, and MIDI interaction
 - Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
 - Integration tests (signal chains, modulation routing)
-- Code coverage enforcement (threshold: 85%, CI pipeline enforces)
-- ~165 tests across 28 suites
+- Code coverage enforcement (threshold: 69%, CI pipeline enforces)
+- ~169 tests across 28 suites (unit, edge case, integration, filter modes)
 - CI runs on Ubuntu + macOS with linting, building, testing, and coverage
 
 ## Key Files to Understand
@@ -76,8 +76,10 @@ bash scripts/coverage.sh
 - `Source/AudioEngine.h/cpp`: Audio processing engine, device management, and modulation matrix
 - `Source/Modules/ModuleBase.h`: Base class with `ModuleType` enum, `ModulationTarget`, `ModulationCategory`
 - `Source/Modules/OscillatorModule.h`: Oscillator with PolyBLEP/PolyBLAMP anti-aliasing, waveform crossfade, and CV feedback fix (channel 0 shared between CV input and audio output, saved before overwrite)
+- `Source/Modules/FilterModule.h`: Multi-mode filter (LadderFilter for LPF/HPF/BPF + SVF for notch), atomic modulated params for visualizer, type parameter
 - `Source/Modules/VisualBuffer.h`: Thread-safe circular buffer using `std::atomic<float>`
 - `Source/PresetManager.h/cpp`: Factory presets with categorized organization
-- `Source/UI/ModuleComponent.cpp`: Auto-UI with type-safe `ModuleType` switching (no string comparisons)
+- `Source/UI/ModuleComponent.cpp`: Auto-UI with type-safe `ModuleType` switching, FrequencyResponseComponent integration and spectrum toggle
+- `Source/UI/FrequencyResponseComponent.h`: Serum-style frequency response curve with FFT spectrum overlay
 - `Source/UI/GraphEditor.cpp`: Graph editor with attenuverter knob rendering and modulation routing
-- `Tests/`: ~165 tests across 28 suites (unit, edge case, integration)
+- `Tests/`: ~169 tests across 28 suites (unit, edge case, integration)

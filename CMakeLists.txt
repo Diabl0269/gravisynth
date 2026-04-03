@@ -115,6 +115,7 @@ target_sources(Gravisynth PRIVATE
     Source/UI/GraphEditor.h
     Source/UI/ModuleComponent.cpp
     Source/UI/ModuleComponent.h
+    Source/UI/FrequencyResponseComponent.h
     Source/UI/ModMatrixComponent.cpp
     Source/UI/ModMatrixComponent.h
 )

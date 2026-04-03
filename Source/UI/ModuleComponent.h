@@ -3,6 +3,8 @@
 #include "../AudioEngine.h"
 #include "../Modules/MidiKeyboardModule.h"
 #include "ScopeComponent.h"
+#include "FrequencyResponseComponent.h"
+#include "../Modules/FilterModule.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -59,6 +61,8 @@ private:
 
     std::unique_ptr<ScopeComponent> scopeComponent;
     std::unique_ptr<juce::ToggleButton> scopeToggle;
+    std::unique_ptr<FrequencyResponseComponent> freqResponseComponent;
+    std::unique_ptr<juce::ToggleButton> spectrumToggle;
     std::unique_ptr<juce::MidiKeyboardComponent> keyboardComponent;
 
     void createControls();
