@@ -1,5 +1,6 @@
 #include "AIStateMapper.h"
 #include "../Modules/ADSRModule.h"
+#include "../Modules/AttenuverterModule.h"
 #include "../Modules/FX/DelayModule.h"
 #include "../Modules/FX/DistortionModule.h"
 #include "../Modules/FX/ReverbModule.h"
@@ -7,6 +8,8 @@
 #include "../Modules/LFOModule.h"
 #include "../Modules/MidiKeyboardModule.h"
 #include "../Modules/OscillatorModule.h"
+#include "../Modules/PolyMidiModule.h"
+#include "../Modules/PolySequencerModule.h"
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
 #include <functional> // For std::function
@@ -33,7 +36,12 @@ static const std::unordered_map<juce::String, ModuleFactoryFunc> moduleFactory =
     {"Distortion", []() { return std::make_unique<DistortionModule>(); }},
     {"Delay", []() { return std::make_unique<DelayModule>(); }},
     {"Reverb", []() { return std::make_unique<ReverbModule>(); }},
-    {"MIDI Keyboard", []() { return std::make_unique<MidiKeyboardModule>(); }}};
+    {"MIDI Keyboard", []() { return std::make_unique<MidiKeyboardModule>(); }},
+    {"Amp Env", []() { return std::make_unique<ADSRModule>("Amp Env"); }},
+    {"Filter Env", []() { return std::make_unique<ADSRModule>("Filter Env"); }},
+    {"Poly MIDI", []() { return std::make_unique<PolyMidiModule>(); }},
+    {"Poly Sequencer", []() { return std::make_unique<PolySequencerModule>(); }},
+    {"Attenuverter", []() { return std::make_unique<AttenuverterModule>(); }}};
 
 bool AIStateMapper::validatePatchJSON(const juce::var& json) {
     if (!json.isObject()) {
@@ -95,7 +103,16 @@ juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
             juce::DynamicObject::Ptr params = new juce::DynamicObject();
             for (auto* param : processor->getParameters()) {
                 if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
-                    params->setProperty(p->paramID, p->getValue());
+                    if (auto* choice = dynamic_cast<juce::AudioParameterChoice*>(param)) {
+                        // Store choice as string name for readability
+                        params->setProperty(choice->paramID, choice->getCurrentChoiceName());
+                    } else if (auto* boolParam = dynamic_cast<juce::AudioParameterBool*>(param)) {
+                        params->setProperty(boolParam->paramID, boolParam->get());
+                    } else if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param)) {
+                        // Store denormalized value
+                        float denormalized = ranged->getNormalisableRange().convertFrom0to1(ranged->getValue());
+                        params->setProperty(ranged->paramID, denormalized);
+                    }
                 }
             }
             n->setProperty("params", juce::var(params.get()));
@@ -115,9 +132,17 @@ juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
     for (const auto& conn : graph.getConnections()) {
         juce::DynamicObject::Ptr c = new juce::DynamicObject();
         c->setProperty("src", (int)conn.source.nodeID.uid);
-        c->setProperty("srcPort", conn.source.channelIndex);
+
+        int srcPort = conn.source.channelIndex;
+        int dstPort = conn.destination.channelIndex;
+        if (conn.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex)
+            srcPort = -1;
+        if (conn.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex)
+            dstPort = -1;
+
+        c->setProperty("srcPort", srcPort);
         c->setProperty("dst", (int)conn.destination.nodeID.uid);
-        c->setProperty("dstPort", conn.destination.channelIndex);
+        c->setProperty("dstPort", dstPort);
         c->setProperty("isMidi", conn.source.isMIDI());
         connections.add(juce::var(c.get()));
     }
@@ -278,8 +303,21 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                     int srcPort = cObj->getProperty("srcPort");
                     int dstPort = cObj->getProperty("dstPort");
 
-                    if (idMap.count(srcOld) && idMap.count(dstOld)) {
-                        graph.addConnection({{idMap[srcOld], srcPort}, {idMap[dstOld], dstPort}});
+                    // Map -1 back to MIDI channel index
+                    if (srcPort == -1)
+                        srcPort = juce::AudioProcessorGraph::midiChannelIndex;
+                    if (dstPort == -1)
+                        dstPort = juce::AudioProcessorGraph::midiChannelIndex;
+
+                    auto* srcNode = graph.getNodeForId(idMap[srcOld]);
+                    auto* dstNode = graph.getNodeForId(idMap[dstOld]);
+                    if (srcNode && dstNode) {
+                        int srcPorts = srcNode->getProcessor()->getTotalNumOutputChannels();
+                        int dstPorts = dstNode->getProcessor()->getTotalNumInputChannels();
+                        bool isMidiConnection = (srcPort == juce::AudioProcessorGraph::midiChannelIndex);
+                        if (isMidiConnection || (srcPort < srcPorts && dstPort < dstPorts)) {
+                            graph.addConnection({{idMap[srcOld], srcPort}, {idMap[dstOld], dstPort}});
+                        }
                     }
                 }
             }
@@ -304,9 +342,11 @@ juce::var AIStateMapper::getPatchSchema() {
 
     nodeProperties->setProperty("id", juce::JSON::parse("{\"type\": \"integer\"}"));
     nodeProperties->setProperty(
-        "type", juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
-                                  "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Sequencer\", \"LFO\", "
-                                  "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\"]}"));
+        "type",
+        juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
+                          "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Sequencer\", \"LFO\", "
+                          "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\", \"Amp Env\", \"Filter Env\", "
+                          "\"Poly MIDI\", \"Poly Sequencer\", \"Attenuverter\"]}"));
     nodeProperties->setProperty("params", juce::JSON::parse("{\"type\": \"object\"}"));
 
     nodeItems->setProperty("properties", juce::var(nodeProperties.get()));

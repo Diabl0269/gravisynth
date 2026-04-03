@@ -6,12 +6,7 @@
 
 class ModuleComponentTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        if (getenv("CI") != nullptr) {
-            GTEST_SKIP() << "Skipping UI tests on headless CI";
-        }
-        juce::MessageManager::getInstance();
-    }
+    void SetUp() override { juce::MessageManager::getInstance(); }
 
     void TearDown() override {
         if (!IsSkipped()) {
