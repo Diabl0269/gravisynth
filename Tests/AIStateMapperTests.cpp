@@ -191,7 +191,7 @@ TEST(AIStateMapperTest, MergeMode_PrePopulatesIdMapForCrossConnections) {
 
     bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, false);
     ASSERT_TRUE(success);
-    ASSERT_EQ(graph.getNumNodes(), 2); // 1 existing + 1 new
+    ASSERT_EQ(graph.getNumNodes(), 2);           // 1 existing + 1 new
     ASSERT_EQ(graph.getConnections().size(), 1); // Cross-connection should exist
 }
 
@@ -211,13 +211,12 @@ TEST(AIStateMapperTest, MergeMode_RemoveNodes) {
 
     // Remove the filter node
     int filterNodeId = (int)filterNode->nodeID.uid;
-    juce::String jsonStr =
-        "{\"remove\":[" + juce::String(filterNodeId) + "],\"nodes\":[],\"connections\":[]}";
+    juce::String jsonStr = "{\"remove\":[" + juce::String(filterNodeId) + "],\"nodes\":[],\"connections\":[]}";
     juce::var json = juce::JSON::parse(jsonStr);
 
     bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, false);
     ASSERT_TRUE(success);
-    ASSERT_EQ(graph.getNumNodes(), 2); // Filter removed
+    ASSERT_EQ(graph.getNumNodes(), 2);           // Filter removed
     ASSERT_EQ(graph.getConnections().size(), 0); // Connections involving filter removed by JUCE
 }
 
