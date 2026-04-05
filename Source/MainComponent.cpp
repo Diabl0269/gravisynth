@@ -2,7 +2,7 @@
 #include "AI/OllamaProvider.h"
 
 MainComponent::MainComponent()
-    : graphEditor(audioEngine)
+    : graphEditor(audioEngine, &undoManager)
     , aiService(audioEngine.getGraph())
     , aiChatComponent(aiService) {
     // Setup ApplicationProperties
@@ -27,6 +27,9 @@ MainComponent::MainComponent()
 
     aiService.addListener(this);
     setSize(1600, 900);
+    undoManager.setGraphEditor(&graphEditor);
+    setWantsKeyboardFocus(true);
+    startTimerHz(10);
     addAndMakeVisible(graphEditor);
     addAndMakeVisible(moduleLibrary);
     addAndMakeVisible(aiChatComponent);
@@ -79,6 +82,26 @@ MainComponent::MainComponent()
                 }
             }
         });
+    };
+
+    addAndMakeVisible(undoButton);
+    undoButton.setButtonText("Undo");
+    undoButton.setEnabled(false);
+    undoButton.onClick = [this] {
+        if (undoManager.canUndo())
+            undoManager.undo();
+        undoButton.setEnabled(undoManager.canUndo());
+        redoButton.setEnabled(undoManager.canRedo());
+    };
+
+    addAndMakeVisible(redoButton);
+    redoButton.setButtonText("Redo");
+    redoButton.setEnabled(false);
+    redoButton.onClick = [this] {
+        if (undoManager.canRedo())
+            undoManager.redo();
+        undoButton.setEnabled(undoManager.canUndo());
+        redoButton.setEnabled(undoManager.canRedo());
     };
 
     addAndMakeVisible(toggleAiPanelButton);
@@ -205,8 +228,15 @@ MainComponent::MainComponent()
 }
 
 MainComponent::~MainComponent() {
+    stopTimer();
     aiService.removeListener(this);
+    graphEditor.detachAllModuleComponents();
     audioEngine.shutdown();
+}
+
+void MainComponent::timerCallback() {
+    undoButton.setEnabled(undoManager.canUndo());
+    redoButton.setEnabled(undoManager.canRedo());
 }
 
 void MainComponent::aiPatchApplied() {
@@ -220,6 +250,20 @@ void MainComponent::paint(juce::Graphics& g) {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 }
 
+bool MainComponent::keyPressed(const juce::KeyPress& key) {
+    if (key == juce::KeyPress('z', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0)) {
+        if (undoManager.canRedo())
+            undoManager.redo();
+        return true;
+    }
+    if (key == juce::KeyPress('z', juce::ModifierKeys::commandModifier, 0)) {
+        if (undoManager.canUndo())
+            undoManager.undo();
+        return true;
+    }
+    return false;
+}
+
 void MainComponent::resized() {
     auto bounds = getLocalBounds();
     auto header = bounds.removeFromTop(30);
@@ -227,6 +271,8 @@ void MainComponent::resized() {
     saveButton.setBounds(header.removeFromLeft(100).reduced(2));
     loadButton.setBounds(header.removeFromLeft(120).reduced(2));
     settingsButton.setBounds(header.removeFromLeft(100).reduced(2));
+    undoButton.setBounds(header.removeFromLeft(80).reduced(2));
+    redoButton.setBounds(header.removeFromLeft(80).reduced(2));
 
     // Position toggle buttons on the right side of the header
     toggleAiPanelButton.setBounds(header.removeFromRight(100).reduced(2));

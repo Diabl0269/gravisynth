@@ -8,10 +8,12 @@ static ModuleType getType(juce::AudioProcessor* module) {
     return ModuleType::Oscillator;
 }
 
-ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGraph::NodeID nodeId, GraphEditor& owner)
+ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGraph::NodeID nId, GraphEditor& owner,
+                                 GravisynthUndoManager* undoMgr)
     : module(m)
-    , nodeId(nodeId)
-    , owner(owner) {
+    , nodeId(nId)
+    , owner(owner)
+    , undoManager(undoMgr) {
 
     if (auto* modBase = dynamic_cast<ModuleBase*>(module)) {
         if (auto* vb = modBase->getVisualBuffer()) {
@@ -44,8 +46,39 @@ ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGr
     startTimerHz(30); // 30 FPS for step visualization
 }
 
-ModuleComponent::~ModuleComponent() { stopTimer(); }
-void ModuleComponent::timerCallback() { repaint(); }
+ModuleComponent::~ModuleComponent() { detachFromProcessor(); }
+
+void ModuleComponent::detachFromProcessor() {
+    stopTimer();
+    setVisible(false);
+
+    // Destroy scope component first — it has its own timer reading from the module's VisualBuffer
+    scopeComponent.reset();
+    scopeToggle.reset();
+    keyboardComponent.reset();
+
+    if (auto* parent = getParentComponent())
+        parent->removeChildComponent(this);
+
+    // Destroy attachments (they reference params)
+    sliderAttachments.clear();
+    comboAttachments.clear();
+    buttonAttachments.clear();
+
+    if (module == nullptr)
+        return;
+
+    if (auto* node = owner.getAudioEngine().getGraph().getNodeForId(nodeId)) {
+        for (auto* param : node->getProcessor()->getParameters())
+            param->removeListener(this);
+    }
+
+    module = nullptr;
+}
+void ModuleComponent::timerCallback() {
+    if (module != nullptr)
+        repaint();
+}
 
 void ModuleComponent::createControls() {
     // Auto-UI
@@ -105,6 +138,12 @@ void ModuleComponent::createControls() {
                 auto* attach = buttonAttachments.add(new juce::ButtonParameterAttachment(*boolParam, *toggle));
             }
         }
+    }
+
+    // Register as parameter listener for undo tracking
+    if (undoManager) {
+        for (auto* param : module->getParameters())
+            param->addListener(this);
     }
 
     // Auto-resize
@@ -168,6 +207,9 @@ void ModuleComponent::updateLayout() {
 }
 
 void ModuleComponent::paint(juce::Graphics& g) {
+    if (module == nullptr)
+        return;
+
     if (getType(module) == ModuleType::Attenuverter) {
         return; // Transparent background, no ports, no header
     }
@@ -278,6 +320,9 @@ void ModuleComponent::paint(juce::Graphics& g) {
 }
 
 juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
+    if (module == nullptr)
+        return {0, 0};
+
     if (getType(module) == ModuleType::Attenuverter) {
         return {getWidth() / 2, getHeight() / 2};
     }
@@ -300,6 +345,9 @@ juce::Point<int> ModuleComponent::getPortCenter(int index, bool isInput) {
 }
 
 std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Point<int> localPoint) {
+    if (module == nullptr)
+        return std::nullopt;
+
     if (getType(module) == ModuleType::Attenuverter) {
         return std::nullopt; // Users cannot manually drag connections from the smart wire knob
     }
@@ -347,6 +395,9 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
 }
 
 void ModuleComponent::resized() {
+    if (module == nullptr)
+        return;
+
     if (getType(module) == ModuleType::Sequencer) {
         // --- Sequencer Specific Layout ---
         int x = 10;
@@ -498,6 +549,29 @@ void ModuleComponent::resized() {
     }
 }
 
+void ModuleComponent::parameterValueChanged(int parameterIndex, float newValue) {
+    juce::ignoreUnused(parameterIndex, newValue);
+}
+
+void ModuleComponent::parameterGestureChanged(int parameterIndex, bool gestureIsStarting) {
+    if (!undoManager || module == nullptr)
+        return;
+
+    if (gestureIsStarting) {
+        // Capture full graph snapshot at gesture start
+        gestureStartValues[parameterIndex] = 1.0f; // flag that gesture is active
+        undoManager->captureBeforeState(owner.getAudioEngine().getGraph());
+    } else {
+        auto it = gestureStartValues.find(parameterIndex);
+        if (it != gestureStartValues.end()) {
+            // Capture after snapshot and push as undo action
+            auto* graphEditor = &owner;
+            undoManager->pushSnapshotFromCapture(owner.getAudioEngine().getGraph());
+            gestureStartValues.erase(it);
+        }
+    }
+}
+
 void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
     auto port = getPortForPoint(e.getPosition());
     if (port) {
@@ -525,12 +599,18 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
             m.addItem("Delete Module", [this] { owner.deleteModule(this); });
             m.showMenuAsync(juce::PopupMenu::Options());
         } else {
+            dragStartPosition = getPosition();
+            if (undoManager)
+                undoManager->captureBeforeState(owner.getAudioEngine().getGraph());
             dragger.startDraggingComponent(this, e);
         }
     }
 }
 
-void ModuleComponent::moved() { owner.updateModulePosition(this); }
+void ModuleComponent::moved() {
+    if (module != nullptr)
+        owner.updateModulePosition(this);
+}
 
 void ModuleComponent::mouseDrag(const juce::MouseEvent& e) {
     if (getPortForPoint(e.getMouseDownPosition())) {
@@ -545,5 +625,7 @@ void ModuleComponent::mouseDrag(const juce::MouseEvent& e) {
 void ModuleComponent::mouseUp(const juce::MouseEvent& e) {
     if (getPortForPoint(e.getMouseDownPosition())) {
         owner.endConnectionDrag(e.getScreenPosition());
+    } else if (undoManager && getPosition() != dragStartPosition) {
+        undoManager->pushSnapshotFromCapture(owner.getAudioEngine().getGraph());
     }
 }

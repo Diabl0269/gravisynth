@@ -2,6 +2,7 @@
 
 #include "AI/AIIntegrationService.h"
 #include "AudioEngine.h"
+#include "GravisynthUndoManager.h"
 #include "PresetManager.h"
 #include "UI/AIChatComponent.h"
 #include "UI/GraphEditor.h"
@@ -12,13 +13,17 @@
 class MainComponent
     : public juce::Component
     , public juce::DragAndDropContainer
+    , public juce::Timer
     , private gsynth::AIIntegrationService::Listener {
 public:
     MainComponent();
     ~MainComponent() override;
 
+    void timerCallback() override;
+
     void paint(juce::Graphics&) override;
     void resized() override;
+    bool keyPressed(const juce::KeyPress& key) override;
 
     // Testing Hooks
     bool isAiPanelConfiguredVisible() const { return isAiPanelVisible; }
@@ -36,6 +41,7 @@ private:
     // AIIntegrationService::Listener
     void aiPatchApplied() override;
 
+    GravisynthUndoManager undoManager;
     AudioEngine audioEngine;
     GraphEditor graphEditor;
     ModuleLibraryComponent moduleLibrary;
@@ -43,6 +49,8 @@ private:
     juce::TextButton saveButton;
     juce::TextButton loadButton;
     juce::TextButton settingsButton;
+    juce::TextButton undoButton;
+    juce::TextButton redoButton;
     juce::TextButton toggleAiPanelButton;
     juce::TextButton toggleModMatrixButton;
 

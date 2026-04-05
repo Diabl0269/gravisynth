@@ -3,8 +3,9 @@
 #include <algorithm>
 #include <map>
 
-ModMatrixComponent::ModMatrixComponent(AudioEngine& engine)
-    : audioEngine(engine) {
+ModMatrixComponent::ModMatrixComponent(AudioEngine& engine, GravisynthUndoManager* undoMgr)
+    : audioEngine(engine)
+    , undoManager(undoMgr) {
     addAndMakeVisible(viewport);
     viewport.setViewedComponent(&contentContainer);
 
@@ -191,7 +192,14 @@ ModMatrixComponent::ModRow::ModRow(ModMatrixComponent& o, juce::AudioProcessorGr
 
     sourceCombo.addListener(this);
     destCombo.addListener(this);
-    deleteButton.onClick = [this] { owner.audioEngine.removeModRouting(attenuverterId); };
+    deleteButton.onClick = [this] {
+        if (owner.undoManager) {
+            owner.undoManager->recordStructuralChange(owner.audioEngine.getGraph(),
+                                                      [this] { owner.audioEngine.removeModRouting(attenuverterId); });
+        } else {
+            owner.audioEngine.removeModRouting(attenuverterId);
+        }
+    };
 
     bypassToggle.setClickingTogglesState(true);
     bypassToggle.setTooltip("Bypass modulation");
@@ -212,6 +220,12 @@ ModMatrixComponent::ModRow::ModRow(ModMatrixComponent& o, juce::AudioProcessorGr
             if (auto* bParam = dynamic_cast<juce::AudioParameterBool*>(params[1])) {
                 bypassAttachment = std::make_unique<juce::ButtonParameterAttachment>(*bParam, bypassToggle);
             }
+        }
+
+        // Register as parameter listener for undo tracking
+        if (owner.undoManager) {
+            for (auto* p : params)
+                p->addListener(this);
         }
     }
 }
@@ -238,8 +252,44 @@ void ModMatrixComponent::ModRow::paint(juce::Graphics& g) {
 }
 
 ModMatrixComponent::ModRow::~ModRow() {
+    detach();
     sourceCombo.removeListener(this);
     destCombo.removeListener(this);
+}
+
+void ModMatrixComponent::ModRow::detach() {
+    amountAttachment.reset();
+    bypassAttachment.reset();
+
+    if (auto* node = owner.audioEngine.getGraph().getNodeForId(attenuverterId)) {
+        for (auto* p : node->getProcessor()->getParameters())
+            p->removeListener(this);
+    }
+}
+
+void ModMatrixComponent::detachAllRows() {
+    for (auto& row : rows)
+        row->detach();
+}
+
+void ModMatrixComponent::ModRow::parameterValueChanged(int parameterIndex, float newValue) {
+    juce::ignoreUnused(parameterIndex, newValue);
+}
+
+void ModMatrixComponent::ModRow::parameterGestureChanged(int parameterIndex, bool gestureIsStarting) {
+    if (!owner.undoManager)
+        return;
+
+    if (gestureIsStarting) {
+        gestureStartValues[parameterIndex] = 1.0f;
+        owner.undoManager->captureBeforeState(owner.audioEngine.getGraph());
+    } else {
+        auto it = gestureStartValues.find(parameterIndex);
+        if (it != gestureStartValues.end()) {
+            owner.undoManager->pushSnapshotFromCapture(owner.audioEngine.getGraph());
+            gestureStartValues.erase(it);
+        }
+    }
 }
 
 void ModMatrixComponent::ModRow::populateCombos() {
@@ -362,25 +412,34 @@ void ModMatrixComponent::ModRow::comboBoxChanged(juce::ComboBox* comboBox) {
         int dstChannel = (int)(destEncoded & 0xFF);
 
         if (srcNodeId != 0 || dstNodeId != 0) {
-            auto& graph = owner.audioEngine.getGraph();
+            auto doReroute = [this, srcNodeId, srcChannel, dstNodeId, dstChannel] {
+                auto& graph = owner.audioEngine.getGraph();
 
-            for (auto& conn : graph.getConnections()) {
-                if (conn.destination.nodeID == attenuverterId && conn.destination.channelIndex == 0) {
-                    graph.removeConnection(conn);
-                    break;
+                for (auto& conn : graph.getConnections()) {
+                    if (conn.destination.nodeID == attenuverterId && conn.destination.channelIndex == 0) {
+                        graph.removeConnection(conn);
+                        break;
+                    }
                 }
-            }
-            if (srcNodeId != 0)
-                graph.addConnection({{juce::AudioProcessorGraph::NodeID(srcNodeId), srcChannel}, {attenuverterId, 0}});
+                if (srcNodeId != 0)
+                    graph.addConnection(
+                        {{juce::AudioProcessorGraph::NodeID(srcNodeId), srcChannel}, {attenuverterId, 0}});
 
-            for (auto& conn : graph.getConnections()) {
-                if (conn.source.nodeID == attenuverterId && conn.source.channelIndex == 0) {
-                    graph.removeConnection(conn);
-                    break;
+                for (auto& conn : graph.getConnections()) {
+                    if (conn.source.nodeID == attenuverterId && conn.source.channelIndex == 0) {
+                        graph.removeConnection(conn);
+                        break;
+                    }
                 }
-            }
-            if (dstNodeId != 0) {
-                graph.addConnection({{attenuverterId, 0}, {juce::AudioProcessorGraph::NodeID(dstNodeId), dstChannel}});
+                if (dstNodeId != 0)
+                    graph.addConnection(
+                        {{attenuverterId, 0}, {juce::AudioProcessorGraph::NodeID(dstNodeId), dstChannel}});
+            };
+
+            if (owner.undoManager) {
+                owner.undoManager->recordStructuralChange(owner.audioEngine.getGraph(), doReroute);
+            } else {
+                doReroute();
             }
         }
     }

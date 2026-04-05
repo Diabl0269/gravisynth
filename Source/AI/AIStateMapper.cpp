@@ -7,6 +7,7 @@
 #include "../Modules/FilterModule.h"
 #include "../Modules/LFOModule.h"
 #include "../Modules/MidiKeyboardModule.h"
+#include "../Modules/ModuleBase.h"
 #include "../Modules/OscillatorModule.h"
 #include "../Modules/PolyMidiModule.h"
 #include "../Modules/PolySequencerModule.h"
@@ -42,7 +43,8 @@ static const std::unordered_map<juce::String, ModuleFactoryFunc> moduleFactory =
     {"Filter Env", []() { return std::make_unique<ADSRModule>("Filter Env"); }},
     {"Poly MIDI", []() { return std::make_unique<PolyMidiModule>(); }},
     {"Poly Sequencer", []() { return std::make_unique<PolySequencerModule>(); }},
-    {"Attenuverter", []() { return std::make_unique<AttenuverterModule>(); }}};
+    {"Attenuverter", []() { return std::make_unique<AttenuverterModule>(); }},
+    {"Mod Slot", []() { return std::make_unique<AttenuverterModule>(); }}};
 
 bool AIStateMapper::validatePatchJSON(const juce::var& json) {
     if (!json.isObject()) {
@@ -86,8 +88,57 @@ std::unique_ptr<juce::AudioProcessor> AIStateMapper::createModule(const juce::St
     if (it != moduleFactory.end()) {
         return it->second();
     }
+
+    // Strip trailing number suffix for backwards compatibility (e.g., "Oscillator 1" → "Oscillator")
+    juce::String baseName = type;
+    int lastSpace = baseName.lastIndexOf(" ");
+    if (lastSpace != -1 && baseName.substring(lastSpace + 1).containsOnly("0123456789"))
+        baseName = baseName.substring(0, lastSpace);
+
+    it = moduleFactory.find(baseName);
+    if (it != moduleFactory.end())
+        return it->second();
+
+    // Handle ADSR variants with custom names (e.g., "Amp Env", "Filter Env")
+    if (baseName.containsIgnoreCase("Env") || baseName.containsIgnoreCase("ADSR"))
+        return std::make_unique<ADSRModule>(baseName);
+
     juce::Logger::writeToLog("AIStateMapper: Unknown module type: " + type);
     return nullptr;
+}
+
+static juce::String getFactoryTypeName(juce::AudioProcessor* processor) {
+    if (auto* mb = dynamic_cast<ModuleBase*>(processor)) {
+        switch (mb->getModuleType()) {
+        case ModuleType::Oscillator:
+            return "Oscillator";
+        case ModuleType::Filter:
+            return "Filter";
+        case ModuleType::VCA:
+            return "VCA";
+        case ModuleType::ADSR:
+            return "ADSR";
+        case ModuleType::LFO:
+            return "LFO";
+        case ModuleType::Sequencer:
+            return "Sequencer";
+        case ModuleType::PolySequencer:
+            return "Sequencer";
+        case ModuleType::MidiKeyboard:
+            return "MIDI Keyboard";
+        case ModuleType::PolyMidi:
+            return "MIDI Keyboard";
+        case ModuleType::Attenuverter:
+            return "Attenuverter";
+        case ModuleType::Delay:
+            return "Delay";
+        case ModuleType::Distortion:
+            return "Distortion";
+        case ModuleType::Reverb:
+            return "Reverb";
+        }
+    }
+    return processor->getName();
 }
 
 juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
@@ -98,9 +149,9 @@ juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
         if (auto* processor = node->getProcessor()) {
             juce::DynamicObject::Ptr n = new juce::DynamicObject();
             n->setProperty("id", (int)node->nodeID.uid);
-            n->setProperty("type", processor->getName());
+            n->setProperty("type", getFactoryTypeName(processor));
 
-            // Params
+            // Params — store denormalized values to match applyJSONToGraph expectations
             juce::DynamicObject::Ptr params = new juce::DynamicObject();
             for (auto* param : processor->getParameters()) {
                 if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
@@ -113,6 +164,8 @@ juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
                         // Store denormalized value
                         float denormalized = ranged->getNormalisableRange().convertFrom0to1(ranged->getValue());
                         params->setProperty(ranged->paramID, denormalized);
+                    } else {
+                        params->setProperty(p->paramID, p->getValue());
                     }
                 }
             }

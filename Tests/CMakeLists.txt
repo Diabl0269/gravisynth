@@ -34,6 +34,7 @@ add_executable(GravisynthTests
     FXModuleTests.cpp
     EdgeCaseTests.cpp
     IntegrationTests.cpp
+    UndoRedoTests.cpp
     PresetManagerTests.cpp
     ../Source/MainComponent.cpp
     ../Source/UI/GraphEditor.cpp
