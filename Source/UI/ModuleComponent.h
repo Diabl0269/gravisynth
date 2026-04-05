@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../AudioEngine.h"
+#include "../GravisynthUndoManager.h"
 #include "../Modules/FilterModule.h"
 #include "../Modules/MidiKeyboardModule.h"
 #include "FrequencyResponseComponent.h"
@@ -8,14 +9,20 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <map>
 
 class GraphEditor; // Forward declaration
 
 class ModuleComponent
     : public juce::Component
-    , public juce::Timer {
+    , public juce::Timer
+    , public juce::AudioProcessorParameter::Listener {
 public:
-    ModuleComponent(juce::AudioProcessor* module, juce::AudioProcessorGraph::NodeID nodeId, GraphEditor& owner);
+    ModuleComponent(juce::AudioProcessor* module, juce::AudioProcessorGraph::NodeID nodeId, GraphEditor& owner,
+                    GravisynthUndoManager* undoMgr = nullptr);
+
+    void parameterValueChanged(int parameterIndex, float newValue) override;
+    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override;
     ~ModuleComponent() override;
 
     void paint(juce::Graphics&) override;
@@ -28,6 +35,10 @@ public:
     void moved() override;
 
     juce::AudioProcessor* getModule() const { return module; }
+
+    // Safely detach from the processor before graph rebuild.
+    // Removes listeners, destroys attachments, stops timer, nulls module pointer.
+    void detachFromProcessor();
 
     // Interaction Logic
     struct Port {
@@ -64,6 +75,10 @@ private:
     std::unique_ptr<FrequencyResponseComponent> freqResponseComponent;
     std::unique_ptr<juce::ToggleButton> spectrumToggle;
     std::unique_ptr<juce::MidiKeyboardComponent> keyboardComponent;
+
+    GravisynthUndoManager* undoManager = nullptr;
+    std::map<int, float> gestureStartValues;
+    juce::Point<int> dragStartPosition;
 
     void createControls();
     void updateLayout();

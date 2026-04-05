@@ -36,3 +36,4 @@ coverage/
 .gemini/
 .claude/settings.local.json
 worktrees/
+build-asan/

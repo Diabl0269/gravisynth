@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../AudioEngine.h"
+#include "../GravisynthUndoManager.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class ModuleComponent;
@@ -11,8 +12,11 @@ class GraphEditor
     , public juce::Timer
     , public juce::DragAndDropTarget {
 public:
-    GraphEditor(AudioEngine& engine);
+    GraphEditor(AudioEngine& engine, GravisynthUndoManager* undoMgr = nullptr);
     ~GraphEditor() override;
+
+    AudioEngine& getAudioEngine() { return audioEngine; }
+    void detachAllModuleComponents();
 
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -43,6 +47,7 @@ public:
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
 
     juce::AudioProcessorGraph::NodeID getAttenuverterNodeAt(juce::Point<float> localPos);
@@ -80,6 +85,9 @@ private:
     juce::Point<int> dragCurrentPos;
 
     juce::AudioProcessorGraph::NodeID draggingAttenuverterNodeId;
+    float attenDragStartValue = 0.0f;
+
+    GravisynthUndoManager* undoManager = nullptr;
 
     void updateTransform();
 

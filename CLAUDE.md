@@ -21,6 +21,7 @@ The project follows a modular architecture with:
 - **GraphEditor**: Visual editor for connecting modules with zoom/pan and drag-to-connect
 - **ModuleComponent**: Auto-UI generation from module parameters with type-safe layout switching via `ModuleType` enum
 - **AttenuverterModule**: Intermediary module for modulation routing with bypass and CV amount control
+- **GravisynthUndoManager**: Snapshot-based undo/redo system wrapping `juce::UndoManager`, captures full graph state on every change
 
 ### Audio Modules
 
@@ -67,19 +68,21 @@ bash scripts/coverage.sh
 - Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
 - Integration tests (signal chains, modulation routing)
 - Code coverage enforcement (threshold: 69%, CI pipeline enforces)
-- ~169 tests across 28 suites (unit, edge case, integration, filter modes)
+- ~169 tests across 28 suites (unit, edge case, integration, undo/redo, filter modes)
 - CI runs on Ubuntu + macOS with linting, building, testing, and coverage
 
 ## Key Files to Understand
 
 - `CMakeLists.txt`: Main build configuration (version 0.14.0)
 - `Source/AudioEngine.h/cpp`: Audio processing engine, device management, and modulation matrix
+- `Source/GravisynthUndoManager.h/cpp`: Snapshot-based undo/redo with `SnapshotAction`, safe detach/reattach lifecycle
 - `Source/Modules/ModuleBase.h`: Base class with `ModuleType` enum, `ModulationTarget`, `ModulationCategory`
 - `Source/Modules/OscillatorModule.h`: Oscillator with PolyBLEP/PolyBLAMP anti-aliasing, waveform crossfade, and CV feedback fix (channel 0 shared between CV input and audio output, saved before overwrite)
 - `Source/Modules/FilterModule.h`: Multi-mode filter (LadderFilter for LPF/HPF/BPF + SVF for notch), atomic modulated params for visualizer, type parameter
 - `Source/Modules/VisualBuffer.h`: Thread-safe circular buffer using `std::atomic<float>`
 - `Source/PresetManager.h/cpp`: Factory presets with categorized organization
-- `Source/UI/ModuleComponent.cpp`: Auto-UI with type-safe `ModuleType` switching, FrequencyResponseComponent integration and spectrum toggle
+- `Source/UI/ModuleComponent.cpp`: Auto-UI with type-safe `ModuleType` switching, parameter listener for undo, safe detach lifecycle, FrequencyResponseComponent integration and spectrum toggle
 - `Source/UI/FrequencyResponseComponent.h`: Serum-style frequency response curve with FFT spectrum overlay
-- `Source/UI/GraphEditor.cpp`: Graph editor with attenuverter knob rendering and modulation routing
-- `Tests/`: ~169 tests across 28 suites (unit, edge case, integration)
+- `Source/UI/GraphEditor.cpp`: Graph editor with attenuverter knob rendering, modulation routing, and undo integration
+- `Source/UI/ModMatrixComponent.cpp`: Modulation matrix with undo tracking for routing and parameter changes
+- `Tests/`: ~169 tests across 28 suites (unit, edge case, integration, undo/redo, filter modes)

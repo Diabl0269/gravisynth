@@ -32,6 +32,8 @@ endif()
 add_library(GravisynthCore STATIC
     Source/AudioEngine.cpp
     Source/AudioEngine.h
+    Source/GravisynthUndoManager.cpp
+    Source/GravisynthUndoManager.h
     Source/PresetManager.cpp
     Source/PresetManager.h
     # Modules

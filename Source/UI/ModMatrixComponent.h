@@ -1,13 +1,15 @@
 #pragma once
 
 #include "../AudioEngine.h"
+#include "../GravisynthUndoManager.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <map>
 
 class ModMatrixComponent
     : public juce::Component
     , public juce::Timer {
 public:
-    ModMatrixComponent(AudioEngine& engine);
+    ModMatrixComponent(AudioEngine& engine, GravisynthUndoManager* undoMgr = nullptr);
     ~ModMatrixComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -21,8 +23,12 @@ public:
         repaint();
     }
 
+    // Safely detach all rows from their processors before graph rebuild
+    void detachAllRows();
+
 private:
     AudioEngine& audioEngine;
+    GravisynthUndoManager* undoManager = nullptr;
     bool isSourceMenuFlat = false;
 
     juce::TextButton addButton{"Add Modulation"};
@@ -30,8 +36,12 @@ private:
 
     struct ModRow
         : public juce::Component
-        , public juce::ComboBox::Listener {
+        , public juce::ComboBox::Listener
+        , public juce::AudioProcessorParameter::Listener {
         ModRow(ModMatrixComponent& owner, juce::AudioProcessorGraph::NodeID id);
+
+        void parameterValueChanged(int parameterIndex, float newValue) override;
+        void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override;
         ~ModRow() override;
 
         void setRowIndex(int index) {
@@ -56,6 +66,9 @@ private:
         std::unique_ptr<juce::SliderParameterAttachment> amountAttachment;
         std::unique_ptr<juce::ButtonParameterAttachment> bypassAttachment;
 
+        std::map<int, float> gestureStartValues;
+
+        void detach();
         void refresh(const AudioEngine::ModRoutingInfo& info);
         void populateCombos();
     };
