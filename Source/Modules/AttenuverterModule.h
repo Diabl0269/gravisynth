@@ -47,6 +47,9 @@ public:
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"Amount", 1}}; }
+    juce::String getInputPortLabel(int i) const override { return i == 0 ? "Signal" : "Amount"; }
+    juce::String getOutputPortLabel(int) const override { return "Out"; }
+
     ModuleType getModuleType() const override { return ModuleType::Attenuverter; }
 
 private:

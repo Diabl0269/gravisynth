@@ -2,8 +2,13 @@
 #include "../AI/AIStateMapper.h"
 #include "../Modules/ADSRModule.h"
 #include "../Modules/AttenuverterModule.h"
+#include "../Modules/FX/ChorusModule.h"
+#include "../Modules/FX/CompressorModule.h"
 #include "../Modules/FX/DelayModule.h"
 #include "../Modules/FX/DistortionModule.h"
+#include "../Modules/FX/FlangerModule.h"
+#include "../Modules/FX/LimiterModule.h"
+#include "../Modules/FX/PhaserModule.h"
 #include "../Modules/FX/ReverbModule.h"
 #include "../Modules/FilterModule.h"
 #include "../Modules/LFOModule.h"
@@ -619,6 +624,16 @@ void GraphEditor::itemDropped(const SourceDetails& dragSourceDetails) {
         newProcessor = std::make_unique<MidiKeyboardModule>();
     else if (name == "Attenuverter")
         newProcessor = std::make_unique<AttenuverterModule>();
+    else if (name == "Chorus")
+        newProcessor = std::make_unique<ChorusModule>();
+    else if (name == "Phaser")
+        newProcessor = std::make_unique<PhaserModule>();
+    else if (name == "Compressor")
+        newProcessor = std::make_unique<CompressorModule>();
+    else if (name == "Flanger")
+        newProcessor = std::make_unique<FlangerModule>();
+    else if (name == "Limiter")
+        newProcessor = std::make_unique<LimiterModule>();
 
     if (newProcessor) {
         auto& graph = audioEngine.getGraph();

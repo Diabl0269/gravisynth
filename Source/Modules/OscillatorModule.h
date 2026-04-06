@@ -10,8 +10,8 @@ public:
     {
         addParameter(waveformParam = new juce::AudioParameterChoice("waveform", "Waveform",
                                                                     {"Sine", "Square", "Saw", "Triangle"}, 0));
-        addParameter(octaveParam = new juce::AudioParameterInt("octave", "Octave", -4, 4, 0));
-        addParameter(coarseParam = new juce::AudioParameterInt("coarse", "Coarse", -12, 12, 0));
+        addParameter(octaveParam = new juce::AudioParameterInt(juce::ParameterID("octave", 1), "Octave", -4, 4, 0));
+        addParameter(coarseParam = new juce::AudioParameterInt(juce::ParameterID("coarse", 1), "Coarse", -12, 12, 0));
         addParameter(fineParam = new juce::AudioParameterFloat("fine", "Fine", -100.0f, 100.0f, 0.0f));
         addParameter(levelParam = new juce::AudioParameterFloat("level", "Level", 0.0f, 1.0f, 1.0f));
 
@@ -185,6 +185,11 @@ public:
     std::vector<ModulationTarget> getModulationTargets() const override {
         return {{"Pitch", 0}, {"Waveform", 1}, {"Octave", 2}, {"Coarse", 3}, {"Fine", 4}, {"Level", 5}};
     }
+    juce::String getInputPortLabel(int i) const override {
+        const juce::String labels[] = {"Pitch", "Waveform", "Octave", "Coarse", "Fine", "Level"};
+        return (i >= 0 && i < 6) ? labels[i] : ModuleBase::getInputPortLabel(i);
+    }
+    juce::String getOutputPortLabel(int) const override { return "Audio"; }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Oscillator; }
     ModuleType getModuleType() const override { return ModuleType::Oscillator; }
 
