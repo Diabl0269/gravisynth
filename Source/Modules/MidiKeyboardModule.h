@@ -13,7 +13,7 @@ class MidiKeyboardModule : public ModuleBase {
 public:
     MidiKeyboardModule()
         : ModuleBase("MIDI Keyboard", 0, 0) {
-        addParameter(octaveParam = new juce::AudioParameterInt("octave", "Octave", -2, 2, 0));
+        addParameter(octaveParam = new juce::AudioParameterInt(juce::ParameterID("octave", 1), "Octave", -2, 2, 0));
     }
 
     bool producesMidi() const override { return true; }

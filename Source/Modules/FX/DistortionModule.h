@@ -88,6 +88,12 @@ public:
         }
     }
 
+    juce::String getInputPortLabel(int i) const override {
+        const juce::String labels[] = {"Left", "Right", "Drive", "Mix"};
+        return (i >= 0 && i < 4) ? labels[i] : ModuleBase::getInputPortLabel(i);
+    }
+    juce::String getOutputPortLabel(int i) const override { return i == 0 ? "Left" : "Right"; }
+
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"Drive", 2}, {"Mix", 3}}; }
 
     ModulationCategory getModulationCategory() const override { return ModulationCategory::FX; }

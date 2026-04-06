@@ -26,7 +26,12 @@ enum class ModuleType {
     Attenuverter,
     Delay,
     Distortion,
-    Reverb
+    Reverb,
+    Chorus,
+    Phaser,
+    Compressor,
+    Flanger,
+    Limiter
 };
 
 class ModuleBase : public juce::AudioProcessor {
@@ -92,6 +97,8 @@ public:
     void setModuleName(const juce::String& name) { moduleName = name; }
 
     virtual std::vector<ModulationTarget> getModulationTargets() const { return {}; }
+    virtual juce::String getInputPortLabel(int channelIndex) const { return "In " + juce::String(channelIndex); }
+    virtual juce::String getOutputPortLabel(int channelIndex) const { return "Out " + juce::String(channelIndex); }
     virtual ModulationCategory getModulationCategory() const { return ModulationCategory::Other; }
     virtual ModuleType getModuleType() const = 0;
 

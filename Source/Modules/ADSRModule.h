@@ -53,6 +53,8 @@ public:
     }
 
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Envelope; }
+    juce::String getInputPortLabel(int) const override { return "Gate"; }
+    juce::String getOutputPortLabel(int) const override { return "Env"; }
     ModuleType getModuleType() const override { return ModuleType::ADSR; }
 
 private:
