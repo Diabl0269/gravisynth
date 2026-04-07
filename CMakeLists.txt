@@ -97,6 +97,9 @@ target_include_directories(GravisynthCore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Source
 )
 
+# Required for plugin shared library linking on Linux
+set_target_properties(GravisynthCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 if(MSVC)
     target_compile_options(GravisynthCore PRIVATE /W4)
 else()
