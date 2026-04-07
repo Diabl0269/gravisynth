@@ -362,3 +362,109 @@ TEST_F(UndoRedoTest, ComplexGraphModification) {
     undoManager.redo(); // Add second connection
     ASSERT_EQ(graph.getConnections().size(), 2);
 }
+
+/**
+ * Test 11: RedoWithParameterValueInUnitInterval
+ * - Create a Filter module with a parameter that has range > [0,1]
+ * - Set parameter to a value within [0,1] (e.g., drive = 1.0, range 1.0-10.0)
+ * - Record a structural change (module addition)
+ * - Undo (module removed)
+ * - Redo (module restored)
+ * - Verify the parameter value is still correct (1.0, not 10.0)
+ *
+ * This tests the fix for GitHub issue #53: Redo after module replacement
+ * corrupts new module's parameters. The bug was that values in [0,1] were
+ * being double-converted: normalized value from state was incorrectly treated
+ * as a normalized value and converted again.
+ */
+TEST_F(UndoRedoTest, RedoWithParameterValueInUnitInterval) {
+    // Create a Filter module (has parameters with ranges > [0,1])
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+    auto nodeId = filterNode->nodeID;
+
+    // Find the "drive" parameter (range 1.0-10.0)
+    juce::String driveParamId = "drive";
+    juce::RangedAudioParameter* driveParam = nullptr;
+    for (auto* param : filterNode->getProcessor()->getParameters()) {
+        if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+            if (p->paramID == driveParamId) {
+                driveParam = dynamic_cast<juce::RangedAudioParameter*>(param);
+                break;
+            }
+        }
+    }
+    ASSERT_NE(driveParam, nullptr);
+
+    // Set drive to 1.0 (within [0,1] but valid for range 1.0-10.0)
+    float targetValue = 1.0f;
+    driveParam->setValueNotifyingHost(driveParam->getNormalisableRange().convertTo0to1(targetValue));
+
+    // Verify the value was set correctly
+    float denormalized = driveParam->getNormalisableRange().convertFrom0to1(driveParam->getValue());
+    ASSERT_NEAR(denormalized, targetValue, 0.001f);
+
+    // Record a structural change (add the Filter module)
+    // Note: We already added it above, so we'll remove it and re-add it via undo/redo
+    graph.removeNode(nodeId);
+    ASSERT_EQ(graph.getNumNodes(), 0);
+
+    // Now add it back via recordStructuralChange
+    undoManager.recordStructuralChange(graph, [this] {
+        auto node = graph.addNode(std::make_unique<FilterModule>());
+        // Set the same parameter to the same value
+        for (auto* param : node->getProcessor()->getParameters()) {
+            if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+                if (p->paramID == "drive") {
+                    if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param)) {
+                        ranged->setValueNotifyingHost(ranged->getNormalisableRange().convertTo0to1(1.0f));
+                    }
+                }
+            }
+        }
+    });
+
+    ASSERT_EQ(graph.getNumNodes(), 1);
+
+    // Get the new module and verify parameter
+    auto newFilterNode = graph.getNodes().getFirst();
+    ASSERT_NE(newFilterNode, nullptr);
+    juce::RangedAudioParameter* newDriveParam = nullptr;
+    for (auto* param : newFilterNode->getProcessor()->getParameters()) {
+        if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+            if (p->paramID == "drive") {
+                newDriveParam = dynamic_cast<juce::RangedAudioParameter*>(param);
+                break;
+            }
+        }
+    }
+    ASSERT_NE(newDriveParam, nullptr);
+
+    float valueAfterAdd = newDriveParam->getNormalisableRange().convertFrom0to1(newDriveParam->getValue());
+    ASSERT_NEAR(valueAfterAdd, 1.0f, 0.001f) << "Parameter value should be 1.0 after initial add";
+
+    // Undo (removes the module)
+    undoManager.undo();
+    ASSERT_EQ(graph.getNumNodes(), 0);
+
+    // Redo (restores the module with the same parameters)
+    undoManager.redo();
+    ASSERT_EQ(graph.getNumNodes(), 1);
+
+    // Verify the parameter value is still correct (not double-converted to 10.0)
+    auto redoFilterNode = graph.getNodes().getFirst();
+    ASSERT_NE(redoFilterNode, nullptr);
+    juce::RangedAudioParameter* redoDriveParam = nullptr;
+    for (auto* param : redoFilterNode->getProcessor()->getParameters()) {
+        if (auto* p = dynamic_cast<juce::AudioProcessorParameterWithID*>(param)) {
+            if (p->paramID == "drive") {
+                redoDriveParam = dynamic_cast<juce::RangedAudioParameter*>(param);
+                break;
+            }
+        }
+    }
+    ASSERT_NE(redoDriveParam, nullptr);
+
+    float valueAfterRedo = redoDriveParam->getNormalisableRange().convertFrom0to1(redoDriveParam->getValue());
+    ASSERT_NEAR(valueAfterRedo, 1.0f, 0.001f)
+        << "Parameter value should be 1.0 after redo, not 10.0 (double-converted)";
+}

@@ -21,7 +21,8 @@ public:
      * @brief Applies a JSON-compatible juce::var to the graph.
      * @return true if the patch was applied successfully.
      */
-    static bool applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting = true);
+    static bool applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting = true,
+                                 bool trusted = false);
 
     /**
      * @brief Gets a Markdown-formatted string of all available modules and their parameters.
@@ -44,7 +45,8 @@ private:
      */
     static int findChoiceIndex(juce::AudioParameterChoice* p, const juce::String& choiceText);
 
-    static void applyParamsToProcessor(juce::AudioProcessor* processor, const juce::DynamicObject* paramsObj);
+    static void applyParamsToProcessor(juce::AudioProcessor* processor, const juce::DynamicObject* paramsObj,
+                                       bool trusted = false);
 };
 
 } // namespace gsynth

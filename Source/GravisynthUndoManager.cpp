@@ -24,7 +24,7 @@ public:
 
         if (preRestore)
             preRestore();
-        gsynth::AIStateMapper::applyJSONToGraph(afterState, graph, true);
+        gsynth::AIStateMapper::applyJSONToGraph(afterState, graph, true, true);
         if (postRestore)
             postRestore();
         return true;
@@ -33,7 +33,7 @@ public:
     bool undo() override {
         if (preRestore)
             preRestore();
-        gsynth::AIStateMapper::applyJSONToGraph(beforeState, graph, true);
+        gsynth::AIStateMapper::applyJSONToGraph(beforeState, graph, true, true);
         if (postRestore)
             postRestore();
         return true;
