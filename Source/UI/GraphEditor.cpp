@@ -348,7 +348,12 @@ void GraphEditor::updateComponents() {
 
     // Refresh mod matrix to pick up any new/removed attenuverter routings
     // Use callAsync to avoid re-entrancy during graph modification
-    juce::MessageManager::callAsync([this]() { modMatrix.updateRowsFromGraph(); });
+    // SafePointer guards against the GraphEditor being destroyed before the callback fires
+    juce::Component::SafePointer<GraphEditor> safeThis(this);
+    juce::MessageManager::callAsync([safeThis]() {
+        if (auto* self = safeThis.getComponent())
+            self->modMatrix.updateRowsFromGraph();
+    });
 
     repaint();
 }
