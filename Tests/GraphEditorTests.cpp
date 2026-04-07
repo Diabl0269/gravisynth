@@ -321,6 +321,7 @@ TEST_F(GraphEditorTest, ReplaceModuleIsUndoable) {
     AudioEngine engine;
     GravisynthUndoManager undoMgr;
     GraphEditor editor(engine, &undoMgr);
+    undoMgr.setGraphEditor(&editor);
     editor.setSize(800, 600);
 
     auto& graph = engine.getGraph();
