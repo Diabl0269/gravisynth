@@ -670,8 +670,7 @@ void GraphEditor::replaceModule(ModuleComponent* moduleComp, const juce::String&
                     graph.addConnection({{ci.otherNodeId, ci.otherChannelIndex},
                                          {newNodeId, ci.oldChannelIndex}});
                 } else if (!ci.isIncoming && ci.oldChannelIndex < newNumOutputs) {
-                    graph.addConnection({{newNodeId, ci.oldChannelIndex},
-                                         {ci.otherNodeId, ci.otherChannelIndex}});
+                    graph.addConnection({{newNodeId, ci.oldChannelIndex}, {ci.otherNodeId, ci.otherChannelIndex}});
                 }
             }
         }
@@ -685,13 +684,11 @@ void GraphEditor::replaceModule(ModuleComponent* moduleComp, const juce::String&
         for (auto& rw : modRoutings) {
             if (rw.oldModuleIsSource) {
                 if (rw.channelOnOldModule < newNumOutputs) {
-                    graph.addConnection({{newNodeId, rw.channelOnOldModule},
-                                         {rw.attenuverterId, 0}});
+                    graph.addConnection({{newNodeId, rw.channelOnOldModule}, {rw.attenuverterId, 0}});
                 }
             } else {
                 if (rw.channelOnOldModule < newNumInputs) {
-                    graph.addConnection({{rw.attenuverterId, 0},
-                                         {newNodeId, rw.channelOnOldModule}});
+                    graph.addConnection({{rw.attenuverterId, 0}, {newNodeId, rw.channelOnOldModule}});
                 }
             }
         }

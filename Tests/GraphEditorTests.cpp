@@ -1,12 +1,12 @@
-#include "../Source/Modules/FilterModule.h"
-#include "../Source/Modules/OscillatorModule.h"
-#include "../Source/Modules/VCAModule.h"
-#include "../Source/Modules/LFOModule.h"
+#include "../Source/GravisynthUndoManager.h"
 #include "../Source/Modules/ADSRModule.h"
+#include "../Source/Modules/FilterModule.h"
+#include "../Source/Modules/LFOModule.h"
+#include "../Source/Modules/OscillatorModule.h"
 #include "../Source/Modules/SequencerModule.h"
+#include "../Source/Modules/VCAModule.h"
 #include "../Source/UI/GraphEditor.h"
 #include "../Source/UI/ModuleComponent.h"
-#include "../Source/GravisynthUndoManager.h"
 #include <gtest/gtest.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -207,8 +207,8 @@ TEST_F(GraphEditorTest, ReplaceModulePreservesAudioConnections) {
     // Verify connection Osc -> VCA on channel 0
     bool connectionFound = false;
     for (auto& conn : graph.getConnections()) {
-        if (conn.source.nodeID == oscNode->nodeID && conn.source.channelIndex == 0
-            && conn.destination.nodeID == vcaNodeId && conn.destination.channelIndex == 0) {
+        if (conn.source.nodeID == oscNode->nodeID && conn.source.channelIndex == 0 &&
+            conn.destination.nodeID == vcaNodeId && conn.destination.channelIndex == 0) {
             connectionFound = true;
             break;
         }
@@ -305,10 +305,10 @@ TEST_F(GraphEditorTest, ReplaceModulePreservesMidiConnections) {
     // Verify MIDI connection Sequencer -> ADSR
     bool midiConnFound = false;
     for (auto& conn : graph.getConnections()) {
-        if (conn.source.nodeID == seqNode->nodeID
-            && conn.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex
-            && conn.destination.nodeID == adsrNodeId
-            && conn.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) {
+        if (conn.source.nodeID == seqNode->nodeID &&
+            conn.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex &&
+            conn.destination.nodeID == adsrNodeId &&
+            conn.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) {
             midiConnFound = true;
             break;
         }
@@ -348,8 +348,10 @@ TEST_F(GraphEditorTest, ReplaceModuleIsUndoable) {
     // Verify filter exists, oscillator gone
     bool hasFilter = false, hasOsc = false;
     for (auto* node : graph.getNodes()) {
-        if (dynamic_cast<FilterModule*>(node->getProcessor())) hasFilter = true;
-        if (dynamic_cast<OscillatorModule*>(node->getProcessor())) hasOsc = true;
+        if (dynamic_cast<FilterModule*>(node->getProcessor()))
+            hasFilter = true;
+        if (dynamic_cast<OscillatorModule*>(node->getProcessor()))
+            hasOsc = true;
     }
     EXPECT_TRUE(hasFilter);
     EXPECT_FALSE(hasOsc);
@@ -361,8 +363,10 @@ TEST_F(GraphEditorTest, ReplaceModuleIsUndoable) {
     hasFilter = false;
     hasOsc = false;
     for (auto* node : graph.getNodes()) {
-        if (dynamic_cast<FilterModule*>(node->getProcessor())) hasFilter = true;
-        if (dynamic_cast<OscillatorModule*>(node->getProcessor())) hasOsc = true;
+        if (dynamic_cast<FilterModule*>(node->getProcessor()))
+            hasFilter = true;
+        if (dynamic_cast<OscillatorModule*>(node->getProcessor()))
+            hasOsc = true;
     }
     EXPECT_FALSE(hasFilter);
     EXPECT_TRUE(hasOsc);
