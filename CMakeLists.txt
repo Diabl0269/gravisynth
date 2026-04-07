@@ -65,12 +65,12 @@ add_library(GravisynthCore STATIC
     Source/AI/AIStateMapper.h
 )
 
-# Precompiled headers for faster builds
+# Precompiled headers for faster builds (CXX only — JUCE adds .c files to the target)
 target_precompile_headers(GravisynthCore PRIVATE
-    <juce_core/juce_core.h>
-    <juce_audio_basics/juce_audio_basics.h>
-    <juce_audio_processors/juce_audio_processors.h>
-    <juce_dsp/juce_dsp.h>
+    "$<$<COMPILE_LANGUAGE:CXX>:<juce_core/juce_core.h$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<juce_audio_basics/juce_audio_basics.h$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<juce_audio_processors/juce_audio_processors.h$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<juce_dsp/juce_dsp.h$<ANGLE-R>>"
 )
 
 # Link Core against JUCE
