@@ -1,6 +1,7 @@
 #include "../Source/AI/AIStateMapper.h"
 #include "../Source/Modules/AttenuverterModule.h"
 #include "../Source/Modules/FilterModule.h"
+#include "../Source/Modules/LFOModule.h"
 #include "../Source/Modules/OscillatorModule.h"
 #include "../Source/Modules/VCAModule.h"
 #include <gtest/gtest.h>
@@ -373,4 +374,203 @@ TEST(AIStateMapperTest, ValidateJSON_AllowsRemoveOnly) {
     bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, false);
     ASSERT_TRUE(success);
     ASSERT_EQ(graph.getNumNodes(), 0);
+}
+
+TEST(AIStateMapperTest, Modulation_GraphToJSON_SerializesModulations) {
+    juce::AudioProcessorGraph graph;
+
+    auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+
+    // Create attenuverter-based modulation: LFO -> Attenuverter -> Filter cutoff (channel 1)
+    auto attenNode = graph.addNode(std::make_unique<AttenuverterModule>());
+    // Set amount to 0.7
+    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenNode->getProcessor()->getParameters()[0]))
+        param->setValueNotifyingHost(param->convertTo0to1(0.7f));
+
+    graph.addConnection({{lfoNode->nodeID, 0}, {attenNode->nodeID, 0}});
+    graph.addConnection({{attenNode->nodeID, 0}, {filterNode->nodeID, 1}});
+
+    auto json = gsynth::AIStateMapper::graphToJSON(graph);
+
+    // Verify modulations array exists and has one entry
+    auto* rootObj = json.getDynamicObject();
+    ASSERT_TRUE(rootObj->hasProperty("modulations"));
+    auto* modArr = rootObj->getProperty("modulations").getArray();
+    ASSERT_NE(modArr, nullptr);
+    ASSERT_EQ(modArr->size(), 1);
+
+    auto* mod = (*modArr)[0].getDynamicObject();
+    EXPECT_EQ((int)mod->getProperty("source"), (int)lfoNode->nodeID.uid);
+    EXPECT_EQ((int)mod->getProperty("sourcePort"), 0);
+    EXPECT_EQ((int)mod->getProperty("dest"), (int)filterNode->nodeID.uid);
+    EXPECT_EQ((int)mod->getProperty("destPort"), 1);
+    EXPECT_NEAR((float)mod->getProperty("amount"), 0.7f, 0.05f);
+    EXPECT_EQ((bool)mod->getProperty("bypass"), false);
+}
+
+TEST(AIStateMapperTest, Modulation_ApplyJSON_CreatesModulationChain) {
+    juce::AudioProcessorGraph graph;
+
+    juce::var json = juce::JSON::parse(R"({
+        "nodes": [
+            {"id": 1, "type": "LFO", "params": {"rateHz": 2.0}},
+            {"id": 2, "type": "Filter", "params": {"cutoff": 1000.0}}
+        ],
+        "connections": [],
+        "modulations": [
+            {"source": 1, "dest": 2, "destPort": 1, "amount": 0.5}
+        ]
+    })");
+
+    bool success = gsynth::AIStateMapper::applyJSONToGraph(json, graph, true);
+    ASSERT_TRUE(success);
+
+    // Should have 3 nodes: LFO, Filter, and auto-created Attenuverter
+    ASSERT_EQ(graph.getNumNodes(), 3);
+
+    // Find the attenuverter node
+    juce::AudioProcessorGraph::Node* attenNode = nullptr;
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<AttenuverterModule*>(node->getProcessor()) != nullptr) {
+            attenNode = node;
+            break;
+        }
+    }
+    ASSERT_NE(attenNode, nullptr);
+
+    // Verify amount parameter is set to 0.5
+    auto* amountParam = dynamic_cast<juce::RangedAudioParameter*>(attenNode->getProcessor()->getParameters()[0]);
+    ASSERT_NE(amountParam, nullptr);
+    float amount = amountParam->getNormalisableRange().convertFrom0to1(amountParam->getValue());
+    EXPECT_NEAR(amount, 0.5f, 0.05f);
+
+    // Verify connections exist: source->atten and atten->dest
+    bool hasSourceToAtten = false;
+    bool hasAttenToDest = false;
+    for (const auto& conn : graph.getConnections()) {
+        if (conn.destination.nodeID == attenNode->nodeID && conn.destination.channelIndex == 0)
+            hasSourceToAtten = true;
+        if (conn.source.nodeID == attenNode->nodeID && conn.destination.channelIndex == 1)
+            hasAttenToDest = true;
+    }
+    EXPECT_TRUE(hasSourceToAtten);
+    EXPECT_TRUE(hasAttenToDest);
+}
+
+TEST(AIStateMapperTest, Modulation_RemoveModulations) {
+    juce::AudioProcessorGraph graph;
+
+    // First, create a graph with a modulation
+    juce::var setupJson = juce::JSON::parse(R"({
+        "nodes": [
+            {"id": 1, "type": "LFO"},
+            {"id": 2, "type": "Filter"}
+        ],
+        "connections": [],
+        "modulations": [
+            {"source": 1, "dest": 2, "destPort": 1, "amount": 0.8}
+        ]
+    })");
+    ASSERT_TRUE(gsynth::AIStateMapper::applyJSONToGraph(setupJson, graph, true));
+    ASSERT_EQ(graph.getNumNodes(), 3); // LFO + Filter + Attenuverter
+
+    // Now remove the modulation in merge mode
+    // We need the mapped IDs - find LFO and Filter node IDs
+    juce::AudioProcessorGraph::NodeID lfoId, filterId;
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<LFOModule*>(node->getProcessor()))
+            lfoId = node->nodeID;
+        if (dynamic_cast<FilterModule*>(node->getProcessor()))
+            filterId = node->nodeID;
+    }
+
+    juce::String removeJson = "{\"removeModulations\": [{\"source\": " + juce::String((int)lfoId.uid) +
+                              ", \"dest\": " + juce::String((int)filterId.uid) +
+                              ", \"destPort\": 1}], \"nodes\": [], \"connections\": []}";
+
+    ASSERT_TRUE(gsynth::AIStateMapper::applyJSONToGraph(juce::JSON::parse(removeJson), graph, false));
+
+    // Attenuverter should be removed, only LFO and Filter remain
+    ASSERT_EQ(graph.getNumNodes(), 2);
+
+    // No attenuverter should exist
+    for (auto* node : graph.getNodes()) {
+        EXPECT_EQ(dynamic_cast<AttenuverterModule*>(node->getProcessor()), nullptr);
+    }
+}
+
+TEST(AIStateMapperTest, Modulation_MergeMode_AddModulation) {
+    juce::AudioProcessorGraph graph;
+
+    // Create initial graph with LFO and Filter (no modulation)
+    auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+
+    int lfoId = (int)lfoNode->nodeID.uid;
+    int filterId = (int)filterNode->nodeID.uid;
+
+    ASSERT_EQ(graph.getNumNodes(), 2);
+
+    // Merge: add modulation between existing nodes
+    juce::String jsonStr = "{\"nodes\": [], \"connections\": [], \"modulations\": ["
+                           "{\"source\": " +
+                           juce::String(lfoId) + ", \"dest\": " + juce::String(filterId) +
+                           ", \"destPort\": 1, \"amount\": 0.6}]}";
+
+    bool success = gsynth::AIStateMapper::applyJSONToGraph(juce::JSON::parse(jsonStr), graph, false);
+    ASSERT_TRUE(success);
+    ASSERT_EQ(graph.getNumNodes(), 3); // LFO + Filter + new Attenuverter
+}
+
+TEST(AIStateMapperTest, Modulation_SchemaIncludesModulationTargets) {
+    juce::String schema = gsynth::AIStateMapper::getModuleSchema();
+    ASSERT_TRUE(schema.contains("Modulation Targets"));
+    ASSERT_TRUE(schema.contains("Cutoff"));
+    ASSERT_TRUE(schema.contains("Resonance"));
+    ASSERT_TRUE(schema.contains("Modulation Sources"));
+}
+
+TEST(AIStateMapperTest, Modulation_DefaultAmount) {
+    juce::AudioProcessorGraph graph;
+
+    // No "amount" field — should default to 1.0
+    juce::var json = juce::JSON::parse(R"({
+        "nodes": [
+            {"id": 1, "type": "LFO"},
+            {"id": 2, "type": "VCA"}
+        ],
+        "connections": [],
+        "modulations": [
+            {"source": 1, "dest": 2, "destPort": 1}
+        ]
+    })");
+
+    ASSERT_TRUE(gsynth::AIStateMapper::applyJSONToGraph(json, graph, true));
+
+    // Find attenuverter and check amount is 1.0
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<AttenuverterModule*>(node->getProcessor())) {
+            auto* amountParam = dynamic_cast<juce::RangedAudioParameter*>(node->getProcessor()->getParameters()[0]);
+            float amount = amountParam->getNormalisableRange().convertFrom0to1(amountParam->getValue());
+            EXPECT_NEAR(amount, 1.0f, 0.05f);
+            return;
+        }
+    }
+    FAIL() << "No attenuverter node found";
+}
+
+TEST(AIStateMapperTest, Modulation_UnconnectedAttenuverterNotSerialized) {
+    juce::AudioProcessorGraph graph;
+
+    // Add a standalone attenuverter with no connections
+    graph.addNode(std::make_unique<AttenuverterModule>());
+
+    auto json = gsynth::AIStateMapper::graphToJSON(graph);
+
+    auto* rootObj = json.getDynamicObject();
+    ASSERT_TRUE(rootObj->hasProperty("modulations"));
+    auto* modArr = rootObj->getProperty("modulations").getArray();
+    ASSERT_NE(modArr, nullptr);
+    EXPECT_EQ(modArr->size(), 0); // Unconnected attenuverter should NOT appear
 }
