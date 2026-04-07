@@ -12,12 +12,14 @@ The project follows a modular architecture with:
 
 1. **Core Library (`GravisynthCore`)**: Contains all audio processing modules and core logic
 2. **Application Layer (`Gravisynth`)**: GUI application built on JUCE that uses the core library
-3. **UI Components**: Graph editor and module components for visual patching
+3. **Plugin (`GravisynthPlugin`)**: VST3/AU plugin wrapping the core library for DAW integration
+4. **UI Components**: Graph editor and module components for visual patching
 
 ### Key Components
 
 - **ModuleBase**: Abstract base class for all audio modules with `ModuleType` enum, `ModulationTarget` metadata, and `VisualBuffer` support
-- **AudioEngine**: Manages audio device I/O, the audio processor graph, and modulation matrix routing
+- **IGraphManager**: Abstract interface decoupling UI from audio backend; implemented by both `AudioEngine` (standalone) and `PluginProcessor` (VST3/AU)
+- **AudioEngine**: Manages audio device I/O, the audio processor graph, and modulation matrix routing (standalone app)
 - **GraphEditor**: Visual editor for connecting modules with zoom/pan and drag-to-connect
 - **ModuleComponent**: Auto-UI generation from module parameters with type-safe layout switching via `ModuleType` enum
 - **AttenuverterModule**: Intermediary module for modulation routing with bypass and CV amount control
@@ -87,9 +89,13 @@ bash scripts/coverage.sh
 - `Source/UI/GraphEditor.cpp`: Graph editor with attenuverter knob rendering, modulation routing, and undo integration
 - `Source/UI/ModuleLibraryComponent.h`: Categorized sidebar with section headers for module drag-and-drop
 - `Source/UI/ModMatrixComponent.cpp`: Modulation matrix with undo tracking for routing and parameter changes
+- `Source/IGraphManager.h`: Abstract interface for graph management, decouples UI from AudioEngine/PluginProcessor
+- `Source/Plugin/PluginProcessor.h/cpp`: VST3/AU plugin processor wrapping `AudioProcessorGraph`, implements `IGraphManager`
+- `Source/Plugin/PluginEditor.h/cpp`: Plugin editor embedding GraphEditor, ModuleLibrary, and AI chat UI
 - `Source/Modules/FX/ChorusModule.h`: Chorus effect using `juce::dsp::Chorus`, CV modulation on Rate/Depth
 - `Source/Modules/FX/PhaserModule.h`: Phaser effect using `juce::dsp::Phaser`, CV modulation on Rate/Depth
 - `Source/Modules/FX/CompressorModule.h`: Compressor with manual makeup gain
 - `Source/Modules/FX/FlangerModule.h`: Flanger via `juce::dsp::Chorus` with low-delay tuning
 - `Source/Modules/FX/LimiterModule.h`: Brickwall limiter with input gain drive
-- `Tests/`: ~200+ tests across 35+ suites (unit, edge case, integration, undo/redo, filter modes, port labels)
+- `Tests/PluginProcessorTests.cpp`: Plugin processor lifecycle, state roundtrip, MIDI input, mod routing tests
+- `Tests/`: ~240 tests across 36+ suites (unit, edge case, integration, undo/redo, filter modes, port labels, plugin)

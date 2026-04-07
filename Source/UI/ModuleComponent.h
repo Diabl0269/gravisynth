@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../AudioEngine.h"
 #include "../GravisynthUndoManager.h"
+#include "../IGraphManager.h"
 #include "../Modules/FilterModule.h"
 #include "../Modules/MidiKeyboardModule.h"
 #include "FrequencyResponseComponent.h"

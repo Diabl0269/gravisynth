@@ -1,3 +1,4 @@
+#include "../Source/AudioEngine.h"
 #include "../Source/Modules/FilterModule.h"
 #include "../Source/Modules/OscillatorModule.h"
 #include "../Source/UI/GraphEditor.h"

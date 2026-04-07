@@ -36,11 +36,14 @@ add_executable(GravisynthTests
     IntegrationTests.cpp
     UndoRedoTests.cpp
     PresetManagerTests.cpp
+    PluginProcessorTests.cpp
     ../Source/MainComponent.cpp
     ../Source/UI/GraphEditor.cpp
     ../Source/UI/ModMatrixComponent.cpp
     ../Source/UI/AIChatComponent.cpp
     ../Source/UI/ModuleComponent.cpp
+    ../Source/Plugin/PluginProcessor.cpp
+    ../Source/Plugin/PluginEditor.cpp
 )
 
 target_link_libraries(GravisynthTests PRIVATE

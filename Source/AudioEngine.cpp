@@ -30,11 +30,11 @@ void AudioEngine::shutdown() {
     mainProcessorGraph.clear();
 }
 
-std::vector<AudioEngine::ModRoutingInfo> AudioEngine::getActiveModRoutings() const {
-    std::vector<ModRoutingInfo> routings;
+std::vector<IGraphManager::ModRoutingInfo> AudioEngine::getActiveModRoutings() const {
+    std::vector<IGraphManager::ModRoutingInfo> routings;
     for (auto* node : mainProcessorGraph.getNodes()) {
         if (dynamic_cast<AttenuverterModule*>(node->getProcessor()) != nullptr) {
-            ModRoutingInfo info;
+            IGraphManager::ModRoutingInfo info;
             info.attenuverterNodeID = node->nodeID;
             info.sourceChannelIndex = 0;
             for (auto& conn : mainProcessorGraph.getConnections()) {

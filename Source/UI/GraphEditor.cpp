@@ -18,10 +18,10 @@
 #include "../Modules/VCAModule.h"
 #include "ModuleComponent.h"
 
-GraphEditor::GraphEditor(AudioEngine& engine, GravisynthUndoManager* undoMgr)
-    : audioEngine(engine)
+GraphEditor::GraphEditor(IGraphManager& manager, GravisynthUndoManager* undoMgr)
+    : graphManager(manager)
     , content(*this)
-    , modMatrix(engine, undoMgr)
+    , modMatrix(manager, undoMgr)
     , undoManager(undoMgr) {
     addAndMakeVisible(content);
     addAndMakeVisible(modMatrix);
@@ -38,7 +38,7 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
     g.fillAll(juce::Colours::darkgrey);
 
     // Draw connections
-    auto& graph = editor.audioEngine.getGraph();
+    auto& graph = editor.graphManager.getGraph();
     g.setColour(juce::Colours::yellow);
 
     for (auto& connection : graph.getConnections()) {
@@ -207,7 +207,7 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
             if (port->isMidi != dragSourceIsMidi)
                 continue;
 
-            auto& graph = audioEngine.getGraph();
+            auto& graph = graphManager.getGraph();
             juce::AudioProcessorGraph::Node* srcNode = nullptr;
             juce::AudioProcessorGraph::Node* dstNode = nullptr;
 
@@ -245,7 +245,7 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
                                 graph.addConnection({{srcId, juce::AudioProcessorGraph::midiChannelIndex},
                                                      {dstId, juce::AudioProcessorGraph::midiChannelIndex}});
                             } else if (isCV) {
-                                audioEngine.addModRouting(srcId, sPort, dstId, dPort);
+                                graphManager.addModRouting(srcId, sPort, dstId, dPort);
                             } else {
                                 graph.addConnection({{srcId, sPort}, {dstId, dPort}});
                             }
@@ -265,7 +265,7 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
                             }
                         }
                         if (isCV) {
-                            audioEngine.addModRouting(realSrc->nodeID, sPort, realDst->nodeID, dPort);
+                            graphManager.addModRouting(realSrc->nodeID, sPort, realDst->nodeID, dPort);
                         } else {
                             graph.addConnection({{realSrc->nodeID, sPort}, {realDst->nodeID, dPort}});
                         }
@@ -288,7 +288,7 @@ void GraphEditor::detachAllModuleComponents() {
 }
 
 void GraphEditor::updateComponents() {
-    auto& graph = audioEngine.getGraph();
+    auto& graph = graphManager.getGraph();
     auto& modules = content.getModules();
 
     // 1. Remove components for nodes that no longer exist
@@ -401,7 +401,7 @@ void GraphEditor::mouseDown(const juce::MouseEvent& e) {
         if (attenId.uid != 0) {
             draggingAttenuverterNodeId = attenId;
             if (undoManager)
-                undoManager->captureBeforeState(audioEngine.getGraph());
+                undoManager->captureBeforeState(graphManager.getGraph());
         } else {
             draggingAttenuverterNodeId = juce::AudioProcessorGraph::NodeID();
         }
@@ -411,7 +411,7 @@ void GraphEditor::mouseDown(const juce::MouseEvent& e) {
 void GraphEditor::mouseDrag(const juce::MouseEvent& e) {
     if (e.mods.isLeftButtonDown() && !isDraggingConnection) {
         if (draggingAttenuverterNodeId.uid != 0) {
-            auto& graph = audioEngine.getGraph();
+            auto& graph = graphManager.getGraph();
             auto* node = graph.getNodeForId(draggingAttenuverterNodeId);
             if (node) {
                 if (auto* p = dynamic_cast<juce::AudioParameterFloat*>(node->getProcessor()->getParameters()[0])) {
@@ -435,7 +435,7 @@ void GraphEditor::mouseDrag(const juce::MouseEvent& e) {
 
 void GraphEditor::mouseUp(const juce::MouseEvent& e) {
     if (draggingAttenuverterNodeId.uid != 0 && undoManager) {
-        undoManager->pushSnapshotFromCapture(audioEngine.getGraph());
+        undoManager->pushSnapshotFromCapture(graphManager.getGraph());
     }
     draggingAttenuverterNodeId = juce::AudioProcessorGraph::NodeID();
 }
@@ -445,17 +445,17 @@ void GraphEditor::mouseDoubleClick(const juce::MouseEvent& e) {
     auto attenId = getAttenuverterNodeAt(localPos.toFloat());
     if (attenId.uid != 0) {
         if (undoManager) {
-            undoManager->recordStructuralChange(audioEngine.getGraph(),
-                                                [this, attenId] { audioEngine.removeModRouting(attenId); });
+            undoManager->recordStructuralChange(graphManager.getGraph(),
+                                                [this, attenId] { graphManager.removeModRouting(attenId); });
         } else {
-            audioEngine.removeModRouting(attenId);
+            graphManager.removeModRouting(attenId);
         }
         content.repaint();
     }
 }
 
 juce::AudioProcessorGraph::NodeID GraphEditor::getAttenuverterNodeAt(juce::Point<float> localPos) {
-    auto& graph = audioEngine.getGraph();
+    auto& graph = graphManager.getGraph();
     for (auto& connection : graph.getConnections()) {
         auto* node1 = graph.getNodeForId(connection.source.nodeID);
         auto* node2 = graph.getNodeForId(connection.destination.nodeID);
@@ -507,7 +507,7 @@ juce::AudioProcessorGraph::NodeID GraphEditor::getAttenuverterNodeAt(juce::Point
 void GraphEditor::updateModulePosition(ModuleComponent* module) {
     if (!module)
         return;
-    for (auto* n : audioEngine.getGraph().getNodes()) {
+    for (auto* n : graphManager.getGraph().getNodes()) {
         if (n->getProcessor() == module->getModule()) {
             n->properties.set("x", module->getX());
             n->properties.set("y", module->getY());
@@ -517,7 +517,7 @@ void GraphEditor::updateModulePosition(ModuleComponent* module) {
 }
 
 void GraphEditor::deleteModule(ModuleComponent* module) {
-    auto& graph = audioEngine.getGraph();
+    auto& graph = graphManager.getGraph();
     juce::AudioProcessorGraph::NodeID nodeId;
 
     for (auto* n : graph.getNodes()) {
@@ -545,7 +545,7 @@ void GraphEditor::deleteModule(ModuleComponent* module) {
 }
 
 void GraphEditor::disconnectPort(ModuleComponent* module, int portIndex, bool isInput, bool isMidi) {
-    auto& graph = audioEngine.getGraph();
+    auto& graph = graphManager.getGraph();
     juce::AudioProcessorGraph::NodeID nodeId;
 
     for (auto* n : graph.getNodes()) {
@@ -567,7 +567,7 @@ void GraphEditor::disconnectPort(ModuleComponent* module, int portIndex, bool is
                 if (c.destination.nodeID == nodeId && c.destination.channelIndex == targetChannel) {
                     if (auto* srcNode = graph.getNodeForId(c.source.nodeID)) {
                         if (dynamic_cast<AttenuverterModule*>(srcNode->getProcessor()) != nullptr)
-                            audioEngine.removeModRouting(srcNode->nodeID);
+                            graphManager.removeModRouting(srcNode->nodeID);
                         else
                             toRemove.push_back(c);
                     }
@@ -576,7 +576,7 @@ void GraphEditor::disconnectPort(ModuleComponent* module, int portIndex, bool is
                 if (c.source.nodeID == nodeId && c.source.channelIndex == targetChannel) {
                     if (auto* dstNode = graph.getNodeForId(c.destination.nodeID)) {
                         if (dynamic_cast<AttenuverterModule*>(dstNode->getProcessor()) != nullptr)
-                            audioEngine.removeModRouting(dstNode->nodeID);
+                            graphManager.removeModRouting(dstNode->nodeID);
                         else
                             toRemove.push_back(c);
                     }
@@ -640,7 +640,7 @@ void GraphEditor::itemDropped(const SourceDetails& dragSourceDetails) {
         newProcessor = std::make_unique<LimiterModule>();
 
     if (newProcessor) {
-        auto& graph = audioEngine.getGraph();
+        auto& graph = graphManager.getGraph();
         auto dropPos = content.getLocalPoint(this, dragSourceDetails.localPosition);
 
         if (undoManager) {
@@ -648,7 +648,7 @@ void GraphEditor::itemDropped(const SourceDetails& dragSourceDetails) {
             auto proc = std::make_shared<std::unique_ptr<juce::AudioProcessor>>(std::move(newProcessor));
             undoManager->recordStructuralChange(graph, [this, proc, dropPos] {
                 if (*proc) {
-                    auto node = audioEngine.getGraph().addNode(std::move(*proc));
+                    auto node = graphManager.getGraph().addNode(std::move(*proc));
                     if (node) {
                         node->properties.set("x", dropPos.x);
                         node->properties.set("y", dropPos.y);
@@ -668,7 +668,7 @@ void GraphEditor::itemDropped(const SourceDetails& dragSourceDetails) {
 }
 
 void GraphEditor::savePreset(juce::File file) {
-    auto json = gsynth::AIStateMapper::graphToJSON(audioEngine.getGraph());
+    auto json = gsynth::AIStateMapper::graphToJSON(graphManager.getGraph());
     file.replaceWithText(juce::JSON::toString(json));
 }
 
@@ -679,7 +679,7 @@ void GraphEditor::loadPreset(juce::File file) {
                                                "Could not parse preset file.");
         return;
     }
-    if (gsynth::AIStateMapper::applyJSONToGraph(json, audioEngine.getGraph(), true)) {
+    if (gsynth::AIStateMapper::applyJSONToGraph(json, graphManager.getGraph(), true)) {
         updateComponents();
     } else {
         juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon, "Load Failed",

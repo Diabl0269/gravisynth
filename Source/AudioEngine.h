@@ -1,12 +1,15 @@
 #pragma once
 
+#include "IGraphManager.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_core/juce_core.h>
 
-class AudioEngine : public juce::AudioIODeviceCallback {
+class AudioEngine
+    : public juce::AudioIODeviceCallback
+    , public IGraphManager {
 public:
     AudioEngine();
     ~AudioEngine() override;
@@ -21,26 +24,17 @@ public:
     void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
     void audioDeviceStopped() override;
 
-    juce::AudioProcessorGraph& getGraph() { return mainProcessorGraph; }
+    juce::AudioProcessorGraph& getGraph() override { return mainProcessorGraph; }
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
-    struct ModRoutingInfo {
-        juce::AudioProcessorGraph::NodeID attenuverterNodeID;
-        juce::AudioProcessorGraph::NodeID sourceNodeID;
-        int sourceChannelIndex;
-        juce::AudioProcessorGraph::NodeID destNodeID;
-        int destChannelIndex;
-        bool isBypassed;
-    };
-
-    std::vector<ModRoutingInfo> getActiveModRoutings() const;
+    std::vector<IGraphManager::ModRoutingInfo> getActiveModRoutings() const override;
     void addModRouting(juce::AudioProcessorGraph::NodeID sourceNodeID, int sourceChannelIndex,
-                       juce::AudioProcessorGraph::NodeID destNodeID, int destChannelIndex);
-    void addEmptyModRouting();
-    void removeModRouting(juce::AudioProcessorGraph::NodeID attenuverterNodeID);
-    void toggleModBypass(juce::AudioProcessorGraph::NodeID attenuverterNodeID);
-    bool isModBypassed(juce::AudioProcessorGraph::NodeID attenuverterNodeID) const;
-    void updateModuleNames();
+                       juce::AudioProcessorGraph::NodeID destNodeID, int destChannelIndex) override;
+    void addEmptyModRouting() override;
+    void removeModRouting(juce::AudioProcessorGraph::NodeID attenuverterNodeID) override;
+    void toggleModBypass(juce::AudioProcessorGraph::NodeID attenuverterNodeID) override;
+    bool isModBypassed(juce::AudioProcessorGraph::NodeID attenuverterNodeID) const override;
+    void updateModuleNames() override;
 
 private:
     juce::AudioDeviceManager deviceManager;
