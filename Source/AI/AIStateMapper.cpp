@@ -202,6 +202,61 @@ juce::var AIStateMapper::graphToJSON(juce::AudioProcessorGraph& graph) {
     }
     root->setProperty("connections", connections);
 
+    // Scan for AttenuverterModule nodes and emit modulations array
+    juce::Array<juce::var> modulations;
+    for (auto* node : graph.getNodes()) {
+        if (auto* attenverter = dynamic_cast<AttenuverterModule*>(node->getProcessor())) {
+            // Find source connection (input to attenuverter channel 0)
+            bool hasSource = false;
+            juce::AudioProcessorGraph::NodeID sourceNodeID;
+            int sourceChannel = 0;
+            for (const auto& conn : graph.getConnections()) {
+                if (conn.destination.nodeID == node->nodeID && conn.destination.channelIndex == 0) {
+                    sourceNodeID = conn.source.nodeID;
+                    sourceChannel = conn.source.channelIndex;
+                    hasSource = true;
+                    break;
+                }
+            }
+
+            // Find destination connection (output from attenuverter channel 0)
+            bool hasDest = false;
+            juce::AudioProcessorGraph::NodeID destNodeID;
+            int destChannel = 0;
+            for (const auto& conn : graph.getConnections()) {
+                if (conn.source.nodeID == node->nodeID && conn.source.channelIndex == 0) {
+                    destNodeID = conn.destination.nodeID;
+                    destChannel = conn.destination.channelIndex;
+                    hasDest = true;
+                    break;
+                }
+            }
+
+            // Only create modulation entry if both source and dest connections exist
+            if (hasSource && hasDest) {
+                juce::DynamicObject::Ptr modEntry = new juce::DynamicObject();
+                modEntry->setProperty("source", (int)sourceNodeID.uid);
+                modEntry->setProperty("sourcePort", sourceChannel);
+                modEntry->setProperty("dest", (int)destNodeID.uid);
+                modEntry->setProperty("destPort", destChannel);
+
+                // Get amount parameter (param[0])
+                if (auto* param = dynamic_cast<juce::RangedAudioParameter*>(attenverter->getParameters()[0])) {
+                    float amount = param->getNormalisableRange().convertFrom0to1(param->getValue());
+                    modEntry->setProperty("amount", amount);
+                }
+
+                // Get bypass parameter (param[1])
+                if (auto* param = dynamic_cast<juce::AudioParameterBool*>(attenverter->getParameters()[1])) {
+                    modEntry->setProperty("bypass", param->get());
+                }
+
+                modulations.add(juce::var(modEntry.get()));
+            }
+        }
+    }
+    root->setProperty("modulations", modulations);
+
     return juce::var(root.get());
 }
 
@@ -209,6 +264,10 @@ juce::String AIStateMapper::getModuleSchema() {
     juce::String schema = "### Available Modules and Parameters\n\n";
 
     for (const auto& entry : moduleFactory) {
+        // Hide internal modules from AI — modulation uses the "modulations" array instead
+        if (entry.first == "Attenuverter" || entry.first == "Mod Slot")
+            continue;
+
         auto processor = entry.second();
         if (!processor)
             continue;
@@ -235,6 +294,25 @@ juce::String AIStateMapper::getModuleSchema() {
         }
         schema += "\n";
     }
+
+    // Modulation targets section
+    schema += "### Modulation Targets\n\n";
+    schema += "Use the `modulations` array to route modulation sources to these targets.\n\n";
+    schema += "| Module | Target | Port |\n";
+    schema += "| :--- | :--- | :--- |\n";
+
+    for (const auto& entry : moduleFactory) {
+        auto processor = entry.second();
+        if (!processor) continue;
+        if (auto* mb = dynamic_cast<ModuleBase*>(processor.get())) {
+            auto targets = mb->getModulationTargets();
+            for (const auto& t : targets) {
+                schema += "| " + entry.first + " | " + t.name + " | " + juce::String(t.channelIndex) + " |\n";
+            }
+        }
+    }
+
+    schema += "\n**Modulation Sources**: LFO, ADSR, Amp Env, Filter Env, Oscillator, Sequencer\n\n";
 
     return schema;
 }
@@ -351,6 +429,50 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
         }
     }
 
+    // Process removeModulations before adding new modulations
+    if (rootObj->hasProperty("removeModulations")) {
+        auto* rmModList = rootObj->getProperty("removeModulations").getArray();
+        if (rmModList) {
+            for (const auto& rmModVar : *rmModList) {
+                if (auto* rmModObj = rmModVar.getDynamicObject()) {
+                    int sourceId = (int)rmModObj->getProperty("source");
+                    int destId = (int)rmModObj->getProperty("dest");
+                    int destPort = (int)rmModObj->getProperty("destPort");
+
+                    // Find and remove the matching attenuverter node
+                    auto mappedSource = idMap.count(sourceId) ? idMap[sourceId] : juce::AudioProcessorGraph::NodeID((juce::uint32)sourceId);
+                    auto mappedDest = idMap.count(destId) ? idMap[destId] : juce::AudioProcessorGraph::NodeID((juce::uint32)destId);
+
+                    juce::AudioProcessorGraph::NodeID nodeToRemove;
+                    bool found = false;
+                    for (auto* node : graph.getNodes()) {
+                        if (dynamic_cast<AttenuverterModule*>(node->getProcessor()) == nullptr)
+                            continue;
+
+                        bool sourceMatch = false;
+                        bool destMatch = false;
+                        for (const auto& conn : graph.getConnections()) {
+                            if (conn.destination.nodeID == node->nodeID && conn.destination.channelIndex == 0 &&
+                                conn.source.nodeID == mappedSource)
+                                sourceMatch = true;
+                            if (conn.source.nodeID == node->nodeID && conn.source.channelIndex == 0 &&
+                                conn.destination.nodeID == mappedDest && conn.destination.channelIndex == destPort)
+                                destMatch = true;
+                        }
+
+                        if (sourceMatch && destMatch) {
+                            nodeToRemove = node->nodeID;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found)
+                        graph.removeNode(nodeToRemove);
+                }
+            }
+        }
+    }
+
     // 1. Create Nodes
     if (rootObj->hasProperty("nodes")) {
         auto* nodesList = rootObj->getProperty("nodes").getArray();
@@ -432,7 +554,35 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                         int srcPorts = srcNode->getProcessor()->getTotalNumOutputChannels();
                         int dstPorts = dstNode->getProcessor()->getTotalNumInputChannels();
                         bool isMidiConnection = (srcPort == juce::AudioProcessorGraph::midiChannelIndex);
-                        if (isMidiConnection || (srcPort < srcPorts && dstPort < dstPorts)) {
+
+                        // Auto-detect modulation targets: if the destination port is a
+                        // modulation target, route through an attenuverter automatically
+                        // (same logic as GraphEditor::endConnectionDrag).
+                        // Skip if source is already an AttenuverterModule (existing routing).
+                        bool isModTarget = false;
+                        if (!isMidiConnection &&
+                            dynamic_cast<AttenuverterModule*>(srcNode->getProcessor()) == nullptr) {
+                            if (auto* modBase = dynamic_cast<ModuleBase*>(dstNode->getProcessor())) {
+                                for (const auto& t : modBase->getModulationTargets()) {
+                                    if (t.channelIndex == dstPort) {
+                                        isModTarget = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (isModTarget) {
+                            // Create attenuverter chain: source -> attenuverter -> dest
+                            auto attenNode = graph.addNode(std::make_unique<AttenuverterModule>());
+                            if (attenNode) {
+                                if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(
+                                        attenNode->getProcessor()->getParameters()[0]))
+                                    param->setValueNotifyingHost(param->getNormalisableRange().convertTo0to1(1.0f));
+                                graph.addConnection({{idMap[srcOld], srcPort}, {attenNode->nodeID, 0}});
+                                graph.addConnection({{attenNode->nodeID, 0}, {idMap[dstOld], dstPort}});
+                            }
+                        } else if (isMidiConnection || (srcPort < srcPorts && dstPort < dstPorts)) {
                             graph.addConnection({{idMap[srcOld], srcPort}, {idMap[dstOld], dstPort}});
                         }
                     }
@@ -441,7 +591,69 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
         }
     }
 
-    // 3. Auto-connect: in merge mode, connect new unconnected audio nodes to Audio Output
+    // 3. Modulations
+    if (rootObj->hasProperty("modulations")) {
+        auto* modList = rootObj->getProperty("modulations").getArray();
+        if (modList) {
+            for (const auto& modVar : *modList) {
+                if (auto* modObj = modVar.getDynamicObject()) {
+                    int sourceId = (int)modObj->getProperty("source");
+                    int destId = (int)modObj->getProperty("dest");
+                    int sourcePort = modObj->hasProperty("sourcePort") ? (int)modObj->getProperty("sourcePort") : 0;
+                    int destPort = (int)modObj->getProperty("destPort");
+                    float amount = modObj->hasProperty("amount") ? (float)modObj->getProperty("amount") : 1.0f;
+                    bool bypass = modObj->hasProperty("bypass") ? (bool)modObj->getProperty("bypass") : false;
+
+                    // Get mapped node IDs
+                    if (idMap.count(sourceId) && idMap.count(destId)) {
+                        auto mappedSource = idMap[sourceId];
+                        auto mappedDest = idMap[destId];
+
+                        // Skip if an attenuverter already exists for this routing
+                        // (e.g., from nodes/connections arrays in the same JSON)
+                        bool alreadyExists = false;
+                        for (auto* existingNode : graph.getNodes()) {
+                            if (dynamic_cast<AttenuverterModule*>(existingNode->getProcessor()) == nullptr)
+                                continue;
+                            bool srcMatch = false, dstMatch = false;
+                            for (const auto& conn : graph.getConnections()) {
+                                if (conn.destination.nodeID == existingNode->nodeID && conn.destination.channelIndex == 0 &&
+                                    conn.source.nodeID == mappedSource && conn.source.channelIndex == sourcePort)
+                                    srcMatch = true;
+                                if (conn.source.nodeID == existingNode->nodeID && conn.source.channelIndex == 0 &&
+                                    conn.destination.nodeID == mappedDest && conn.destination.channelIndex == destPort)
+                                    dstMatch = true;
+                            }
+                            if (srcMatch && dstMatch) { alreadyExists = true; break; }
+                        }
+                        if (alreadyExists) continue;
+
+                        // Create attenuverter node
+                        auto attenNode = graph.addNode(std::make_unique<AttenuverterModule>());
+                        if (attenNode) {
+                            // Set amount parameter
+                            if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenNode->getProcessor()->getParameters()[0])) {
+                                param->setValueNotifyingHost(param->getNormalisableRange().convertTo0to1(amount));
+                            }
+
+                            // Set bypass parameter if true
+                            if (bypass) {
+                                if (auto* bp = dynamic_cast<juce::AudioParameterBool*>(attenNode->getProcessor()->getParameters()[1])) {
+                                    bp->setValueNotifyingHost(1.0f);
+                                }
+                            }
+
+                            // Add connections
+                            graph.addConnection({{mappedSource, sourcePort}, {attenNode->nodeID, 0}});
+                            graph.addConnection({{attenNode->nodeID, 0}, {mappedDest, destPort}});
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 4. Auto-connect: in merge mode, connect new unconnected audio nodes to Audio Output
     if (!clearExisting && !newlyCreatedNodes.empty()) {
         // Find the Audio Output node
         juce::AudioProcessorGraph::Node* audioOutputNode = nullptr;
@@ -544,7 +756,7 @@ juce::var AIStateMapper::getPatchSchema() {
         juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
                           "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Sequencer\", \"LFO\", "
                           "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\", \"Amp Env\", \"Filter Env\", "
-                          "\"Poly MIDI\", \"Poly Sequencer\", \"Attenuverter\"]}"));
+                          "\"Poly MIDI\", \"Poly Sequencer\"]}"));
     nodeProperties->setProperty("params", juce::JSON::parse("{\"type\": \"object\"}"));
 
     nodeItems->setProperty("properties", juce::var(nodeProperties.get()));
@@ -577,6 +789,37 @@ juce::var AIStateMapper::getPatchSchema() {
     removeArr->setProperty("type", "array");
     removeArr->setProperty("items", juce::JSON::parse("{\"type\": \"integer\"}"));
     properties->setProperty("remove", juce::var(removeArr.get()));
+
+    // 5. Modulations (optional)
+    juce::DynamicObject::Ptr modulations = new juce::DynamicObject();
+    modulations->setProperty("type", "array");
+    juce::DynamicObject::Ptr modItems = new juce::DynamicObject();
+    modItems->setProperty("type", "object");
+    juce::DynamicObject::Ptr modProperties = new juce::DynamicObject();
+    modProperties->setProperty("source", juce::JSON::parse("{\"type\": \"integer\"}"));
+    modProperties->setProperty("sourcePort", juce::JSON::parse("{\"type\": \"integer\"}"));
+    modProperties->setProperty("dest", juce::JSON::parse("{\"type\": \"integer\"}"));
+    modProperties->setProperty("destPort", juce::JSON::parse("{\"type\": \"integer\"}"));
+    modProperties->setProperty("amount", juce::JSON::parse("{\"type\": \"number\"}"));
+    modProperties->setProperty("bypass", juce::JSON::parse("{\"type\": \"boolean\"}"));
+    modItems->setProperty("properties", juce::var(modProperties.get()));
+    modItems->setProperty("required", juce::Array<juce::var>({"source", "dest", "destPort"}));
+    modulations->setProperty("items", juce::var(modItems.get()));
+    properties->setProperty("modulations", juce::var(modulations.get()));
+
+    // 6. RemoveModulations (optional)
+    juce::DynamicObject::Ptr removeModulations = new juce::DynamicObject();
+    removeModulations->setProperty("type", "array");
+    juce::DynamicObject::Ptr rmModItems = new juce::DynamicObject();
+    rmModItems->setProperty("type", "object");
+    juce::DynamicObject::Ptr rmModProperties = new juce::DynamicObject();
+    rmModProperties->setProperty("source", juce::JSON::parse("{\"type\": \"integer\"}"));
+    rmModProperties->setProperty("dest", juce::JSON::parse("{\"type\": \"integer\"}"));
+    rmModProperties->setProperty("destPort", juce::JSON::parse("{\"type\": \"integer\"}"));
+    rmModItems->setProperty("properties", juce::var(rmModProperties.get()));
+    rmModItems->setProperty("required", juce::Array<juce::var>({"source", "dest", "destPort"}));
+    removeModulations->setProperty("items", juce::var(rmModItems.get()));
+    properties->setProperty("removeModulations", juce::var(removeModulations.get()));
 
     schema->setProperty("properties", juce::var(properties.get()));
     schema->setProperty("required", juce::Array<juce::var>({"nodes", "connections"}));

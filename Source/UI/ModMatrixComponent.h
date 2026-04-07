@@ -77,8 +77,12 @@ private:
     juce::Viewport viewport;
     juce::Component contentContainer;
 
-    void updateRowsFromGraph();
     void addModulation();
+
+public:
+    void updateRowsFromGraph();
+
+private:
 
     int lastNodeCount = 0;
 

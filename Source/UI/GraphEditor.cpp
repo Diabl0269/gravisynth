@@ -341,6 +341,10 @@ void GraphEditor::updateComponents() {
         moduleIndex++;
     }
 
+    // Refresh mod matrix to pick up any new/removed attenuverter routings
+    // Use callAsync to avoid re-entrancy during graph modification
+    juce::MessageManager::callAsync([this]() { modMatrix.updateRowsFromGraph(); });
+
     repaint();
 }
 
