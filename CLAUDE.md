@@ -42,7 +42,6 @@ The project uses CMake with:
 - JUCE framework (fetched automatically via FetchContent)
 - GoogleTest for unit testing
 - Code coverage support (enabled via `ENABLE_COVERAGE` option)
-- Precompiled headers (PCH) for juce_core, juce_audio_basics, juce_audio_processors, juce_dsp — tests reuse PCH from GravisynthCore
 - `JUCE_WEB_BROWSER=0` — WebBrowserComponent is unused; disabling removes WebKit/libsoup deps on Linux
 
 ## Development Commands
@@ -71,7 +70,7 @@ CI runs via `.github/workflows/ci.yml` with 4 parallel jobs: Lint (Ubuntu), Buil
 **Optimizations:**
 - **ccache**: Compiler cache avoids recompiling unchanged files. `CMAKE_C/CXX_COMPILER_LAUNCHER=ccache`, cached at `~/.ccache` (Linux) / `~/Library/Caches/ccache` (macOS), 500M max, keyed by commit SHA with prefix restore.
 - **FetchContent caching**: `build/_deps` (JUCE 8.0.3 + GoogleTest 1.14.0) cached via `actions/cache`, keyed on `CMakeLists.txt` + `Tests/CMakeLists.txt` hashes.
-- **PCH**: Precompiled headers for juce_core, juce_audio_basics, juce_audio_processors, juce_dsp. Tests reuse PCH from GravisynthCore. Reduces header parsing across ~60 TUs.
+**What didn't work:** Precompiled headers (PCH) — JUCE compiles its own module `.cpp` files as part of the target and they have guards against being pre-included. On macOS, `.mm` files also need Obj-C++ mode which conflicts with C++ PCH.
 - **JUCE_WEB_BROWSER=0**: Disabled unused WebBrowserComponent, removed WebKit/libsoup deps from Linux builds.
 - **coverage.sh --report-only**: In CI, skips redundant configure/build/test and only does profdata merge + report.
 - **Separate lint job**: Instant formatting feedback (~30s) without waiting for full build.
