@@ -66,7 +66,7 @@ bash scripts/coverage.sh
 
 ## CI Pipeline
 
-CI runs via `.github/workflows/ci.yml` with 3 parallel jobs: Lint (Ubuntu), Build+Test+Coverage (Ubuntu), Build+Test (macOS).
+CI runs via `.github/workflows/ci.yml` with 4 parallel jobs: Lint (Ubuntu), Build+Test+Coverage (Ubuntu, Debug), Build+Test (Ubuntu, Release), Build+Test (macOS). The Release job catches UB/segfaults that only manifest with optimizations enabled — without it, the build-artifacts workflow on main could fail despite PR CI passing.
 
 **Optimizations:**
 - **ccache**: Compiler cache avoids recompiling unchanged files. `CMAKE_C/CXX_COMPILER_LAUNCHER=ccache`, cached at `~/.ccache` (Linux) / `~/Library/Caches/ccache` (macOS), 500M max, keyed by commit SHA with prefix restore.
