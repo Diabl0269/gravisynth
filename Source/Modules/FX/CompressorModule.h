@@ -31,6 +31,9 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed())
+            return;
+
         juce::ignoreUnused(midiMessages);
 
         const int numSamples = buffer.getNumSamples();

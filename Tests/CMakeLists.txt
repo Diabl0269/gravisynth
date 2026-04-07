@@ -37,6 +37,7 @@ add_executable(GravisynthTests
     UndoRedoTests.cpp
     PresetManagerTests.cpp
     PluginProcessorTests.cpp
+    ModuleBypassTests.cpp
     ../Source/MainComponent.cpp
     ../Source/UI/GraphEditor.cpp
     ../Source/UI/ModMatrixComponent.cpp

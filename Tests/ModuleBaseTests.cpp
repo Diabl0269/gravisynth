@@ -42,7 +42,7 @@ TEST_F(ModuleBaseTest, VisualBufferManagement) {
 
 TEST_F(ModuleBaseTest, StateSerialization) {
     // 1. Modify parameter
-    auto* param = module.getParameters()[0]; // Gain
+    auto* param = module.getParameters()[1]; // Gain
     param->setValueNotifyingHost(0.8f);
     EXPECT_FLOAT_EQ(param->getValue(), 0.8f);
 

@@ -19,7 +19,7 @@ TEST_F(VCAModuleTest, GainApplication) {
         buffer.setSample(0, i, 1.0f);
     }
 
-    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[0]);
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[1]);
     ASSERT_NE(gainParam, nullptr);
     gainParam->setValueNotifyingHost(0.5f); // 0.5 normalized
 
@@ -51,7 +51,7 @@ TEST_F(VCAModuleTest, CVControl) {
         buffer.setSample(1, i, 0.5f);
     }
 
-    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[0]);
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[1]);
     gainParam->setValueNotifyingHost(1.0f); // Set gain to max
 
     juce::MidiBuffer midi;

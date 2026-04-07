@@ -54,7 +54,7 @@ std::vector<IGraphManager::ModRoutingInfo> AudioEngine::getActiveModRoutings() c
 
             // Get bypass state
             info.isBypassed = false;
-            if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[1])) {
+            if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[2])) {
                 info.isBypassed = bypassParam->get();
             }
 
@@ -69,7 +69,7 @@ void AudioEngine::addModRouting(juce::AudioProcessorGraph::NodeID sourceNodeID, 
     auto attenuverterNode = mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>());
     if (attenuverterNode == nullptr)
         return;
-    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenuverterNode->getProcessor()->getParameters()[0]))
+    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenuverterNode->getProcessor()->getParameters()[1]))
         param->setValueNotifyingHost(param->convertTo0to1(1.0f));
     mainProcessorGraph.addConnection({{sourceNodeID, sourceChannelIndex}, {attenuverterNode->nodeID, 0}});
     mainProcessorGraph.addConnection({{attenuverterNode->nodeID, 0}, {destNodeID, destChannelIndex}});
@@ -83,7 +83,7 @@ void AudioEngine::removeModRouting(juce::AudioProcessorGraph::NodeID attenuverte
 
 void AudioEngine::toggleModBypass(juce::AudioProcessorGraph::NodeID attenuverterNodeID) {
     if (auto* node = mainProcessorGraph.getNodeForId(attenuverterNodeID)) {
-        if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[1])) {
+        if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[2])) {
             bypassParam->setValueNotifyingHost(!bypassParam->get());
         }
     }
@@ -91,7 +91,7 @@ void AudioEngine::toggleModBypass(juce::AudioProcessorGraph::NodeID attenuverter
 
 bool AudioEngine::isModBypassed(juce::AudioProcessorGraph::NodeID attenuverterNodeID) const {
     if (auto* node = mainProcessorGraph.getNodeForId(attenuverterNodeID)) {
-        if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[1])) {
+        if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[2])) {
             return bypassParam->get();
         }
     }

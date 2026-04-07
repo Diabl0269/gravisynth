@@ -80,7 +80,7 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
                     g.drawLine(p1.toFloat().x, p1.toFloat().y, p2.toFloat().x, p2.toFloat().y, 2.0f);
 
                     float amt = 0.0f;
-                    if (auto* p = node2->getProcessor()->getParameters()[0]) {
+                    if (auto* p = node2->getProcessor()->getParameters()[1]) {
                         amt = p->getValue();
                         amt = amt * 2.0f - 1.0f; // 0 to 1 back to -1.0 to 1.0
                     }
@@ -414,7 +414,7 @@ void GraphEditor::mouseDrag(const juce::MouseEvent& e) {
             auto& graph = graphManager.getGraph();
             auto* node = graph.getNodeForId(draggingAttenuverterNodeId);
             if (node) {
-                if (auto* p = dynamic_cast<juce::AudioParameterFloat*>(node->getProcessor()->getParameters()[0])) {
+                if (auto* p = dynamic_cast<juce::AudioParameterFloat*>(node->getProcessor()->getParameters()[1])) {
                     float delta = (e.getPosition().y - lastMousePos.y) * -0.01f;
                     float currentVal = p->get(); // -1 to 1
                     currentVal = juce::jlimit(-1.0f, 1.0f, currentVal + delta);

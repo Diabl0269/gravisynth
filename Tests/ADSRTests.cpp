@@ -56,7 +56,7 @@ TEST_F(ADSRTest, AttackPhase) {
 
 TEST_F(ADSRTest, SustainLevel) {
     // Set sustain to 0.75
-    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[2])->setValueNotifyingHost(0.75f);
+    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[3])->setValueNotifyingHost(0.75f);
 
     // Trigger NoteOn
     auto noteOn = juce::MidiMessage::noteOn(1, 60, (juce::uint8)100);
@@ -89,7 +89,7 @@ TEST_F(ADSRTest, SustainLevel) {
 
 TEST_F(ADSRTest, ReleasePhase) {
     // Set sustain to non-zero so envelope holds at a level
-    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[2])->setValueNotifyingHost(0.8f);
+    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[3])->setValueNotifyingHost(0.8f);
 
     // Trigger NoteOn
     auto noteOn = juce::MidiMessage::noteOn(1, 60, (juce::uint8)100);
@@ -225,7 +225,7 @@ TEST_F(ADSRTest, RetriggerDuringRelease) {
 
 TEST_F(ADSRTest, ZeroSustain) {
     // Set sustain to 0.0
-    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[2])->setValueNotifyingHost(0.0f);
+    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[3])->setValueNotifyingHost(0.0f);
 
     // Trigger NoteOn
     auto noteOn = juce::MidiMessage::noteOn(1, 60, (juce::uint8)100);
@@ -256,7 +256,7 @@ TEST_F(ADSRTest, ZeroSustain) {
 
 TEST_F(ADSRTest, FastAttack) {
     // Set attack to minimum (0.01f, clamped to 0.002f)
-    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[0])->setValueNotifyingHost(0.0f);
+    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[1])->setValueNotifyingHost(0.0f);
 
     // Trigger NoteOn
     auto noteOn = juce::MidiMessage::noteOn(1, 60, (juce::uint8)100);
@@ -315,7 +315,7 @@ TEST_F(ADSRTest, ParameterChangesDuringPlayback) {
     EXPECT_LT(rmsBeforeChange, 0.05f);
 
     // Now change sustain parameter mid-stream to 0.6
-    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[2])->setValueNotifyingHost(0.6f);
+    dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[3])->setValueNotifyingHost(0.6f);
 
     // Process more blocks; the envelope should adapt
     for (int block = 0; block < 15; ++block) {
