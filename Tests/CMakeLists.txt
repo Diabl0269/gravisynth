@@ -43,6 +43,8 @@ add_executable(GravisynthTests
     ../Source/UI/ModuleComponent.cpp
 )
 
+target_precompile_headers(GravisynthTests REUSE_FROM GravisynthCore)
+
 target_link_libraries(GravisynthTests PRIVATE
     GTest::gtest_main
     GravisynthCore

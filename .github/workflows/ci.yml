@@ -5,8 +5,25 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+    paths:
+      - 'Source/**'
+      - 'Tests/**'
+      - 'CMakeLists.txt'
+      - 'Tests/CMakeLists.txt'
+      - 'scripts/**'
+      - '.github/workflows/ci.yml'
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install clang-format
+      run: sudo apt-get update && sudo apt-get install -y clang-format
+    - name: Check Formatting
+      run: find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run --Werror
+
   build-and-test:
     name: Build, Test, and Coverage
     runs-on: ubuntu-latest
@@ -15,39 +32,10 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          ninja-build \
-          libasound2-dev \
-          libx11-dev \
-          libxinerama-dev \
-          libxext-dev \
-          libxcomposite-dev \
-          libxcursor-dev \
-          libxrandr-dev \
-          libxrender-dev \
-          libfontconfig1-dev \
-          libfreetype6-dev \
-          libwebkit2gtk-4.1-dev \
-          libglu1-mesa-dev \
-          libcurl4-openssl-dev \
-          libgtk-3-dev \
-          libjack-jackd2-dev \
-          freeglut3-dev \
-          libsoup-3.0-dev \
-          libcurl4-openssl-dev \
-          pkg-config \
-          llvm \
-          clang \
-          clang-format \
-          ccache \
-          xvfb
-
-    - name: Lint Check
-      run: |
-        find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run --Werror
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: cmake ninja-build libasound2-dev libx11-dev libxinerama-dev libxext-dev libxcomposite-dev libxcursor-dev libxrandr-dev libxrender-dev libfontconfig1-dev libfreetype6-dev libglu1-mesa-dev libcurl4-openssl-dev libgtk-3-dev libjack-jackd2-dev freeglut3-dev pkg-config llvm clang ccache xvfb
+        version: 1.0
 
     - name: Cache FetchContent Dependencies
       uses: actions/cache@v4

@@ -42,6 +42,8 @@ The project uses CMake with:
 - JUCE framework (fetched automatically via FetchContent)
 - GoogleTest for unit testing
 - Code coverage support (enabled via `ENABLE_COVERAGE` option)
+- Precompiled headers (PCH) for juce_core, juce_audio_basics, juce_audio_processors, juce_dsp — tests reuse PCH from GravisynthCore
+- `JUCE_WEB_BROWSER=0` — WebBrowserComponent is unused; disabling removes WebKit/libsoup deps on Linux
 
 ## Development Commands
 
@@ -62,13 +64,29 @@ cmake --build build --target GravisynthTests
 bash scripts/coverage.sh
 ```
 
+## CI Pipeline
+
+CI runs via `.github/workflows/ci.yml` with 3 parallel jobs: Lint (Ubuntu), Build+Test+Coverage (Ubuntu), Build+Test (macOS).
+
+**Optimizations:**
+- **ccache**: Compiler cache avoids recompiling unchanged files. `CMAKE_C/CXX_COMPILER_LAUNCHER=ccache`, cached at `~/.ccache` (Linux) / `~/Library/Caches/ccache` (macOS), 500M max, keyed by commit SHA with prefix restore.
+- **FetchContent caching**: `build/_deps` (JUCE 8.0.3 + GoogleTest 1.14.0) cached via `actions/cache`, keyed on `CMakeLists.txt` + `Tests/CMakeLists.txt` hashes.
+- **PCH**: Precompiled headers for juce_core, juce_audio_basics, juce_audio_processors, juce_dsp. Tests reuse PCH from GravisynthCore. Reduces header parsing across ~60 TUs.
+- **JUCE_WEB_BROWSER=0**: Disabled unused WebBrowserComponent, removed WebKit/libsoup deps from Linux builds.
+- **coverage.sh --report-only**: In CI, skips redundant configure/build/test and only does profdata merge + report.
+- **Separate lint job**: Instant formatting feedback (~30s) without waiting for full build.
+- **apt package caching**: `awalsh128/cache-apt-pkgs-action` caches Ubuntu packages across runs.
+- **Path filtering**: PRs only trigger CI when `Source/`, `Tests/`, `CMakeLists.txt`, `scripts/`, or the workflow file change. Push to main always runs.
+
+**What didn't work:** Unity builds (`CMAKE_UNITY_BUILD`) are incompatible with JUCE — Obj-C++ `.mm` files can't be merged into C++ unity translation units.
+
 ## Testing Strategy
 
 - Unit tests for individual modules using GoogleTest
 - Tests cover audio processing behavior, parameter handling, and MIDI interaction
 - Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
 - Integration tests (signal chains, modulation routing)
-- Code coverage enforcement (threshold: 69%, CI pipeline enforces)
+- Code coverage enforcement (threshold: 75%, CI pipeline enforces via `scripts/coverage.sh`)
 - ~200+ tests across 35+ suites (unit, edge case, integration, undo/redo, filter modes, port labels)
 - CI runs on Ubuntu + macOS with linting, building, testing, and coverage
 
