@@ -575,16 +575,28 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
                 juce::PopupMenu replaceMenu;
                 auto currentType = getType(module);
 
-                struct ModEntry { const char* name; ModuleType type; };
-                struct Category { const char* header; std::vector<ModEntry> modules; };
+                struct ModEntry {
+                    const char* name;
+                    ModuleType type;
+                };
+                struct Category {
+                    const char* header;
+                    std::vector<ModEntry> modules;
+                };
                 std::vector<Category> categories = {
                     {"Sources", {{"Oscillator", ModuleType::Oscillator}, {"LFO", ModuleType::LFO}}},
-                    {"Sequencing", {{"Sequencer", ModuleType::Sequencer}, {"Poly Sequencer", ModuleType::PolySequencer},
-                                    {"MIDI Keyboard", ModuleType::MidiKeyboard}, {"Poly MIDI", ModuleType::PolyMidi}}},
+                    {"Sequencing",
+                     {{"Sequencer", ModuleType::Sequencer},
+                      {"Poly Sequencer", ModuleType::PolySequencer},
+                      {"MIDI Keyboard", ModuleType::MidiKeyboard},
+                      {"Poly MIDI", ModuleType::PolyMidi}}},
                     {"Envelopes & Control", {{"ADSR", ModuleType::ADSR}, {"VCA", ModuleType::VCA}}},
                     {"Filters", {{"Filter", ModuleType::Filter}}},
-                    {"Modulation FX", {{"Chorus", ModuleType::Chorus}, {"Phaser", ModuleType::Phaser},
-                                       {"Flanger", ModuleType::Flanger}, {"Distortion", ModuleType::Distortion}}},
+                    {"Modulation FX",
+                     {{"Chorus", ModuleType::Chorus},
+                      {"Phaser", ModuleType::Phaser},
+                      {"Flanger", ModuleType::Flanger},
+                      {"Distortion", ModuleType::Distortion}}},
                     {"Time FX", {{"Delay", ModuleType::Delay}, {"Reverb", ModuleType::Reverb}}},
                     {"Dynamics", {{"Compressor", ModuleType::Compressor}, {"Limiter", ModuleType::Limiter}}},
                 };
@@ -593,11 +605,10 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
                     juce::PopupMenu catMenu;
                     bool hasItems = false;
                     for (auto& mod : cat.modules) {
-                        if (mod.type == currentType) continue;
+                        if (mod.type == currentType)
+                            continue;
                         juce::String typeName(mod.name);
-                        catMenu.addItem(typeName, [this, typeName] {
-                            owner.replaceModule(this, typeName);
-                        });
+                        catMenu.addItem(typeName, [this, typeName] { owner.replaceModule(this, typeName); });
                         hasItems = true;
                     }
                     if (hasItems)

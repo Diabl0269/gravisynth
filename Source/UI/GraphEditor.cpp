@@ -551,32 +551,35 @@ void GraphEditor::replaceModule(ModuleComponent* moduleComp, const juce::String&
             break;
         }
     }
-    if (oldNodeId.uid == 0) return;
+    if (oldNodeId.uid == 0)
+        return;
 
     // Use shared_ptr to make the lambda copyable (std::function requires it)
     auto newModuleTypeCopy = newModuleType;
 
     auto doReplace = [this, &graph, oldNodeId, newModuleTypeCopy] {
         auto* oldNode = graph.getNodeForId(oldNodeId);
-        if (!oldNode) return;
+        if (!oldNode)
+            return;
 
         // 1. Create the new module
         auto newProcessor = gsynth::AIStateMapper::createModule(newModuleTypeCopy);
-        if (!newProcessor) return;
+        if (!newProcessor)
+            return;
 
         // 2. Snapshot old module's properties
         int posX = oldNode->properties.getWithDefault("x", 0);
         int posY = oldNode->properties.getWithDefault("y", 0);
         auto* oldProc = oldNode->getProcessor();
-        int oldNumInputs  = oldProc->getTotalNumInputChannels();
+        int oldNumInputs = oldProc->getTotalNumInputChannels();
         int oldNumOutputs = oldProc->getTotalNumOutputChannels();
-        bool oldAcceptsMidi  = oldProc->acceptsMidi();
+        bool oldAcceptsMidi = oldProc->acceptsMidi();
         bool oldProducesMidi = oldProc->producesMidi();
 
         // 3. Get new module capabilities before addNode moves it
-        int newNumInputs  = newProcessor->getTotalNumInputChannels();
+        int newNumInputs = newProcessor->getTotalNumInputChannels();
         int newNumOutputs = newProcessor->getTotalNumOutputChannels();
-        bool newAcceptsMidi  = newProcessor->acceptsMidi();
+        bool newAcceptsMidi = newProcessor->acceptsMidi();
         bool newProducesMidi = newProcessor->producesMidi();
 
         // 4. Collect all connections involving the old node
@@ -599,7 +602,8 @@ void GraphEditor::replaceModule(ModuleComponent* moduleComp, const juce::String&
         for (auto& conn : graph.getConnections()) {
             bool srcIsOld = (conn.source.nodeID == oldNodeId);
             bool dstIsOld = (conn.destination.nodeID == oldNodeId);
-            if (!srcIsOld && !dstIsOld) continue;
+            if (!srcIsOld && !dstIsOld)
+                continue;
 
             // Check if this involves an attenuverter
             if (srcIsOld) {
@@ -627,8 +631,9 @@ void GraphEditor::replaceModule(ModuleComponent* moduleComp, const juce::String&
 
             // Direct connection (not attenuverter-mediated)
             ConnectionInfo ci;
-            bool isMidiConn = (srcIsOld && conn.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex)
-                           || (dstIsOld && conn.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex);
+            bool isMidiConn =
+                (srcIsOld && conn.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) ||
+                (dstIsOld && conn.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex);
             ci.isMidi = isMidiConn;
             if (srcIsOld) {
                 ci.otherNodeId = conn.destination.nodeID;
@@ -646,7 +651,8 @@ void GraphEditor::replaceModule(ModuleComponent* moduleComp, const juce::String&
 
         // 5. Add the new node to the graph
         auto newNode = graph.addNode(std::move(newProcessor));
-        if (!newNode) return;
+        if (!newNode)
+            return;
         auto newNodeId = newNode->nodeID;
         newNode->properties.set("x", posX);
         newNode->properties.set("y", posY);
@@ -667,8 +673,7 @@ void GraphEditor::replaceModule(ModuleComponent* moduleComp, const juce::String&
                 }
             } else {
                 if (ci.isIncoming && ci.oldChannelIndex < newNumInputs) {
-                    graph.addConnection({{ci.otherNodeId, ci.otherChannelIndex},
-                                         {newNodeId, ci.oldChannelIndex}});
+                    graph.addConnection({{ci.otherNodeId, ci.otherChannelIndex}, {newNodeId, ci.oldChannelIndex}});
                 } else if (!ci.isIncoming && ci.oldChannelIndex < newNumOutputs) {
                     graph.addConnection({{newNodeId, ci.oldChannelIndex}, {ci.otherNodeId, ci.otherChannelIndex}});
                 }
