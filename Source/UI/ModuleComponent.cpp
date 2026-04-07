@@ -158,7 +158,8 @@ void ModuleComponent::createControls() {
         for (auto* param : module->getParameters()) {
             if (auto* boolParam = dynamic_cast<juce::AudioParameterBool*>(param)) {
                 if (boolParam->paramID == "bypassed") {
-                    bypassAttachment = std::make_unique<juce::ButtonParameterAttachment>(*boolParam, *bypassButton, nullptr);
+                    bypassAttachment =
+                        std::make_unique<juce::ButtonParameterAttachment>(*boolParam, *bypassButton, nullptr);
                     break;
                 }
             }
@@ -603,16 +604,15 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
             m.addItem(2, dynamic_cast<ModuleBase*>(module)->isBypassed() ? "Enable Module" : "Bypass Module");
             m.addItem(1, "Delete Module");
 
-            m.showMenuAsync(juce::PopupMenu::Options(),
-                           [this](int result) {
-                               if (result == 2) {
-                                   if (auto* mod = dynamic_cast<ModuleBase*>(module))
-                                       mod->setBypassed(!mod->isBypassed());
-                                   repaint();
-                               } else if (result == 1) {
-                                   owner.deleteModule(this);
-                               }
-                           });
+            m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
+                if (result == 2) {
+                    if (auto* mod = dynamic_cast<ModuleBase*>(module))
+                        mod->setBypassed(!mod->isBypassed());
+                    repaint();
+                } else if (result == 1) {
+                    owner.deleteModule(this);
+                }
+            });
         } else {
             dragStartPosition = getPosition();
             if (undoManager)

@@ -144,8 +144,7 @@ TEST_F(ModuleBypassTest, BypassedSourceOutputsSilence) {
 
     // Verify all samples are zero
     for (int i = 0; i < blockSize; ++i) {
-        EXPECT_FLOAT_EQ(buffer.getSample(0, i), 0.0f)
-            << "Bypassed oscillator did not clear buffer at sample " << i;
+        EXPECT_FLOAT_EQ(buffer.getSample(0, i), 0.0f) << "Bypassed oscillator did not clear buffer at sample " << i;
     }
 }
 
@@ -175,6 +174,5 @@ TEST_F(ModuleBypassTest, BypassStateSerializedInState) {
     filter2.setStateInformation(stateData.getData(), (int)stateData.getSize());
 
     // Verify the bypass state was restored
-    EXPECT_TRUE(filter2.isBypassed())
-        << "Filter2 should have bypass state restored from serialized state";
+    EXPECT_TRUE(filter2.isBypassed()) << "Filter2 should have bypass state restored from serialized state";
 }
