@@ -1,7 +1,12 @@
 #include "../Source/Modules/FilterModule.h"
 #include "../Source/Modules/OscillatorModule.h"
+#include "../Source/Modules/VCAModule.h"
+#include "../Source/Modules/LFOModule.h"
+#include "../Source/Modules/ADSRModule.h"
+#include "../Source/Modules/SequencerModule.h"
 #include "../Source/UI/GraphEditor.h"
 #include "../Source/UI/ModuleComponent.h"
+#include "../Source/GravisynthUndoManager.h"
 #include <gtest/gtest.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -116,4 +121,249 @@ TEST_F(GraphEditorTest, DragConnectionCreatesLink) {
     }
 
     EXPECT_TRUE(connectionFound);
+}
+
+TEST_F(GraphEditorTest, ReplaceModulePreservesPosition) {
+    AudioEngine engine;
+    GraphEditor editor(engine);
+    editor.setSize(800, 600);
+
+    auto& graph = engine.getGraph();
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+    oscNode->properties.set("x", 200);
+    oscNode->properties.set("y", 300);
+    editor.updateComponents();
+
+    // Find the ModuleComponent for the oscillator
+    ModuleComponent* oscComp = nullptr;
+    auto* content = editor.getChildComponent(0);
+    if (content) {
+        for (auto* child : content->getChildren()) {
+            if (auto* mod = dynamic_cast<ModuleComponent*>(child)) {
+                if (mod->getModule() == oscNode->getProcessor())
+                    oscComp = mod;
+            }
+        }
+    }
+    ASSERT_NE(oscComp, nullptr);
+
+    editor.replaceModule(oscComp, "Filter");
+
+    // Verify: oscillator is gone, filter exists at same position
+    bool foundOsc = false, foundFilter = false;
+    int filterX = 0, filterY = 0;
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<OscillatorModule*>(node->getProcessor()))
+            foundOsc = true;
+        if (dynamic_cast<FilterModule*>(node->getProcessor())) {
+            foundFilter = true;
+            filterX = node->properties.getWithDefault("x", 0);
+            filterY = node->properties.getWithDefault("y", 0);
+        }
+    }
+    EXPECT_FALSE(foundOsc);
+    EXPECT_TRUE(foundFilter);
+    EXPECT_EQ(filterX, 200);
+    EXPECT_EQ(filterY, 300);
+}
+
+TEST_F(GraphEditorTest, ReplaceModulePreservesAudioConnections) {
+    AudioEngine engine;
+    GraphEditor editor(engine);
+    editor.setSize(800, 600);
+
+    auto& graph = engine.getGraph();
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+
+    // Connect oscillator output 0 -> filter input 0
+    graph.addConnection({{oscNode->nodeID, 0}, {filterNode->nodeID, 0}});
+    editor.updateComponents();
+
+    // Find the filter ModuleComponent
+    ModuleComponent* filterComp = nullptr;
+    auto* content = editor.getChildComponent(0);
+    if (content) {
+        for (auto* child : content->getChildren()) {
+            if (auto* mod = dynamic_cast<ModuleComponent*>(child)) {
+                if (mod->getModule() == filterNode->getProcessor())
+                    filterComp = mod;
+            }
+        }
+    }
+    ASSERT_NE(filterComp, nullptr);
+
+    // Replace filter with VCA (both have input on channel 0)
+    editor.replaceModule(filterComp, "VCA");
+
+    // Find the new VCA node
+    juce::AudioProcessorGraph::NodeID vcaNodeId;
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<VCAModule*>(node->getProcessor()))
+            vcaNodeId = node->nodeID;
+    }
+    EXPECT_NE(vcaNodeId.uid, 0u);
+
+    // Verify connection Osc -> VCA on channel 0
+    bool connectionFound = false;
+    for (auto& conn : graph.getConnections()) {
+        if (conn.source.nodeID == oscNode->nodeID && conn.source.channelIndex == 0
+            && conn.destination.nodeID == vcaNodeId && conn.destination.channelIndex == 0) {
+            connectionFound = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(connectionFound);
+}
+
+TEST_F(GraphEditorTest, ReplaceModuleDropsIncompatibleConnections) {
+    AudioEngine engine;
+    GraphEditor editor(engine);
+    editor.setSize(800, 600);
+
+    auto& graph = engine.getGraph();
+    auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+
+    // Connect LFO output 0 -> Oscillator input 5 (Oscillator has 6 inputs)
+    graph.addConnection({{lfoNode->nodeID, 0}, {oscNode->nodeID, 5}});
+    editor.updateComponents();
+
+    // Find the oscillator ModuleComponent
+    ModuleComponent* oscComp = nullptr;
+    auto* content = editor.getChildComponent(0);
+    if (content) {
+        for (auto* child : content->getChildren()) {
+            if (auto* mod = dynamic_cast<ModuleComponent*>(child)) {
+                if (mod->getModule() == oscNode->getProcessor())
+                    oscComp = mod;
+            }
+        }
+    }
+    ASSERT_NE(oscComp, nullptr);
+
+    // Replace Oscillator (6 inputs) with VCA (2 inputs) — channel 5 is incompatible
+    editor.replaceModule(oscComp, "VCA");
+
+    // Find the new VCA node
+    juce::AudioProcessorGraph::NodeID vcaNodeId;
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<VCAModule*>(node->getProcessor()))
+            vcaNodeId = node->nodeID;
+    }
+    EXPECT_NE(vcaNodeId.uid, 0u);
+
+    // Verify NO connection from LFO to VCA (channel 5 doesn't exist on VCA)
+    bool connectionFound = false;
+    for (auto& conn : graph.getConnections()) {
+        if (conn.source.nodeID == lfoNode->nodeID && conn.destination.nodeID == vcaNodeId) {
+            connectionFound = true;
+            break;
+        }
+    }
+    EXPECT_FALSE(connectionFound);
+}
+
+TEST_F(GraphEditorTest, ReplaceModulePreservesMidiConnections) {
+    AudioEngine engine;
+    GraphEditor editor(engine);
+    editor.setSize(800, 600);
+
+    auto& graph = engine.getGraph();
+    auto seqNode = graph.addNode(std::make_unique<SequencerModule>());
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+
+    // Connect Sequencer MIDI out -> Oscillator MIDI in
+    graph.addConnection({{seqNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex},
+                         {oscNode->nodeID, juce::AudioProcessorGraph::midiChannelIndex}});
+    editor.updateComponents();
+
+    // Find the oscillator ModuleComponent
+    ModuleComponent* oscComp = nullptr;
+    auto* content = editor.getChildComponent(0);
+    if (content) {
+        for (auto* child : content->getChildren()) {
+            if (auto* mod = dynamic_cast<ModuleComponent*>(child)) {
+                if (mod->getModule() == oscNode->getProcessor())
+                    oscComp = mod;
+            }
+        }
+    }
+    ASSERT_NE(oscComp, nullptr);
+
+    // Replace Oscillator with ADSR (both accept MIDI)
+    editor.replaceModule(oscComp, "ADSR");
+
+    // Find the new ADSR node
+    juce::AudioProcessorGraph::NodeID adsrNodeId;
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<ADSRModule*>(node->getProcessor()))
+            adsrNodeId = node->nodeID;
+    }
+    EXPECT_NE(adsrNodeId.uid, 0u);
+
+    // Verify MIDI connection Sequencer -> ADSR
+    bool midiConnFound = false;
+    for (auto& conn : graph.getConnections()) {
+        if (conn.source.nodeID == seqNode->nodeID
+            && conn.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex
+            && conn.destination.nodeID == adsrNodeId
+            && conn.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) {
+            midiConnFound = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(midiConnFound);
+}
+
+TEST_F(GraphEditorTest, ReplaceModuleIsUndoable) {
+    AudioEngine engine;
+    GravisynthUndoManager undoMgr;
+    GraphEditor editor(engine, &undoMgr);
+    editor.setSize(800, 600);
+
+    auto& graph = engine.getGraph();
+    auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
+    oscNode->properties.set("x", 100);
+    oscNode->properties.set("y", 200);
+    auto oscNodeId = oscNode->nodeID;
+    editor.updateComponents();
+
+    // Find the oscillator ModuleComponent
+    ModuleComponent* oscComp = nullptr;
+    auto* content = editor.getChildComponent(0);
+    if (content) {
+        for (auto* child : content->getChildren()) {
+            if (auto* mod = dynamic_cast<ModuleComponent*>(child)) {
+                if (mod->getModule() == oscNode->getProcessor())
+                    oscComp = mod;
+            }
+        }
+    }
+    ASSERT_NE(oscComp, nullptr);
+
+    // Replace oscillator with filter
+    editor.replaceModule(oscComp, "Filter");
+
+    // Verify filter exists, oscillator gone
+    bool hasFilter = false, hasOsc = false;
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<FilterModule*>(node->getProcessor())) hasFilter = true;
+        if (dynamic_cast<OscillatorModule*>(node->getProcessor())) hasOsc = true;
+    }
+    EXPECT_TRUE(hasFilter);
+    EXPECT_FALSE(hasOsc);
+
+    // Undo
+    EXPECT_TRUE(undoMgr.undo());
+
+    // Verify oscillator is back, filter gone
+    hasFilter = false;
+    hasOsc = false;
+    for (auto* node : graph.getNodes()) {
+        if (dynamic_cast<FilterModule*>(node->getProcessor())) hasFilter = true;
+        if (dynamic_cast<OscillatorModule*>(node->getProcessor())) hasOsc = true;
+    }
+    EXPECT_FALSE(hasFilter);
+    EXPECT_TRUE(hasOsc);
 }
