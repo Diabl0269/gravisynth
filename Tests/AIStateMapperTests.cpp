@@ -385,7 +385,7 @@ TEST(AIStateMapperTest, Modulation_GraphToJSON_SerializesModulations) {
     // Create attenuverter-based modulation: LFO -> Attenuverter -> Filter cutoff (channel 1)
     auto attenNode = graph.addNode(std::make_unique<AttenuverterModule>());
     // Set amount to 0.7
-    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenNode->getProcessor()->getParameters()[0]))
+    if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenNode->getProcessor()->getParameters()[1]))
         param->setValueNotifyingHost(param->convertTo0to1(0.7f));
 
     graph.addConnection({{lfoNode->nodeID, 0}, {attenNode->nodeID, 0}});
@@ -440,7 +440,7 @@ TEST(AIStateMapperTest, Modulation_ApplyJSON_CreatesModulationChain) {
     ASSERT_NE(attenNode, nullptr);
 
     // Verify amount parameter is set to 0.5
-    auto* amountParam = dynamic_cast<juce::RangedAudioParameter*>(attenNode->getProcessor()->getParameters()[0]);
+    auto* amountParam = dynamic_cast<juce::RangedAudioParameter*>(attenNode->getProcessor()->getParameters()[1]);
     ASSERT_NE(amountParam, nullptr);
     float amount = amountParam->getNormalisableRange().convertFrom0to1(amountParam->getValue());
     EXPECT_NEAR(amount, 0.5f, 0.05f);
@@ -551,7 +551,7 @@ TEST(AIStateMapperTest, Modulation_DefaultAmount) {
     // Find attenuverter and check amount is 1.0
     for (auto* node : graph.getNodes()) {
         if (dynamic_cast<AttenuverterModule*>(node->getProcessor())) {
-            auto* amountParam = dynamic_cast<juce::RangedAudioParameter*>(node->getProcessor()->getParameters()[0]);
+            auto* amountParam = dynamic_cast<juce::RangedAudioParameter*>(node->getProcessor()->getParameters()[1]);
             float amount = amountParam->getNormalisableRange().convertFrom0to1(amountParam->getValue());
             EXPECT_NEAR(amount, 1.0f, 0.05f);
             return;
