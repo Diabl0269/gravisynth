@@ -1,15 +1,24 @@
 #!/bin/bash
 set -e
 
-# Configure with coverage enabled
-cmake -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+REPORT_ONLY=false
+for arg in "$@"; do
+  case $arg in
+    --report-only) REPORT_ONLY=true ;;
+  esac
+done
 
-# Build the tests
-cmake --build build --target GravisynthTests
+if [ "$REPORT_ONLY" = false ]; then
+  # Configure with coverage enabled
+  cmake -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
 
-# Run the tests
-export LLVM_PROFILE_FILE="default.profraw"
-./build/Tests/GravisynthTests
+  # Build the tests
+  cmake --build build --target GravisynthTests
+
+  # Run the tests
+  export LLVM_PROFILE_FILE="default.profraw"
+  ./build/Tests/GravisynthTests
+fi
 
 # Generate coverage report
 echo "Merging profile data..."

@@ -42,31 +42,59 @@ jobs:
           llvm \
           clang \
           clang-format \
+          ccache \
           xvfb
 
     - name: Lint Check
       run: |
         find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run --Werror
 
+    - name: Cache FetchContent Dependencies
+      uses: actions/cache@v4
+      with:
+        path: build/_deps
+        key: ${{ runner.os }}-deps-${{ hashFiles('CMakeLists.txt', 'Tests/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/.ccache
+        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-
+
+    - name: Configure ccache
+      run: |
+        ccache --set-config=max_size=500M
+        ccache --zero-stats
+
     - name: Configure CMake
       run: |
         # Use clang for consistent coverage flags
         export CC=clang
         export CXX=clang++
-        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DENABLE_COVERAGE=ON \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
     - name: Build
       run: cmake --build build
 
+    - name: ccache Stats
+      run: ccache --show-stats
+
     - name: Run Tests
-      working-directory: ./build/Tests
       run: |
         export LLVM_PROFILE_FILE="default.profraw"
-        xvfb-run ./GravisynthTests
+        xvfb-run ./build/Tests/GravisynthTests
 
     - name: Check Coverage
-      run: xvfb-run bash scripts/coverage.sh
-        
+      run: xvfb-run bash scripts/coverage.sh --report-only
+
     - name: Upload Coverage Artifact (Optional)
       if: always()
       uses: actions/upload-artifact@v4
@@ -84,13 +112,41 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Install Dependencies
-      run: brew install cmake ninja
+      run: brew install cmake ninja ccache
+
+    - name: Cache FetchContent Dependencies
+      uses: actions/cache@v4
+      with:
+        path: build/_deps
+        key: ${{ runner.os }}-deps-${{ hashFiles('CMakeLists.txt', 'Tests/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    - name: Cache ccache
+      uses: actions/cache@v4
+      with:
+        path: ~/Library/Caches/ccache
+        key: ${{ runner.os }}-ccache-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-ccache-
+
+    - name: Configure ccache
+      run: |
+        ccache --set-config=max_size=500M
+        ccache --zero-stats
 
     - name: Configure CMake
-      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
     - name: Build
       run: cmake --build build
+
+    - name: ccache Stats
+      run: ccache --show-stats
 
     - name: Run Tests
       working-directory: ./build/Tests
