@@ -465,5 +465,6 @@ TEST_F(UndoRedoTest, RedoWithParameterValueInUnitInterval) {
     ASSERT_NE(redoDriveParam, nullptr);
 
     float valueAfterRedo = redoDriveParam->getNormalisableRange().convertFrom0to1(redoDriveParam->getValue());
-    ASSERT_NEAR(valueAfterRedo, 1.0f, 0.001f) << "Parameter value should be 1.0 after redo, not 10.0 (double-converted)";
+    ASSERT_NEAR(valueAfterRedo, 1.0f, 0.001f)
+        << "Parameter value should be 1.0 after redo, not 10.0 (double-converted)";
 }

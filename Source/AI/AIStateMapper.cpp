@@ -274,7 +274,8 @@ int AIStateMapper::findChoiceIndex(juce::AudioParameterChoice* p, const juce::St
     return -1;
 }
 
-void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, const juce::DynamicObject* paramsObj, bool trusted) {
+void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, const juce::DynamicObject* paramsObj,
+                                           bool trusted) {
     for (auto* param : processor->getParameters()) {
         if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param)) {
             if (paramsObj->hasProperty(p->paramID)) {
@@ -326,7 +327,8 @@ void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, cons
     }
 }
 
-bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting, bool trusted) {
+bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting,
+                                     bool trusted) {
     if (!json.isObject()) {
         juce::Logger::writeToLog("applyJSONToGraph: JSON is not an object.");
         return false;
