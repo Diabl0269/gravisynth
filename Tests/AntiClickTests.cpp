@@ -19,8 +19,8 @@ TEST_F(AntiClickTest, ADSRMinimumRelease) {
     adsr.prepareToPlay(44100.0, 512);
 
     // Set parameters for quick test
-    auto* attackParam = dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[0]);
-    auto* releaseParam = dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[3]);
+    auto* attackParam = dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[1]);
+    auto* releaseParam = dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[4]);
     ASSERT_NE(attackParam, nullptr);
     ASSERT_NE(releaseParam, nullptr);
 
@@ -79,7 +79,7 @@ TEST_F(AntiClickTest, OscillatorFrequencySmoothing) {
     OscillatorModule osc;
     osc.prepareToPlay(44100.0, 512);
 
-    auto* coarseParam = dynamic_cast<juce::AudioParameterInt*>(osc.getParameters()[2]);
+    auto* coarseParam = dynamic_cast<juce::AudioParameterInt*>(osc.getParameters()[3]);
     ASSERT_NE(coarseParam, nullptr);
 
     // Initial coarse
@@ -98,7 +98,7 @@ TEST_F(AntiClickTest, ADSRMinimumAttack) {
     ADSRModule adsr;
     adsr.prepareToPlay(44100.0, 512);
 
-    auto* attackParam = dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[0]);
+    auto* attackParam = dynamic_cast<juce::AudioParameterFloat*>(adsr.getParameters()[1]);
     ASSERT_NE(attackParam, nullptr);
     *attackParam = 0.0f; // Request instant attack
 

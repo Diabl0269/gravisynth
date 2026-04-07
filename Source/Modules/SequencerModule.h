@@ -70,6 +70,11 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed()) {
+            buffer.clear();
+            return;
+        }
+
         juce::ignoreUnused(buffer);
 
         if (!*runParam) {

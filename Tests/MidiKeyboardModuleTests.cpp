@@ -45,7 +45,7 @@ TEST_F(MidiKeyboardModuleTest, OctaveShiftWorks) {
     state.noteOn(1, 60, 0.8f);
 
     // Set octave to +1
-    auto* octaveParam = dynamic_cast<juce::AudioParameterInt*>(module->getParameters()[0]);
+    auto* octaveParam = dynamic_cast<juce::AudioParameterInt*>(module->getParameters()[1]);
     ASSERT_NE(octaveParam, nullptr);
     *octaveParam = 1;
 

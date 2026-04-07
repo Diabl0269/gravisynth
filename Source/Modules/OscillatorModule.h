@@ -31,6 +31,11 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed()) {
+            buffer.clear();
+            return;
+        }
+
         // Process MIDI for Pitch
         for (const auto metadata : midiMessages) {
             auto msg = metadata.getMessage();

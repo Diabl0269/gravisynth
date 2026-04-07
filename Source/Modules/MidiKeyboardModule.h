@@ -26,6 +26,11 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed()) {
+            buffer.clear();
+            return;
+        }
+
         juce::ignoreUnused(buffer);
 
         // Inject events from keyboard state

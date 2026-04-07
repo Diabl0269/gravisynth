@@ -1,4 +1,5 @@
 #include "ModuleComponent.h"
+#include "../Modules/ModuleBase.h"
 #include "../Modules/SequencerModule.h"
 #include "GraphEditor.h"
 
@@ -40,6 +41,16 @@ ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGr
         spectrumToggle->setToggleState(false, juce::dontSendNotification);
         spectrumToggle->onClick = [this] { freqResponseComponent->setShowSpectrum(spectrumToggle->getToggleState()); };
         addAndMakeVisible(spectrumToggle.get());
+    }
+
+    if (getType(module) != ModuleType::Attenuverter) {
+        bypassButton = std::make_unique<juce::TextButton>("B");
+        bypassButton->setClickingTogglesState(true);
+        bypassButton->setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        bypassButton->setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange);
+        bypassButton->setColour(juce::TextButton::textColourOffId, juce::Colours::white);
+        bypassButton->setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+        addAndMakeVisible(*bypassButton);
     }
 
     createControls();
@@ -131,11 +142,26 @@ void ModuleComponent::createControls() {
                 label->setJustificationType(juce::Justification::centred);
                 addAndMakeVisible(label);
             } else if (auto* boolParam = dynamic_cast<juce::AudioParameterBool*>(param)) {
+                if (boolParam->paramID == "bypassed")
+                    continue;
+
                 auto* toggle = toggles.add(new juce::ToggleButton(boolParam->getName(100)));
                 toggle->setComponentID(boolParam->getName(100)); // ID for Lookup
                 addAndMakeVisible(toggle);
 
                 auto* attach = buttonAttachments.add(new juce::ButtonParameterAttachment(*boolParam, *toggle));
+            }
+        }
+    }
+
+    if (bypassButton) {
+        for (auto* param : module->getParameters()) {
+            if (auto* boolParam = dynamic_cast<juce::AudioParameterBool*>(param)) {
+                if (boolParam->paramID == "bypassed") {
+                    bypassAttachment =
+                        std::make_unique<juce::ButtonParameterAttachment>(*boolParam, *bypassButton, nullptr);
+                    break;
+                }
             }
         }
     }
@@ -214,7 +240,10 @@ void ModuleComponent::paint(juce::Graphics& g) {
         return; // Transparent background, no ports, no header
     }
 
-    g.fillAll(juce::Colours::lightgrey);
+    auto* mod = dynamic_cast<ModuleBase*>(module);
+    bool isBypassed = mod && mod->isBypassed();
+
+    g.fillAll(isBypassed ? juce::Colours::lightgrey.withAlpha(0.4f) : juce::Colours::lightgrey);
 
     // Highlight Active Step (Sequencer only)
     if (getType(module) == ModuleType::Sequencer) {
@@ -234,7 +263,7 @@ void ModuleComponent::paint(juce::Graphics& g) {
     g.drawRect(getLocalBounds(), 2);
 
     // Header
-    g.setColour(juce::Colours::darkgrey);
+    g.setColour(isBypassed ? juce::Colour(0xff555555) : juce::Colours::darkgrey);
     g.fillRect(0, 0, getWidth(), 24);
     g.setColour(juce::Colours::white);
     g.drawText(module->getName(), 0, 0, getWidth(), 24, juce::Justification::centred, true);
@@ -370,6 +399,9 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
 void ModuleComponent::resized() {
     if (module == nullptr)
         return;
+
+    if (bypassButton)
+        bypassButton->setBounds(getWidth() - 26, 2, 22, 20);
 
     if (getType(module) == ModuleType::Sequencer) {
         // --- Sequencer Specific Layout ---
@@ -569,6 +601,17 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
 
         if (e.mods.isPopupMenu()) {
             juce::PopupMenu m;
+
+            // Bypass toggle (only for actual modules)
+            if (auto* mod = dynamic_cast<ModuleBase*>(module)) {
+                m.addItem(mod->isBypassed() ? "Enable Module" : "Bypass Module", [this] {
+                    if (auto* mod = dynamic_cast<ModuleBase*>(module)) {
+                        mod->setBypassed(!mod->isBypassed());
+                        repaint();
+                    }
+                });
+                m.addSeparator();
+            }
 
             // "Replace with..." submenu (only for actual modules, not AudioGraphIOProcessor)
             if (dynamic_cast<ModuleBase*>(module) != nullptr) {

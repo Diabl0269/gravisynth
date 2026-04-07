@@ -33,7 +33,7 @@ TEST_F(AttenuverterTests, ProcessingWithPositiveGain) {
 
     // Set gain parameter to 0.5 manually
     // Wait, Attenuverter "Amount" is between -1.0 and 1.0. Its default might be 0.
-    if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[0])) {
+    if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1])) {
         amt->setValueNotifyingHost(amt->convertTo0to1(0.5f));
     }
 
@@ -51,7 +51,7 @@ TEST_F(AttenuverterTests, ProcessingWithNegativeGain) {
     }
     juce::MidiBuffer midi;
 
-    if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[0])) {
+    if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1])) {
         amt->setValueNotifyingHost(amt->convertTo0to1(-0.5f));
     }
 
@@ -61,7 +61,7 @@ TEST_F(AttenuverterTests, ProcessingWithNegativeGain) {
 }
 
 TEST_F(AttenuverterTests, StateSerialization) {
-    if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[0])) {
+    if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1])) {
         amt->setValueNotifyingHost(amt->convertTo0to1(0.75f));
     }
 
@@ -71,7 +71,7 @@ TEST_F(AttenuverterTests, StateSerialization) {
     auto newModule = std::make_unique<AttenuverterModule>();
     newModule->setStateInformation(state.getData(), (int)state.getSize());
 
-    if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(newModule->getParameters()[0])) {
+    if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(newModule->getParameters()[1])) {
         EXPECT_NEAR(amt->get(), 0.75f, 0.001f);
     } else {
         FAIL() << "Parameter not found or of wrong type.";
