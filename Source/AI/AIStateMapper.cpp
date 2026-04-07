@@ -254,7 +254,7 @@ int AIStateMapper::findChoiceIndex(juce::AudioParameterChoice* p, const juce::St
     return -1;
 }
 
-void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, const juce::DynamicObject* paramsObj) {
+void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, const juce::DynamicObject* paramsObj, bool trusted) {
     for (auto* param : processor->getParameters()) {
         if (auto* p = dynamic_cast<juce::RangedAudioParameter*>(param)) {
             if (paramsObj->hasProperty(p->paramID)) {
@@ -281,7 +281,7 @@ void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, cons
                     // the AI probably sent a normalized value — convert it to the actual range.
                     bool rangeIsUnitInterval = (range.start >= 0.0f && range.end <= 1.0f);
                     bool wasConverted = false;
-                    if (!rangeIsUnitInterval && val >= 0.0f && val <= 1.0f) {
+                    if (!trusted && !rangeIsUnitInterval && val >= 0.0f && val <= 1.0f) {
                         float originalVal = val;
                         val = range.convertFrom0to1(val);
                         wasConverted = true;
@@ -303,7 +303,7 @@ void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, cons
     }
 }
 
-bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting) {
+bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessorGraph& graph, bool clearExisting, bool trusted) {
     if (!json.isObject()) {
         juce::Logger::writeToLog("applyJSONToGraph: JSON is not an object.");
         return false;
@@ -368,7 +368,7 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                                 // Update parameters on existing node
                                 if (nObj->hasProperty("params")) {
                                     if (auto* pObj = nObj->getProperty("params").getDynamicObject()) {
-                                        applyParamsToProcessor(existingNode->getProcessor(), pObj);
+                                        applyParamsToProcessor(existingNode->getProcessor(), pObj, trusted);
                                     }
                                 }
                                 // Update position if provided
@@ -388,7 +388,7 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                         // Set parameters using helper
                         if (nObj->hasProperty("params")) {
                             if (auto* pObj = nObj->getProperty("params").getDynamicObject()) {
-                                applyParamsToProcessor(processor.get(), pObj);
+                                applyParamsToProcessor(processor.get(), pObj, trusted);
                             }
                         }
 
