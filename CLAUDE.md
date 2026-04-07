@@ -62,13 +62,24 @@ cmake --build build --target GravisynthTests
 bash scripts/coverage.sh
 ```
 
+## CI Pipeline
+
+CI runs on Ubuntu (with coverage) + macOS via `.github/workflows/ci.yml`. Key optimizations:
+
+- **ccache**: Compiler cache (`CMAKE_C/CXX_COMPILER_LAUNCHER=ccache`) to avoid recompiling unchanged files. Cache stored at `~/.ccache` (Linux) or `~/Library/Caches/ccache` (macOS), keyed by commit SHA with prefix-match restore for partial hits. Max size 500M.
+- **FetchContent caching**: `build/_deps` (JUCE 8.0.3 + GoogleTest 1.14.0) cached via `actions/cache`, keyed on `CMakeLists.txt` + `Tests/CMakeLists.txt` hashes. Avoids re-downloading ~100MB+ of dependencies each run.
+- **Unity builds**: `CMAKE_UNITY_BUILD=ON` merges source files into fewer translation units, reducing compile overhead. CI-only — not used for local dev. If new source files cause ODR (One Definition Rule) violations (duplicate symbols, leaking macros), the fix is usually to wrap offending code in anonymous namespaces or rename conflicting locals.
+- **coverage.sh --report-only**: In CI, the build and test steps already ran, so coverage.sh skips the redundant configure/build/test and only does profdata merge + report. Without this flag (local dev), it runs the full pipeline.
+
+These optimizations reduced CI from ~12 minutes to ~4 minutes (warm cache).
+
 ## Testing Strategy
 
 - Unit tests for individual modules using GoogleTest
 - Tests cover audio processing behavior, parameter handling, and MIDI interaction
 - Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
 - Integration tests (signal chains, modulation routing)
-- Code coverage enforcement (threshold: 69%, CI pipeline enforces)
+- Code coverage enforcement (threshold: 75%, CI pipeline enforces via `scripts/coverage.sh`)
 - ~200+ tests across 35+ suites (unit, edge case, integration, undo/redo, filter modes, port labels)
 - CI runs on Ubuntu + macOS with linting, building, testing, and coverage
 
