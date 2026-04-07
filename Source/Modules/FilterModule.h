@@ -30,6 +30,9 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/) override {
+        if (isBypassed())
+            return;
+
         smoothedCutoff.setTargetValue(*cutoffParam);
         applyFilterType(filterTypeParam->getIndex());
         float baseRes = *resonanceParam;

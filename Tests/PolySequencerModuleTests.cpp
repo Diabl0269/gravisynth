@@ -25,11 +25,11 @@ TEST_F(PolySequencerModuleTest, GeneratesChordWhenRunning) {
     juce::MidiBuffer midi;
 
     // Run
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
     runParam->setValueNotifyingHost(1.0f);
 
     // Set Minor chord for step 0
-    auto* chord0 = dynamic_cast<juce::AudioParameterChoice*>(seq->getParameters()[11 + 0]); // Step 1 Chord
+    auto* chord0 = dynamic_cast<juce::AudioParameterChoice*>(seq->getParameters()[12 + 0]); // Step 1 Chord
     *chord0 = 2;                                                                            // Minor
 
     seq->processBlock(buffer, midi);
@@ -47,7 +47,7 @@ TEST_F(PolySequencerModuleTest, StepsAdvance) {
     juce::AudioBuffer<float> buffer(2, 512);
     juce::MidiBuffer midi;
 
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
     runParam->setValueNotifyingHost(1.0f);
 
     int initialStep = seq->currentActiveStep;
@@ -66,8 +66,8 @@ TEST_F(PolySequencerModuleTest, StepsAdvance) {
 }
 
 TEST_F(PolySequencerModuleTest, BPMChange) {
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
-    auto* bpmParam = dynamic_cast<juce::AudioParameterFloat*>(seq->getParameters()[1]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
+    auto* bpmParam = dynamic_cast<juce::AudioParameterFloat*>(seq->getParameters()[2]);
     runParam->setValueNotifyingHost(1.0f);
 
     // Fast BPM
@@ -90,11 +90,11 @@ TEST_F(PolySequencerModuleTest, BPMChange) {
 }
 
 TEST_F(PolySequencerModuleTest, AllChordTypes) {
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
     runParam->setValueNotifyingHost(1.0f);
 
     for (int i = 0; i < 8; ++i) {
-        auto* chord0 = dynamic_cast<juce::AudioParameterChoice*>(seq->getParameters()[11]);
+        auto* chord0 = dynamic_cast<juce::AudioParameterChoice*>(seq->getParameters()[12]);
         *chord0 = i;
 
         juce::AudioBuffer<float> buffer(2, 512);

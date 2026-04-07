@@ -20,6 +20,9 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed())
+            return;
+
         juce::ignoreUnused(midiMessages);
 
         juce::Reverb::Parameters params;
