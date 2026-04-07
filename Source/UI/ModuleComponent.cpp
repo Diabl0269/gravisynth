@@ -601,18 +601,69 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
 
         if (e.mods.isPopupMenu()) {
             juce::PopupMenu m;
-            m.addItem(2, dynamic_cast<ModuleBase*>(module)->isBypassed() ? "Enable Module" : "Bypass Module");
-            m.addItem(1, "Delete Module");
 
-            m.showMenuAsync(juce::PopupMenu::Options(), [this](int result) {
-                if (result == 2) {
-                    if (auto* mod = dynamic_cast<ModuleBase*>(module))
+            // Bypass toggle (only for actual modules)
+            if (auto* mod = dynamic_cast<ModuleBase*>(module)) {
+                m.addItem(mod->isBypassed() ? "Enable Module" : "Bypass Module", [this] {
+                    if (auto* mod = dynamic_cast<ModuleBase*>(module)) {
                         mod->setBypassed(!mod->isBypassed());
-                    repaint();
-                } else if (result == 1) {
-                    owner.deleteModule(this);
+                        repaint();
+                    }
+                });
+                m.addSeparator();
+            }
+
+            // "Replace with..." submenu (only for actual modules, not AudioGraphIOProcessor)
+            if (dynamic_cast<ModuleBase*>(module) != nullptr) {
+                juce::PopupMenu replaceMenu;
+                auto currentType = getType(module);
+
+                struct ModEntry {
+                    const char* name;
+                    ModuleType type;
+                };
+                struct Category {
+                    const char* header;
+                    std::vector<ModEntry> modules;
+                };
+                std::vector<Category> categories = {
+                    {"Sources", {{"Oscillator", ModuleType::Oscillator}, {"LFO", ModuleType::LFO}}},
+                    {"Sequencing",
+                     {{"Sequencer", ModuleType::Sequencer},
+                      {"Poly Sequencer", ModuleType::PolySequencer},
+                      {"MIDI Keyboard", ModuleType::MidiKeyboard},
+                      {"Poly MIDI", ModuleType::PolyMidi}}},
+                    {"Envelopes & Control", {{"ADSR", ModuleType::ADSR}, {"VCA", ModuleType::VCA}}},
+                    {"Filters", {{"Filter", ModuleType::Filter}}},
+                    {"Modulation FX",
+                     {{"Chorus", ModuleType::Chorus},
+                      {"Phaser", ModuleType::Phaser},
+                      {"Flanger", ModuleType::Flanger},
+                      {"Distortion", ModuleType::Distortion}}},
+                    {"Time FX", {{"Delay", ModuleType::Delay}, {"Reverb", ModuleType::Reverb}}},
+                    {"Dynamics", {{"Compressor", ModuleType::Compressor}, {"Limiter", ModuleType::Limiter}}},
+                };
+
+                for (auto& cat : categories) {
+                    juce::PopupMenu catMenu;
+                    bool hasItems = false;
+                    for (auto& mod : cat.modules) {
+                        if (mod.type == currentType)
+                            continue;
+                        juce::String typeName(mod.name);
+                        catMenu.addItem(typeName, [this, typeName] { owner.replaceModule(this, typeName); });
+                        hasItems = true;
+                    }
+                    if (hasItems)
+                        replaceMenu.addSubMenu(cat.header, catMenu);
                 }
-            });
+
+                m.addSubMenu("Replace with...", replaceMenu);
+                m.addSeparator();
+            }
+
+            m.addItem("Delete Module", [this] { owner.deleteModule(this); });
+            m.showMenuAsync(juce::PopupMenu::Options());
         } else {
             dragStartPosition = getPosition();
             if (undoManager)
