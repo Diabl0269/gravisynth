@@ -1,7 +1,17 @@
+#include "Modules/ADSRModule.h"
 #include "Modules/AttenuverterModule.h"
+#include "Modules/FX/ChorusModule.h"
+#include "Modules/FX/CompressorModule.h"
 #include "Modules/FX/DelayModule.h"
 #include "Modules/FX/DistortionModule.h"
+#include "Modules/FX/FlangerModule.h"
+#include "Modules/FX/LimiterModule.h"
+#include "Modules/FX/PhaserModule.h"
 #include "Modules/FX/ReverbModule.h"
+#include "Modules/FilterModule.h"
+#include "Modules/LFOModule.h"
+#include "Modules/OscillatorModule.h"
+#include "Modules/VCAModule.h"
 #include <gtest/gtest.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 
@@ -331,4 +341,446 @@ TEST_F(ReverbModuleTest, RoomSizeParameterIsApplied) {
 
     juce::MidiBuffer midi;
     EXPECT_NO_THROW(module->processBlock(buffer, midi));
+}
+
+// ---------------------------------------------------------------------------
+// ChorusModule tests
+// ---------------------------------------------------------------------------
+
+class ChorusModuleTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        module = std::make_unique<ChorusModule>();
+        module->prepareToPlay(44100.0, 512);
+    }
+
+    std::unique_ptr<ChorusModule> module;
+};
+
+TEST_F(ChorusModuleTest, ProcessBlockProducesOutput) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.5f);
+
+    juce::MidiBuffer midi;
+    module->processBlock(buffer, midi);
+
+    bool anyNonZero = false;
+    for (int i = 0; i < 512; ++i) {
+        if (buffer.getSample(0, i) != 0.0f) {
+            anyNonZero = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(anyNonZero);
+}
+
+TEST_F(ChorusModuleTest, CVChannelsAreClearedAfterProcessing) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.5f);
+
+    for (int i = 0; i < 512; ++i) {
+        buffer.setSample(2, i, 0.3f);
+        buffer.setSample(3, i, 0.2f);
+    }
+
+    juce::MidiBuffer midi;
+    module->processBlock(buffer, midi);
+
+    for (int i = 0; i < 512; ++i) {
+        EXPECT_FLOAT_EQ(buffer.getSample(2, i), 0.0f);
+        EXPECT_FLOAT_EQ(buffer.getSample(3, i), 0.0f);
+    }
+}
+
+TEST_F(ChorusModuleTest, PrepareToPlayAndProcessDoNotCrash) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.3f);
+
+    juce::MidiBuffer midi;
+    EXPECT_NO_THROW(module->processBlock(buffer, midi));
+}
+
+TEST_F(ChorusModuleTest, ModuleTypeAndCategoryAreCorrect) {
+    EXPECT_EQ(module->getModuleType(), ModuleType::Chorus);
+    EXPECT_EQ(module->getModulationCategory(), ModulationCategory::FX);
+}
+
+// ---------------------------------------------------------------------------
+// PhaserModule tests
+// ---------------------------------------------------------------------------
+
+class PhaserModuleTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        module = std::make_unique<PhaserModule>();
+        module->prepareToPlay(44100.0, 512);
+    }
+
+    std::unique_ptr<PhaserModule> module;
+};
+
+TEST_F(PhaserModuleTest, ProcessBlockProducesOutput) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.5f);
+
+    juce::MidiBuffer midi;
+    module->processBlock(buffer, midi);
+
+    bool anyNonZero = false;
+    for (int i = 0; i < 512; ++i) {
+        if (buffer.getSample(0, i) != 0.0f) {
+            anyNonZero = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(anyNonZero);
+}
+
+TEST_F(PhaserModuleTest, CVChannelsAreClearedAfterProcessing) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.5f);
+
+    for (int i = 0; i < 512; ++i) {
+        buffer.setSample(2, i, 0.3f);
+        buffer.setSample(3, i, 0.2f);
+    }
+
+    juce::MidiBuffer midi;
+    module->processBlock(buffer, midi);
+
+    for (int i = 0; i < 512; ++i) {
+        EXPECT_FLOAT_EQ(buffer.getSample(2, i), 0.0f);
+        EXPECT_FLOAT_EQ(buffer.getSample(3, i), 0.0f);
+    }
+}
+
+TEST_F(PhaserModuleTest, PrepareToPlayAndProcessDoNotCrash) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.3f);
+
+    juce::MidiBuffer midi;
+    EXPECT_NO_THROW(module->processBlock(buffer, midi));
+}
+
+TEST_F(PhaserModuleTest, ModuleTypeAndCategoryAreCorrect) {
+    EXPECT_EQ(module->getModuleType(), ModuleType::Phaser);
+    EXPECT_EQ(module->getModulationCategory(), ModulationCategory::FX);
+}
+
+// ---------------------------------------------------------------------------
+// CompressorModule tests
+// ---------------------------------------------------------------------------
+
+class CompressorModuleTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        module = std::make_unique<CompressorModule>();
+        module->prepareToPlay(44100.0, 512);
+    }
+
+    std::unique_ptr<CompressorModule> module;
+};
+
+TEST_F(CompressorModuleTest, ProcessBlockProducesOutput) {
+    juce::AudioBuffer<float> buffer(2, 512);
+    buffer.clear();
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.5f);
+
+    juce::MidiBuffer midi;
+    module->processBlock(buffer, midi);
+
+    bool anyNonZero = false;
+    for (int i = 0; i < 512; ++i) {
+        if (buffer.getSample(0, i) != 0.0f) {
+            anyNonZero = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(anyNonZero);
+}
+
+TEST_F(CompressorModuleTest, PrepareToPlayAndProcessDoNotCrash) {
+    juce::AudioBuffer<float> buffer(2, 512);
+    buffer.clear();
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.3f);
+
+    juce::MidiBuffer midi;
+    EXPECT_NO_THROW(module->processBlock(buffer, midi));
+}
+
+TEST_F(CompressorModuleTest, ModuleTypeAndCategoryAreCorrect) {
+    EXPECT_EQ(module->getModuleType(), ModuleType::Compressor);
+    EXPECT_EQ(module->getModulationCategory(), ModulationCategory::FX);
+}
+
+// ---------------------------------------------------------------------------
+// FlangerModule tests
+// ---------------------------------------------------------------------------
+
+class FlangerModuleTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        module = std::make_unique<FlangerModule>();
+        module->prepareToPlay(44100.0, 512);
+    }
+
+    std::unique_ptr<FlangerModule> module;
+};
+
+TEST_F(FlangerModuleTest, ProcessBlockProducesOutput) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.5f);
+
+    juce::MidiBuffer midi;
+    module->processBlock(buffer, midi);
+
+    bool anyNonZero = false;
+    for (int i = 0; i < 512; ++i) {
+        if (buffer.getSample(0, i) != 0.0f) {
+            anyNonZero = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(anyNonZero);
+}
+
+TEST_F(FlangerModuleTest, CVChannelsAreClearedAfterProcessing) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.5f);
+
+    for (int i = 0; i < 512; ++i) {
+        buffer.setSample(2, i, 0.3f);
+        buffer.setSample(3, i, 0.2f);
+    }
+
+    juce::MidiBuffer midi;
+    module->processBlock(buffer, midi);
+
+    for (int i = 0; i < 512; ++i) {
+        EXPECT_FLOAT_EQ(buffer.getSample(2, i), 0.0f);
+        EXPECT_FLOAT_EQ(buffer.getSample(3, i), 0.0f);
+    }
+}
+
+TEST_F(FlangerModuleTest, PrepareToPlayAndProcessDoNotCrash) {
+    juce::AudioBuffer<float> buffer(4, 512);
+    buffer.clear();
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.3f);
+
+    juce::MidiBuffer midi;
+    EXPECT_NO_THROW(module->processBlock(buffer, midi));
+}
+
+TEST_F(FlangerModuleTest, ModuleTypeAndCategoryAreCorrect) {
+    EXPECT_EQ(module->getModuleType(), ModuleType::Flanger);
+    EXPECT_EQ(module->getModulationCategory(), ModulationCategory::FX);
+}
+
+// ---------------------------------------------------------------------------
+// LimiterModule tests
+// ---------------------------------------------------------------------------
+
+class LimiterModuleTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        module = std::make_unique<LimiterModule>();
+        module->prepareToPlay(44100.0, 512);
+    }
+
+    std::unique_ptr<LimiterModule> module;
+};
+
+TEST_F(LimiterModuleTest, ProcessBlockProducesOutput) {
+    juce::AudioBuffer<float> buffer(2, 512);
+    buffer.clear();
+
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.5f);
+
+    juce::MidiBuffer midi;
+    module->processBlock(buffer, midi);
+
+    bool anyNonZero = false;
+    for (int i = 0; i < 512; ++i) {
+        if (buffer.getSample(0, i) != 0.0f) {
+            anyNonZero = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(anyNonZero);
+}
+
+TEST_F(LimiterModuleTest, PrepareToPlayAndProcessDoNotCrash) {
+    juce::AudioBuffer<float> buffer(2, 512);
+    buffer.clear();
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 512; ++i)
+            buffer.setSample(ch, i, 0.3f);
+
+    juce::MidiBuffer midi;
+    EXPECT_NO_THROW(module->processBlock(buffer, midi));
+}
+
+TEST_F(LimiterModuleTest, ModuleTypeAndCategoryAreCorrect) {
+    EXPECT_EQ(module->getModuleType(), ModuleType::Limiter);
+    EXPECT_EQ(module->getModulationCategory(), ModulationCategory::FX);
+}
+
+// ---------------------------------------------------------------------------
+// Port Label tests
+// ---------------------------------------------------------------------------
+
+TEST(PortLabelTests, OscillatorPortLabels) {
+    OscillatorModule osc;
+    EXPECT_EQ(osc.getInputPortLabel(0), "Pitch");
+    EXPECT_EQ(osc.getInputPortLabel(1), "Waveform");
+    EXPECT_EQ(osc.getInputPortLabel(2), "Octave");
+    EXPECT_EQ(osc.getInputPortLabel(3), "Coarse");
+    EXPECT_EQ(osc.getInputPortLabel(4), "Fine");
+    EXPECT_EQ(osc.getInputPortLabel(5), "Level");
+    EXPECT_EQ(osc.getOutputPortLabel(0), "Audio");
+}
+
+TEST(PortLabelTests, FilterPortLabels) {
+    FilterModule filter;
+    EXPECT_EQ(filter.getInputPortLabel(0), "Audio");
+    EXPECT_EQ(filter.getInputPortLabel(1), "Cutoff");
+    EXPECT_EQ(filter.getInputPortLabel(2), "Resonance");
+    EXPECT_EQ(filter.getInputPortLabel(3), "Drive");
+    EXPECT_EQ(filter.getOutputPortLabel(0), "Audio");
+}
+
+TEST(PortLabelTests, VCAPortLabels) {
+    VCAModule vca;
+    EXPECT_EQ(vca.getInputPortLabel(0), "Audio");
+    EXPECT_EQ(vca.getInputPortLabel(1), "CV");
+    EXPECT_EQ(vca.getOutputPortLabel(0), "Audio");
+}
+
+TEST(PortLabelTests, ADSRPortLabels) {
+    ADSRModule adsr;
+    EXPECT_EQ(adsr.getInputPortLabel(0), "Gate");
+    EXPECT_EQ(adsr.getOutputPortLabel(0), "Env");
+}
+
+TEST(PortLabelTests, LFOPortLabels) {
+    LFOModule lfo;
+    EXPECT_EQ(lfo.getOutputPortLabel(0), "CV");
+}
+
+TEST(PortLabelTests, AttenuverterPortLabels) {
+    AttenuverterModule att;
+    EXPECT_EQ(att.getInputPortLabel(0), "Signal");
+    EXPECT_EQ(att.getInputPortLabel(1), "Amount");
+    EXPECT_EQ(att.getOutputPortLabel(0), "Out");
+}
+
+TEST(PortLabelTests, DelayPortLabels) {
+    DelayModule delay;
+    EXPECT_EQ(delay.getInputPortLabel(0), "Left");
+    EXPECT_EQ(delay.getInputPortLabel(1), "Right");
+    EXPECT_EQ(delay.getOutputPortLabel(0), "Left");
+    EXPECT_EQ(delay.getOutputPortLabel(1), "Right");
+}
+
+TEST(PortLabelTests, DistortionPortLabels) {
+    DistortionModule dist;
+    EXPECT_EQ(dist.getInputPortLabel(0), "Left");
+    EXPECT_EQ(dist.getInputPortLabel(1), "Right");
+    EXPECT_EQ(dist.getInputPortLabel(2), "Drive");
+    EXPECT_EQ(dist.getInputPortLabel(3), "Mix");
+    EXPECT_EQ(dist.getOutputPortLabel(0), "Left");
+    EXPECT_EQ(dist.getOutputPortLabel(1), "Right");
+}
+
+TEST(PortLabelTests, ReverbPortLabels) {
+    ReverbModule reverb;
+    EXPECT_EQ(reverb.getInputPortLabel(0), "Left");
+    EXPECT_EQ(reverb.getInputPortLabel(1), "Right");
+    EXPECT_EQ(reverb.getOutputPortLabel(0), "Left");
+    EXPECT_EQ(reverb.getOutputPortLabel(1), "Right");
+}
+
+TEST(PortLabelTests, ChorusPortLabels) {
+    ChorusModule chorus;
+    EXPECT_EQ(chorus.getInputPortLabel(0), "Left");
+    EXPECT_EQ(chorus.getInputPortLabel(1), "Right");
+    EXPECT_EQ(chorus.getInputPortLabel(2), "Rate");
+    EXPECT_EQ(chorus.getInputPortLabel(3), "Depth");
+    EXPECT_EQ(chorus.getOutputPortLabel(0), "Left");
+    EXPECT_EQ(chorus.getOutputPortLabel(1), "Right");
+}
+
+TEST(PortLabelTests, PhaserPortLabels) {
+    PhaserModule phaser;
+    EXPECT_EQ(phaser.getInputPortLabel(0), "Left");
+    EXPECT_EQ(phaser.getInputPortLabel(1), "Right");
+    EXPECT_EQ(phaser.getInputPortLabel(2), "Rate");
+    EXPECT_EQ(phaser.getInputPortLabel(3), "Depth");
+    EXPECT_EQ(phaser.getOutputPortLabel(0), "Left");
+    EXPECT_EQ(phaser.getOutputPortLabel(1), "Right");
+}
+
+TEST(PortLabelTests, CompressorPortLabels) {
+    CompressorModule comp;
+    EXPECT_EQ(comp.getInputPortLabel(0), "Left");
+    EXPECT_EQ(comp.getInputPortLabel(1), "Right");
+    EXPECT_EQ(comp.getOutputPortLabel(0), "Left");
+    EXPECT_EQ(comp.getOutputPortLabel(1), "Right");
+}
+
+TEST(PortLabelTests, FlangerPortLabels) {
+    FlangerModule flanger;
+    EXPECT_EQ(flanger.getInputPortLabel(0), "Left");
+    EXPECT_EQ(flanger.getInputPortLabel(1), "Right");
+    EXPECT_EQ(flanger.getInputPortLabel(2), "Rate");
+    EXPECT_EQ(flanger.getInputPortLabel(3), "Depth");
+    EXPECT_EQ(flanger.getOutputPortLabel(0), "Left");
+    EXPECT_EQ(flanger.getOutputPortLabel(1), "Right");
+}
+
+TEST(PortLabelTests, LimiterPortLabels) {
+    LimiterModule limiter;
+    EXPECT_EQ(limiter.getInputPortLabel(0), "Left");
+    EXPECT_EQ(limiter.getInputPortLabel(1), "Right");
+    EXPECT_EQ(limiter.getOutputPortLabel(0), "Left");
+    EXPECT_EQ(limiter.getOutputPortLabel(1), "Right");
 }

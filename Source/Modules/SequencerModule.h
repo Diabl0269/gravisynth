@@ -41,8 +41,12 @@ public:
                 return text.getIntValue();
             };
 
-            addParameter(stepParams[i] = new juce::AudioParameterInt(name, name, 0, 127, defaults[i], "", stringFromInt,
-                                                                     valueFromText));
+            addParameter(
+                stepParams[i] = new juce::AudioParameterInt(
+                    juce::ParameterID(name, 1), name, 0, 127, defaults[i],
+                    juce::AudioParameterIntAttributes()
+                        .withStringFromValueFunction([stringFromInt](int v, int len) { return stringFromInt(v, len); })
+                        .withValueFromStringFunction(valueFromText)));
         }
 
         // Filter Envelope Amounts

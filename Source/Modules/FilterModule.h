@@ -132,6 +132,11 @@ public:
     std::vector<ModulationTarget> getModulationTargets() const override {
         return {{"Cutoff", 1}, {"Resonance", 2}, {"Drive", 3}};
     }
+    juce::String getInputPortLabel(int i) const override {
+        const juce::String labels[] = {"Audio", "Cutoff", "Resonance", "Drive"};
+        return (i >= 0 && i < 4) ? labels[i] : ModuleBase::getInputPortLabel(i);
+    }
+    juce::String getOutputPortLabel(int) const override { return "Audio"; }
     ModulationCategory getModulationCategory() const override { return ModulationCategory::Filter; }
     ModuleType getModuleType() const override { return ModuleType::Filter; }
 

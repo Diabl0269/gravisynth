@@ -1,6 +1,11 @@
 #include "Modules/ADSRModule.h"
+#include "Modules/FX/ChorusModule.h"
+#include "Modules/FX/CompressorModule.h"
 #include "Modules/FX/DelayModule.h"
 #include "Modules/FX/DistortionModule.h"
+#include "Modules/FX/FlangerModule.h"
+#include "Modules/FX/LimiterModule.h"
+#include "Modules/FX/PhaserModule.h"
 #include "Modules/FX/ReverbModule.h"
 #include "Modules/FilterModule.h"
 #include "Modules/LFOModule.h"
@@ -264,4 +269,54 @@ TEST(EdgeCaseTests, OscillatorAllWaveforms) {
         float rms = buffer.getRMSLevel(0, 0, buffer.getNumSamples());
         EXPECT_GT(rms, 0.0f) << "Waveform " << wf << " should produce non-zero output";
     }
+}
+
+TEST(EdgeCaseTests, ChorusZeroLengthBuffer) {
+    ChorusModule chorus;
+    chorus.prepareToPlay(44100.0, 512);
+
+    juce::AudioBuffer<float> buffer(4, 0);
+    juce::MidiBuffer midi;
+
+    EXPECT_NO_THROW(chorus.processBlock(buffer, midi));
+}
+
+TEST(EdgeCaseTests, PhaserZeroLengthBuffer) {
+    PhaserModule phaser;
+    phaser.prepareToPlay(44100.0, 512);
+
+    juce::AudioBuffer<float> buffer(4, 0);
+    juce::MidiBuffer midi;
+
+    EXPECT_NO_THROW(phaser.processBlock(buffer, midi));
+}
+
+TEST(EdgeCaseTests, CompressorZeroLengthBuffer) {
+    CompressorModule compressor;
+    compressor.prepareToPlay(44100.0, 512);
+
+    juce::AudioBuffer<float> buffer(2, 0);
+    juce::MidiBuffer midi;
+
+    EXPECT_NO_THROW(compressor.processBlock(buffer, midi));
+}
+
+TEST(EdgeCaseTests, FlangerZeroLengthBuffer) {
+    FlangerModule flanger;
+    flanger.prepareToPlay(44100.0, 512);
+
+    juce::AudioBuffer<float> buffer(4, 0);
+    juce::MidiBuffer midi;
+
+    EXPECT_NO_THROW(flanger.processBlock(buffer, midi));
+}
+
+TEST(EdgeCaseTests, LimiterZeroLengthBuffer) {
+    LimiterModule limiter;
+    limiter.prepareToPlay(44100.0, 512);
+
+    juce::AudioBuffer<float> buffer(2, 0);
+    juce::MidiBuffer midi;
+
+    EXPECT_NO_THROW(limiter.processBlock(buffer, midi));
 }

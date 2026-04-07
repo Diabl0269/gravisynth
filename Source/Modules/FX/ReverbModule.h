@@ -37,6 +37,9 @@ public:
         }
     }
 
+    juce::String getInputPortLabel(int i) const override { return i == 0 ? "Left" : "Right"; }
+    juce::String getOutputPortLabel(int i) const override { return i == 0 ? "Left" : "Right"; }
+
     std::vector<ModulationTarget> getModulationTargets() const override {
         return {{"Size", 2}, {"Damping", 3}, {"Wet", 4}, {"Dry", 5}, {"Width", 6}};
     }
