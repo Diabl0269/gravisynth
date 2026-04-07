@@ -33,6 +33,7 @@ public:
     void endConnectionDrag(juce::Point<int> screenPos);
     void disconnectPort(ModuleComponent* module, int portIndex, bool isInput, bool isMidi);
     void deleteModule(ModuleComponent* module);
+    void replaceModule(ModuleComponent* module, const juce::String& newModuleType);
     void updateModulePosition(ModuleComponent* module);
 
     // Preset Management
