@@ -265,38 +265,10 @@ void ModuleComponent::paint(juce::Graphics& g) {
         g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
 
         juce::String label = "In " + juce::String(i);
-        // Custom labels for Oscillator
-        if (getType(module) == ModuleType::Oscillator) {
-            if (i == 0)
-                label = "Pitch CV";
-            else if (i == 1)
-                label = "Wave CV";
-            else if (i == 2)
-                label = "Oct CV";
-            else if (i == 3)
-                label = "Crs CV";
-            else if (i == 4)
-                label = "Fine CV";
-            else if (i == 5)
-                label = "Level CV";
-        }
-        // Custom labels for Filter
-        if (getType(module) == ModuleType::Filter) {
-            if (i == 0)
-                label = "Audio";
-            if (i == 1)
-                label = "Cutoff CV";
-            if (i == 2)
-                label = "Res CV";
-            if (i == 3)
-                label = "Drive CV";
-        }
-        if (getType(module) == ModuleType::VCA) {
-            if (i == 0)
-                label = "Audio";
-            if (i == 1)
-                label = "CV";
-        }
+        if (auto* mb = dynamic_cast<ModuleBase*>(module))
+            label = mb->getInputPortLabel(i);
+        else if (dynamic_cast<juce::AudioProcessorGraph::AudioGraphIOProcessor*>(module))
+            label = (i == 0) ? "Left" : (i == 1) ? "Right" : "In " + juce::String(i);
 
         g.drawText(label, p.x + 10, p.y - 10, 60, 20, juce::Justification::left, false);
     }
@@ -312,9 +284,10 @@ void ModuleComponent::paint(juce::Graphics& g) {
         g.fillEllipse(p.x - 5, p.y - 5, 10, 10);
 
         juce::String label = "Out " + juce::String(i);
-        if (getType(module) == ModuleType::LFO) {
-            label = "CV Out " + juce::String(i + 1);
-        }
+        if (auto* mb = dynamic_cast<ModuleBase*>(module))
+            label = mb->getOutputPortLabel(i);
+        else if (dynamic_cast<juce::AudioProcessorGraph::AudioGraphIOProcessor*>(module))
+            label = (i == 0) ? "Left" : (i == 1) ? "Right" : "Out " + juce::String(i);
         g.drawText(label, p.x - 70, p.y - 10, 60, 20, juce::Justification::right, false);
     }
 }

@@ -50,6 +50,11 @@ add_library(GravisynthCore STATIC
     Source/Modules/FX/DelayModule.h
     Source/Modules/FX/DistortionModule.h
     Source/Modules/FX/ReverbModule.h
+    Source/Modules/FX/ChorusModule.h
+    Source/Modules/FX/PhaserModule.h
+    Source/Modules/FX/CompressorModule.h
+    Source/Modules/FX/FlangerModule.h
+    Source/Modules/FX/LimiterModule.h
     # AI
     Source/AI/AIProvider.h
     Source/AI/OllamaProvider.h

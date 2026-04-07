@@ -1,0 +1,1145 @@
+{
+  "tests": 193,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "GravisynthTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "BasicAssertion",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/TestMain.cpp",
+          "line": 3
+        }
+      ]
+    },
+    {
+      "name": "OscillatorTest",
+      "tests": 8,
+      "testsuite": [
+        {
+          "name": "ProducesSilenceWhenNoChannels",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OscillatorTests.cpp",
+          "line": 17
+        },
+        {
+          "name": "GeneratesSignal",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OscillatorTests.cpp",
+          "line": 23
+        },
+        {
+          "name": "RespondsToMidiNote",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OscillatorTests.cpp",
+          "line": 31
+        },
+        {
+          "name": "TuningParametersExist",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OscillatorTests.cpp",
+          "line": 49
+        },
+        {
+          "name": "VerifiesTuningLogic",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OscillatorTests.cpp",
+          "line": 68
+        },
+        {
+          "name": "ChangesWaveform",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OscillatorTests.cpp",
+          "line": 113
+        },
+        {
+          "name": "ModulatesWaveform",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OscillatorTests.cpp",
+          "line": 135
+        },
+        {
+          "name": "ModulatesTuning",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OscillatorTests.cpp",
+          "line": 149
+        }
+      ]
+    },
+    {
+      "name": "FilterTest",
+      "tests": 8,
+      "testsuite": [
+        {
+          "name": "InitState",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FilterTests.cpp",
+          "line": 23
+        },
+        {
+          "name": "LowPassAttenuatesHighFreq",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FilterTests.cpp",
+          "line": 28
+        },
+        {
+          "name": "ModulationScalesCorrectly",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FilterTests.cpp",
+          "line": 61
+        },
+        {
+          "name": "MultiParamModulation",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FilterTests.cpp",
+          "line": 81
+        },
+        {
+          "name": "FilterTypeParameterExists",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FilterTests.cpp",
+          "line": 94
+        },
+        {
+          "name": "AllFilterTypesProcessWithoutCrash",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FilterTests.cpp",
+          "line": 100
+        },
+        {
+          "name": "HPFAttenuatesLowFreq",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FilterTests.cpp",
+          "line": 119
+        },
+        {
+          "name": "NotchProcessesWithoutCrash",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FilterTests.cpp",
+          "line": 142
+        }
+      ]
+    },
+    {
+      "name": "ADSRTest",
+      "tests": 8,
+      "testsuite": [
+        {
+          "name": "StartsIdle",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ADSRTests.cpp",
+          "line": 17
+        },
+        {
+          "name": "AttackPhase",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ADSRTests.cpp",
+          "line": 39
+        },
+        {
+          "name": "SustainLevel",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ADSRTests.cpp",
+          "line": 57
+        },
+        {
+          "name": "ReleasePhase",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ADSRTests.cpp",
+          "line": 90
+        },
+        {
+          "name": "RetriggerDuringRelease",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ADSRTests.cpp",
+          "line": 150
+        },
+        {
+          "name": "ZeroSustain",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ADSRTests.cpp",
+          "line": 226
+        },
+        {
+          "name": "FastAttack",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ADSRTests.cpp",
+          "line": 257
+        },
+        {
+          "name": "ParameterChangesDuringPlayback",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ADSRTests.cpp",
+          "line": 290
+        }
+      ]
+    },
+    {
+      "name": "ModuleBaseTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "BoilerplateGetters",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModuleBaseTests.cpp",
+          "line": 22
+        },
+        {
+          "name": "VisualBufferManagement",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModuleBaseTests.cpp",
+          "line": 31
+        },
+        {
+          "name": "StateSerialization",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModuleBaseTests.cpp",
+          "line": 43
+        },
+        {
+          "name": "ProgramMethods",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModuleBaseTests.cpp",
+          "line": 83
+        }
+      ]
+    },
+    {
+      "name": "VisualBufferTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "InitialState",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/VisualBufferTests.cpp",
+          "line": 4
+        },
+        {
+          "name": "PushAndRead",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/VisualBufferTests.cpp",
+          "line": 9
+        },
+        {
+          "name": "Overflow",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/VisualBufferTests.cpp",
+          "line": 62
+        }
+      ]
+    },
+    {
+      "name": "AntiClickTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "ADSRMinimumRelease",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AntiClickTests.cpp",
+          "line": 17
+        },
+        {
+          "name": "OscillatorNoPhaseReset",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AntiClickTests.cpp",
+          "line": 55
+        },
+        {
+          "name": "OscillatorFrequencySmoothing",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AntiClickTests.cpp",
+          "line": 78
+        },
+        {
+          "name": "ADSRMinimumAttack",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AntiClickTests.cpp",
+          "line": 97
+        }
+      ]
+    },
+    {
+      "name": "MidiKeyboardModuleTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "NameIsCorrect",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/MidiKeyboardModuleTests.cpp",
+          "line": 14
+        },
+        {
+          "name": "KeyboardStateInitiallyEmpty",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/MidiKeyboardModuleTests.cpp",
+          "line": 16
+        },
+        {
+          "name": "ProducesMidiWhenNoteOn",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/MidiKeyboardModuleTests.cpp",
+          "line": 23
+        },
+        {
+          "name": "OctaveShiftWorks",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/MidiKeyboardModuleTests.cpp",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "name": "VCAModuleTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "GainApplication",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/VCAModuleTests.cpp",
+          "line": 15
+        },
+        {
+          "name": "CVControl",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/VCAModuleTests.cpp",
+          "line": 39
+        },
+        {
+          "name": "MonoToStereoCopy",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/VCAModuleTests.cpp",
+          "line": 64
+        }
+      ]
+    },
+    {
+      "name": "LFOModuleTest",
+      "tests": 11,
+      "testsuite": [
+        {
+          "name": "WaveformOutput",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 14
+        },
+        {
+          "name": "WaveformOutputTriangle",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 36
+        },
+        {
+          "name": "WaveformOutputSaw",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 58
+        },
+        {
+          "name": "WaveformOutputSquare",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 79
+        },
+        {
+          "name": "HzModeUsesRateHzParam",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 112
+        },
+        {
+          "name": "SyncModeAllSubdivisions",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 131
+        },
+        {
+          "name": "GlideParameter",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 145
+        },
+        {
+          "name": "LevelParameter",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 180
+        },
+        {
+          "name": "BipolarUnipolar",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 226
+        },
+        {
+          "name": "Retrigger",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 253
+        },
+        {
+          "name": "SampleAndHold",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/LFOModuleTests.cpp",
+          "line": 271
+        }
+      ]
+    },
+    {
+      "name": "SequencerModuleTest",
+      "tests": 7,
+      "testsuite": [
+        {
+          "name": "StoppedByDefault",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/SequencerModuleTests.cpp",
+          "line": 14
+        },
+        {
+          "name": "GeneratesMidiWhenRunning",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/SequencerModuleTests.cpp",
+          "line": 22
+        },
+        {
+          "name": "StepsAdvance",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/SequencerModuleTests.cpp",
+          "line": 45
+        },
+        {
+          "name": "SendsFilterEnvCC",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/SequencerModuleTests.cpp",
+          "line": 79
+        },
+        {
+          "name": "RestStepSendsNoteOff",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/SequencerModuleTests.cpp",
+          "line": 99
+        },
+        {
+          "name": "NoteOffFiredAfterGateDuration",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/SequencerModuleTests.cpp",
+          "line": 121
+        },
+        {
+          "name": "BPMChangeAffectsTempo",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/SequencerModuleTests.cpp",
+          "line": 146
+        }
+      ]
+    },
+    {
+      "name": "AIStateMapperTest",
+      "tests": 24,
+      "testsuite": [
+        {
+          "name": "GraphToJSONRoundTrip",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 27
+        },
+        {
+          "name": "ApplyJSONToGraphClearsExisting",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 50
+        },
+        {
+          "name": "InvalidJSONReturnsFalse",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 74
+        },
+        {
+          "name": "ParameterValidationClamping",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 90
+        },
+        {
+          "name": "UnknownModuleTypeLogsErrorAndSkips",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 118
+        },
+        {
+          "name": "ChoiceParameterStringMapping",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 138
+        },
+        {
+          "name": "ChoiceParameterCaseInsensitiveMapping",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 154
+        },
+        {
+          "name": "SchemaGeneration",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 170
+        },
+        {
+          "name": "MergeMode_PrePopulatesIdMapForCrossConnections",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 179
+        },
+        {
+          "name": "MergeMode_RemoveNodes",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 199
+        },
+        {
+          "name": "MergeMode_UpdateExistingNodeParams",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 224
+        },
+        {
+          "name": "FactorySupportsAllModuleTypes",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 255
+        },
+        {
+          "name": "MidiConnectionsSerialized",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 267
+        },
+        {
+          "name": "ParameterValuesAreUnnormalized",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 288
+        },
+        {
+          "name": "RoundTripPreservesParameters",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 314
+        },
+        {
+          "name": "MergeMode_TypeMismatchCreatesNewNode",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 347
+        },
+        {
+          "name": "ValidateJSON_AllowsRemoveOnly",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 364
+        },
+        {
+          "name": "Modulation_GraphToJSON_SerializesModulations",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 378
+        },
+        {
+          "name": "Modulation_ApplyJSON_CreatesModulationChain",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 411
+        },
+        {
+          "name": "Modulation_RemoveModulations",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 460
+        },
+        {
+          "name": "Modulation_MergeMode_AddModulation",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 500
+        },
+        {
+          "name": "Modulation_SchemaIncludesModulationTargets",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 522
+        },
+        {
+          "name": "Modulation_DefaultAmount",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 530
+        },
+        {
+          "name": "Modulation_UnconnectedAttenuverterNotSerialized",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIStateMapperTests.cpp",
+          "line": 559
+        }
+      ]
+    },
+    {
+      "name": "OllamaProviderTest",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "SetAndGetCurrentModel",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OllamaProviderTests.cpp",
+          "line": 162
+        },
+        {
+          "name": "FetchAvailableModelsFailsGracefullyWithMock",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OllamaProviderTests.cpp",
+          "line": 168
+        },
+        {
+          "name": "FetchAvailableModelsSuccessWithMock",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OllamaProviderTests.cpp",
+          "line": 178
+        },
+        {
+          "name": "SendPromptSuccessWithMock",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OllamaProviderTests.cpp",
+          "line": 189
+        },
+        {
+          "name": "SendPromptTimeoutFails",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/OllamaProviderTests.cpp",
+          "line": 203
+        }
+      ]
+    },
+    {
+      "name": "MainComponentTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "AIPanelIsVisibleByDefault",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/MainComponentTests.cpp",
+          "line": 18
+        },
+        {
+          "name": "ToggleAIPanelHidesAndShows",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/MainComponentTests.cpp",
+          "line": 23
+        },
+        {
+          "name": "ModMatrixIsVisibleByDefault",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/MainComponentTests.cpp",
+          "line": 38
+        },
+        {
+          "name": "ToggleModMatrixHidesAndShows",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/MainComponentTests.cpp",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "name": "GraphEditorTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "InitializationAndResizing",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/GraphEditorTests.cpp",
+          "line": 23
+        },
+        {
+          "name": "ToggleModMatrixVisibility",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/GraphEditorTests.cpp",
+          "line": 32
+        },
+        {
+          "name": "DropModuleCreatesNode",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/GraphEditorTests.cpp",
+          "line": 44
+        },
+        {
+          "name": "DragConnectionCreatesLink",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/GraphEditorTests.cpp",
+          "line": 72
+        }
+      ]
+    },
+    {
+      "name": "ModuleComponentTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "InitializationAndResizing",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModuleComponentTests.cpp",
+          "line": 19
+        },
+        {
+          "name": "ParameterAttachmentLinksUI",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModuleComponentTests.cpp",
+          "line": 28
+        },
+        {
+          "name": "TimerCallbackDoesNotCrash",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModuleComponentTests.cpp",
+          "line": 53
+        }
+      ]
+    },
+    {
+      "name": "AIChatComponentTest",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "InitializationAndResizing",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIChatComponentTests.cpp",
+          "line": 41
+        },
+        {
+          "name": "SendMessageUpdatesUIAndHistory",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIChatComponentTests.cpp",
+          "line": 52
+        }
+      ]
+    },
+    {
+      "name": "PolyMidiModuleTest",
+      "tests": 6,
+      "testsuite": [
+        {
+          "name": "AcceptsMidi",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolyMidiModuleTests.cpp",
+          "line": 14
+        },
+        {
+          "name": "NoteOnAllocatesVoice",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolyMidiModuleTests.cpp",
+          "line": 16
+        },
+        {
+          "name": "NoteOffDeactivatesVoice",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolyMidiModuleTests.cpp",
+          "line": 28
+        },
+        {
+          "name": "VoiceStealingLRU",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolyMidiModuleTests.cpp",
+          "line": 45
+        },
+        {
+          "name": "AllNotesOff",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolyMidiModuleTests.cpp",
+          "line": 68
+        },
+        {
+          "name": "RenderChunk",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolyMidiModuleTests.cpp",
+          "line": 84
+        }
+      ]
+    },
+    {
+      "name": "PolySequencerModuleTest",
+      "tests": 6,
+      "testsuite": [
+        {
+          "name": "ProducesMidi",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolySequencerModuleTests.cpp",
+          "line": 14
+        },
+        {
+          "name": "StoppedByDefault",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolySequencerModuleTests.cpp",
+          "line": 16
+        },
+        {
+          "name": "GeneratesChordWhenRunning",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolySequencerModuleTests.cpp",
+          "line": 23
+        },
+        {
+          "name": "StepsAdvance",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolySequencerModuleTests.cpp",
+          "line": 46
+        },
+        {
+          "name": "BPMChange",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolySequencerModuleTests.cpp",
+          "line": 68
+        },
+        {
+          "name": "AllChordTypes",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PolySequencerModuleTests.cpp",
+          "line": 92
+        }
+      ]
+    },
+    {
+      "name": "AIIntegrationServiceTest",
+      "tests": 9,
+      "testsuite": [
+        {
+          "name": "InitialHistoryHasSystemPrompt",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 46
+        },
+        {
+          "name": "SendMessageAddsToHistory",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 51
+        },
+        {
+          "name": "ClearHistoryPreservesSystemPrompt",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 71
+        },
+        {
+          "name": "ExtractJsonFromResponse",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 79
+        },
+        {
+          "name": "ExtractJsonRaw",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 92
+        },
+        {
+          "name": "GetPatchContext",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 97
+        },
+        {
+          "name": "ModelManagement",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 103
+        },
+        {
+          "name": "ApplyPatch_MergeMode_PreservesExisting",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 111
+        },
+        {
+          "name": "ApplyPatch_DefaultReplace_ClearsGraph",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/AIIntegrationServiceTests.cpp",
+          "line": 123
+        }
+      ]
+    },
+    {
+      "name": "ModMatrixTest",
+      "tests": 13,
+      "testsuite": [
+        {
+          "name": "AddModRoutingWorks",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 17
+        },
+        {
+          "name": "RemoveModRoutingWorks",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 38
+        },
+        {
+          "name": "MetadataPopulation",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 53
+        },
+        {
+          "name": "SidechainModulationWorks",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 64
+        },
+        {
+          "name": "BypassModRoutingWorks",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 98
+        },
+        {
+          "name": "UpdateModuleNamesAssignsUniqueNames",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 122
+        },
+        {
+          "name": "UpdateModuleNamesStripsExistingNumbers",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 160
+        },
+        {
+          "name": "UpdateModuleNamesHandlesAttenuvertersAsModSlots",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 182
+        },
+        {
+          "name": "AddEmptyModRoutingCreatesAttenuverter",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 213
+        },
+        {
+          "name": "GetActiveModRoutingsWithMultipleRoutings",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 229
+        },
+        {
+          "name": "RemoveModRoutingWithNonExistentID",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 278
+        },
+        {
+          "name": "IsModBypassedWithNonExistentID",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 299
+        },
+        {
+          "name": "ToggleModBypassWithNonExistentID",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/ModMatrixTests.cpp",
+          "line": 311
+        }
+      ]
+    },
+    {
+      "name": "AttenuverterModuleTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "ProcessBlockAttenuatesSignal",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 22
+        },
+        {
+          "name": "ProcessBlockBypassClearsSilent",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 46
+        },
+        {
+          "name": "ProcessBlockWithCVAmountModulation",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 68
+        },
+        {
+          "name": "ProcessBlockEmptyBufferDoesNotCrash",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 95
+        }
+      ]
+    },
+    {
+      "name": "DelayModuleTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "ProcessBlockPassesSignalThrough",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 116
+        },
+        {
+          "name": "FeedbackParameterExists",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 135
+        },
+        {
+          "name": "PrepareToPlayAndProcessDoNotCrash",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 141
+        }
+      ]
+    },
+    {
+      "name": "DistortionModuleTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "ProcessBlockProducesOutput",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 166
+        },
+        {
+          "name": "HighDriveClipsSignal",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 195
+        },
+        {
+          "name": "PrepareToPlayAndProcessDoNotCrash",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 235
+        }
+      ]
+    },
+    {
+      "name": "ReverbModuleTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "ProcessBlockProducesOutput",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 260
+        },
+        {
+          "name": "PrepareToPlayAndProcessDoNotCrash",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 283
+        },
+        {
+          "name": "MonoProcessingDoesNotCrash",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 294
+        },
+        {
+          "name": "RoomSizeParameterIsApplied",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/FXModuleTests.cpp",
+          "line": 315
+        }
+      ]
+    },
+    {
+      "name": "EdgeCaseTests",
+      "tests": 16,
+      "testsuite": [
+        {
+          "name": "OscillatorZeroLengthBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 12
+        },
+        {
+          "name": "FilterZeroLengthBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 22
+        },
+        {
+          "name": "VCAZeroLengthBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 32
+        },
+        {
+          "name": "LFOZeroLengthBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 42
+        },
+        {
+          "name": "ADSRZeroLengthBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 52
+        },
+        {
+          "name": "DelayZeroLengthBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 62
+        },
+        {
+          "name": "DistortionZeroLengthBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 72
+        },
+        {
+          "name": "ReverbZeroLengthBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 82
+        },
+        {
+          "name": "OscillatorSampleRateChange",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 93
+        },
+        {
+          "name": "OscillatorExtremeParameters",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 118
+        },
+        {
+          "name": "FilterMaxResonance",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 150
+        },
+        {
+          "name": "OscillatorRapidParameterChanges",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 183
+        },
+        {
+          "name": "OscillatorSingleSampleBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 206
+        },
+        {
+          "name": "FilterSingleSampleBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 216
+        },
+        {
+          "name": "OscillatorLargeBuffer",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 230
+        },
+        {
+          "name": "OscillatorAllWaveforms",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/EdgeCaseTests.cpp",
+          "line": 246
+        }
+      ]
+    },
+    {
+      "name": "IntegrationTest",
+      "tests": 7,
+      "testsuite": [
+        {
+          "name": "OscToFilterToVCA",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/IntegrationTests.cpp",
+          "line": 18
+        },
+        {
+          "name": "LFOModulatesFilterCutoff",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/IntegrationTests.cpp",
+          "line": 36
+        },
+        {
+          "name": "ADSREnvelopeToVCA",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/IntegrationTests.cpp",
+          "line": 55
+        },
+        {
+          "name": "MultipleModulationsOnSameTarget",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/IntegrationTests.cpp",
+          "line": 69
+        },
+        {
+          "name": "PresetLoadRestoresModRoutings",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/IntegrationTests.cpp",
+          "line": 88
+        },
+        {
+          "name": "SaveLoadRoundTripPreservesState",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/IntegrationTests.cpp",
+          "line": 107
+        },
+        {
+          "name": "AllPresetsLoadAndHaveSignalPath",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/IntegrationTests.cpp",
+          "line": 135
+        }
+      ]
+    },
+    {
+      "name": "UndoRedoTest",
+      "tests": 10,
+      "testsuite": [
+        {
+          "name": "UndoAddModule",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 25
+        },
+        {
+          "name": "UndoRemoveModule",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 45
+        },
+        {
+          "name": "UndoAddConnection",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 69
+        },
+        {
+          "name": "UndoParameterChange",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 96
+        },
+        {
+          "name": "UndoPositionChange",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 136
+        },
+        {
+          "name": "MultipleUndoLevels",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 167
+        },
+        {
+          "name": "ClearUndoHistory",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 206
+        },
+        {
+          "name": "UndoRemoveConnection",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 224
+        },
+        {
+          "name": "ParameterChangeCoalescing",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 250
+        },
+        {
+          "name": "ComplexGraphModification",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/UndoRedoTests.cpp",
+          "line": 302
+        }
+      ]
+    },
+    {
+      "name": "PresetManagerTest",
+      "tests": 9,
+      "testsuite": [
+        {
+          "name": "ListPresets",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 4
+        },
+        {
+          "name": "LoadAllPresets",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 11
+        },
+        {
+          "name": "LoadDefaultPreset",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 20
+        },
+        {
+          "name": "InvalidPresetIndexReturnsFailure",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 26
+        },
+        {
+          "name": "PresetCategoriesAreValid",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 32
+        },
+        {
+          "name": "DefaultPresetHasExpectedNodes",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 44
+        },
+        {
+          "name": "AllPresetsHaveAudioOutput",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 51
+        },
+        {
+          "name": "AllPresetsHaveConnections",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 65
+        },
+        {
+          "name": "PresetNamesMatchPresetList",
+          "file": "\/Users\/talef\/Documents\/projects\/prv\/gravisynth\/.claude\/worktrees\/ai-modulation-routing\/Tests\/PresetManagerTests.cpp",
+          "line": 74
+        }
+      ]
+    }
+  ]
+}

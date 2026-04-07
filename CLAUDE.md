@@ -21,6 +21,7 @@ The project follows a modular architecture with:
 - **GraphEditor**: Visual editor for connecting modules with zoom/pan and drag-to-connect
 - **ModuleComponent**: Auto-UI generation from module parameters with type-safe layout switching via `ModuleType` enum
 - **AttenuverterModule**: Intermediary module for modulation routing with bypass and CV amount control
+- **Port Labels**: Virtual `getInputPortLabel()`/`getOutputPortLabel()` on ModuleBase, overridden per-module for descriptive port names in the UI
 - **GravisynthUndoManager**: Snapshot-based undo/redo system wrapping `juce::UndoManager`, captures full graph state on every change
 
 ### Audio Modules
@@ -32,7 +33,7 @@ The project follows a modular architecture with:
 - LFO: Low Frequency Oscillator for modulation
 - Sequencer: Step sequencer with per-step pitch control
 - MIDI Keyboard: Interactive on-screen keyboard for MIDI input
-- FX Modules: Delay, Distortion, Reverb
+- FX Modules: Delay, Distortion, Reverb, Chorus, Phaser, Compressor, Flanger, Limiter
 - Preset System: Factory presets with categorized organization
 
 ## Build System
@@ -68,7 +69,7 @@ bash scripts/coverage.sh
 - Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
 - Integration tests (signal chains, modulation routing)
 - Code coverage enforcement (threshold: 69%, CI pipeline enforces)
-- ~169 tests across 28 suites (unit, edge case, integration, undo/redo, filter modes)
+- ~200+ tests across 35+ suites (unit, edge case, integration, undo/redo, filter modes, port labels)
 - CI runs on Ubuntu + macOS with linting, building, testing, and coverage
 
 ## Key Files to Understand
@@ -84,5 +85,11 @@ bash scripts/coverage.sh
 - `Source/UI/ModuleComponent.cpp`: Auto-UI with type-safe `ModuleType` switching, parameter listener for undo, safe detach lifecycle, FrequencyResponseComponent integration and spectrum toggle
 - `Source/UI/FrequencyResponseComponent.h`: Serum-style frequency response curve with FFT spectrum overlay
 - `Source/UI/GraphEditor.cpp`: Graph editor with attenuverter knob rendering, modulation routing, and undo integration
+- `Source/UI/ModuleLibraryComponent.h`: Categorized sidebar with section headers for module drag-and-drop
 - `Source/UI/ModMatrixComponent.cpp`: Modulation matrix with undo tracking for routing and parameter changes
-- `Tests/`: ~169 tests across 28 suites (unit, edge case, integration, undo/redo, filter modes)
+- `Source/Modules/FX/ChorusModule.h`: Chorus effect using `juce::dsp::Chorus`, CV modulation on Rate/Depth
+- `Source/Modules/FX/PhaserModule.h`: Phaser effect using `juce::dsp::Phaser`, CV modulation on Rate/Depth
+- `Source/Modules/FX/CompressorModule.h`: Compressor with manual makeup gain
+- `Source/Modules/FX/FlangerModule.h`: Flanger via `juce::dsp::Chorus` with low-delay tuning
+- `Source/Modules/FX/LimiterModule.h`: Brickwall limiter with input gain drive
+- `Tests/`: ~200+ tests across 35+ suites (unit, edge case, integration, undo/redo, filter modes, port labels)

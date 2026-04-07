@@ -83,7 +83,6 @@ public:
     void updateRowsFromGraph();
 
 private:
-
     int lastNodeCount = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModMatrixComponent)

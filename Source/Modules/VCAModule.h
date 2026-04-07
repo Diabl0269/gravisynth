@@ -41,6 +41,8 @@ public:
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"CV", 1}}; }
+    juce::String getInputPortLabel(int i) const override { return i == 0 ? "Audio" : "CV"; }
+    juce::String getOutputPortLabel(int) const override { return "Audio"; }
     ModuleType getModuleType() const override { return ModuleType::VCA; }
 
 private:

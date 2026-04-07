@@ -257,7 +257,8 @@ TEST(AIStateMapperTest, FactorySupportsAllModuleTypes) {
     juce::StringArray expectedTypes = {"Audio Input", "Audio Output",   "Midi Input",    "Oscillator", "Filter",
                                        "VCA",         "ADSR",           "Sequencer",     "LFO",        "Distortion",
                                        "Delay",       "Reverb",         "MIDI Keyboard", "Amp Env",    "Filter Env",
-                                       "Poly MIDI",   "Poly Sequencer", "Attenuverter"};
+                                       "Poly MIDI",   "Poly Sequencer", "Attenuverter",  "Chorus",     "Phaser",
+                                       "Compressor",  "Flanger",        "Limiter"};
     for (const auto& type : expectedTypes) {
         auto module = gsynth::AIStateMapper::createModule(type);
         EXPECT_NE(module, nullptr) << "Failed to create module: " << type.toStdString();
@@ -478,13 +479,15 @@ TEST(AIStateMapperTest, Modulation_RemoveModulations) {
     // We need the mapped IDs - find LFO and Filter node IDs
     juce::AudioProcessorGraph::NodeID lfoId, filterId;
     for (auto* node : graph.getNodes()) {
-        if (dynamic_cast<LFOModule*>(node->getProcessor())) lfoId = node->nodeID;
-        if (dynamic_cast<FilterModule*>(node->getProcessor())) filterId = node->nodeID;
+        if (dynamic_cast<LFOModule*>(node->getProcessor()))
+            lfoId = node->nodeID;
+        if (dynamic_cast<FilterModule*>(node->getProcessor()))
+            filterId = node->nodeID;
     }
 
-    juce::String removeJson = "{\"removeModulations\": [{\"source\": " +
-        juce::String((int)lfoId.uid) + ", \"dest\": " +
-        juce::String((int)filterId.uid) + ", \"destPort\": 1}], \"nodes\": [], \"connections\": []}";
+    juce::String removeJson = "{\"removeModulations\": [{\"source\": " + juce::String((int)lfoId.uid) +
+                              ", \"dest\": " + juce::String((int)filterId.uid) +
+                              ", \"destPort\": 1}], \"nodes\": [], \"connections\": []}";
 
     ASSERT_TRUE(gsynth::AIStateMapper::applyJSONToGraph(juce::JSON::parse(removeJson), graph, false));
 
@@ -511,8 +514,9 @@ TEST(AIStateMapperTest, Modulation_MergeMode_AddModulation) {
 
     // Merge: add modulation between existing nodes
     juce::String jsonStr = "{\"nodes\": [], \"connections\": [], \"modulations\": ["
-        "{\"source\": " + juce::String(lfoId) + ", \"dest\": " + juce::String(filterId) +
-        ", \"destPort\": 1, \"amount\": 0.6}]}";
+                           "{\"source\": " +
+                           juce::String(lfoId) + ", \"dest\": " + juce::String(filterId) +
+                           ", \"destPort\": 1, \"amount\": 0.6}]}";
 
     bool success = gsynth::AIStateMapper::applyJSONToGraph(juce::JSON::parse(jsonStr), graph, false);
     ASSERT_TRUE(success);

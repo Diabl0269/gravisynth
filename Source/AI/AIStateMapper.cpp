@@ -1,8 +1,13 @@
 #include "AIStateMapper.h"
 #include "../Modules/ADSRModule.h"
 #include "../Modules/AttenuverterModule.h"
+#include "../Modules/FX/ChorusModule.h"
+#include "../Modules/FX/CompressorModule.h"
 #include "../Modules/FX/DelayModule.h"
 #include "../Modules/FX/DistortionModule.h"
+#include "../Modules/FX/FlangerModule.h"
+#include "../Modules/FX/LimiterModule.h"
+#include "../Modules/FX/PhaserModule.h"
 #include "../Modules/FX/ReverbModule.h"
 #include "../Modules/FilterModule.h"
 #include "../Modules/LFOModule.h"
@@ -44,7 +49,12 @@ static const std::unordered_map<juce::String, ModuleFactoryFunc> moduleFactory =
     {"Poly MIDI", []() { return std::make_unique<PolyMidiModule>(); }},
     {"Poly Sequencer", []() { return std::make_unique<PolySequencerModule>(); }},
     {"Attenuverter", []() { return std::make_unique<AttenuverterModule>(); }},
-    {"Mod Slot", []() { return std::make_unique<AttenuverterModule>(); }}};
+    {"Mod Slot", []() { return std::make_unique<AttenuverterModule>(); }},
+    {"Chorus", []() { return std::make_unique<ChorusModule>(); }},
+    {"Phaser", []() { return std::make_unique<PhaserModule>(); }},
+    {"Compressor", []() { return std::make_unique<CompressorModule>(); }},
+    {"Flanger", []() { return std::make_unique<FlangerModule>(); }},
+    {"Limiter", []() { return std::make_unique<LimiterModule>(); }}};
 
 bool AIStateMapper::validatePatchJSON(const juce::var& json) {
     if (!json.isObject()) {
@@ -136,6 +146,16 @@ static juce::String getFactoryTypeName(juce::AudioProcessor* processor) {
             return "Distortion";
         case ModuleType::Reverb:
             return "Reverb";
+        case ModuleType::Chorus:
+            return "Chorus";
+        case ModuleType::Phaser:
+            return "Phaser";
+        case ModuleType::Compressor:
+            return "Compressor";
+        case ModuleType::Flanger:
+            return "Flanger";
+        case ModuleType::Limiter:
+            return "Limiter";
         }
     }
     return processor->getName();
@@ -303,7 +323,8 @@ juce::String AIStateMapper::getModuleSchema() {
 
     for (const auto& entry : moduleFactory) {
         auto processor = entry.second();
-        if (!processor) continue;
+        if (!processor)
+            continue;
         if (auto* mb = dynamic_cast<ModuleBase*>(processor.get())) {
             auto targets = mb->getModulationTargets();
             for (const auto& t : targets) {
@@ -357,9 +378,12 @@ void AIStateMapper::applyParamsToProcessor(juce::AudioProcessor* processor, cons
                     // Detect likely normalized 0-1 values from AI models that ignore range instructions.
                     // If the actual range extends beyond [0,1] but the value is within [0,1],
                     // the AI probably sent a normalized value — convert it to the actual range.
+                    // Skip this heuristic for integer params — small values like 0 or 1 are
+                    // almost always valid denormalized values, not normalized.
+                    bool isIntParam = (dynamic_cast<juce::AudioParameterInt*>(p) != nullptr);
                     bool rangeIsUnitInterval = (range.start >= 0.0f && range.end <= 1.0f);
                     bool wasConverted = false;
-                    if (!rangeIsUnitInterval && val >= 0.0f && val <= 1.0f) {
+                    if (!isIntParam && !rangeIsUnitInterval && val >= 0.0f && val <= 1.0f) {
                         float originalVal = val;
                         val = range.convertFrom0to1(val);
                         wasConverted = true;
@@ -440,8 +464,11 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                     int destPort = (int)rmModObj->getProperty("destPort");
 
                     // Find and remove the matching attenuverter node
-                    auto mappedSource = idMap.count(sourceId) ? idMap[sourceId] : juce::AudioProcessorGraph::NodeID((juce::uint32)sourceId);
-                    auto mappedDest = idMap.count(destId) ? idMap[destId] : juce::AudioProcessorGraph::NodeID((juce::uint32)destId);
+                    auto mappedSource = idMap.count(sourceId)
+                                            ? idMap[sourceId]
+                                            : juce::AudioProcessorGraph::NodeID((juce::uint32)sourceId);
+                    auto mappedDest =
+                        idMap.count(destId) ? idMap[destId] : juce::AudioProcessorGraph::NodeID((juce::uint32)destId);
 
                     juce::AudioProcessorGraph::NodeID nodeToRemove;
                     bool found = false;
@@ -617,28 +644,35 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
                                 continue;
                             bool srcMatch = false, dstMatch = false;
                             for (const auto& conn : graph.getConnections()) {
-                                if (conn.destination.nodeID == existingNode->nodeID && conn.destination.channelIndex == 0 &&
-                                    conn.source.nodeID == mappedSource && conn.source.channelIndex == sourcePort)
+                                if (conn.destination.nodeID == existingNode->nodeID &&
+                                    conn.destination.channelIndex == 0 && conn.source.nodeID == mappedSource &&
+                                    conn.source.channelIndex == sourcePort)
                                     srcMatch = true;
                                 if (conn.source.nodeID == existingNode->nodeID && conn.source.channelIndex == 0 &&
                                     conn.destination.nodeID == mappedDest && conn.destination.channelIndex == destPort)
                                     dstMatch = true;
                             }
-                            if (srcMatch && dstMatch) { alreadyExists = true; break; }
+                            if (srcMatch && dstMatch) {
+                                alreadyExists = true;
+                                break;
+                            }
                         }
-                        if (alreadyExists) continue;
+                        if (alreadyExists)
+                            continue;
 
                         // Create attenuverter node
                         auto attenNode = graph.addNode(std::make_unique<AttenuverterModule>());
                         if (attenNode) {
                             // Set amount parameter
-                            if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(attenNode->getProcessor()->getParameters()[0])) {
+                            if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(
+                                    attenNode->getProcessor()->getParameters()[0])) {
                                 param->setValueNotifyingHost(param->getNormalisableRange().convertTo0to1(amount));
                             }
 
                             // Set bypass parameter if true
                             if (bypass) {
-                                if (auto* bp = dynamic_cast<juce::AudioParameterBool*>(attenNode->getProcessor()->getParameters()[1])) {
+                                if (auto* bp = dynamic_cast<juce::AudioParameterBool*>(
+                                        attenNode->getProcessor()->getParameters()[1])) {
                                     bp->setValueNotifyingHost(1.0f);
                                 }
                             }
@@ -666,8 +700,9 @@ bool AIStateMapper::applyJSONToGraph(const juce::var& json, juce::AudioProcessor
 
         if (audioOutputNode != nullptr) {
             // Types that produce audio and should auto-connect to output
-            static const std::set<juce::String> audioNodeTypes = {"Oscillator", "Filter", "VCA",     "Distortion",
-                                                                  "Delay",      "Reverb", "Amp Env", "Filter Env"};
+            static const std::set<juce::String> audioNodeTypes = {
+                "Oscillator", "Filter", "VCA",    "Distortion", "Delay",   "Reverb", "Amp Env",
+                "Filter Env", "Chorus", "Phaser", "Compressor", "Flanger", "Limiter"};
 
             for (auto newNodeId : newlyCreatedNodes) {
                 auto* node = graph.getNodeForId(newNodeId);
@@ -756,7 +791,8 @@ juce::var AIStateMapper::getPatchSchema() {
         juce::JSON::parse("{\"type\": \"string\", \"enum\": [\"Audio Input\", \"Audio Output\", \"Midi "
                           "Input\", \"Oscillator\", \"Filter\", \"VCA\", \"ADSR\", \"Sequencer\", \"LFO\", "
                           "\"Distortion\", \"Delay\", \"Reverb\", \"MIDI Keyboard\", \"Amp Env\", \"Filter Env\", "
-                          "\"Poly MIDI\", \"Poly Sequencer\"]}"));
+                          "\"Poly MIDI\", \"Poly Sequencer\", \"Chorus\", \"Phaser\", "
+                          "\"Compressor\", \"Flanger\", \"Limiter\"]}"));
     nodeProperties->setProperty("params", juce::JSON::parse("{\"type\": \"object\"}"));
 
     nodeItems->setProperty("properties", juce::var(nodeProperties.get()));

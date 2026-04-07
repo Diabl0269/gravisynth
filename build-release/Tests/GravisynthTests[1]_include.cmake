@@ -1,0 +1,5 @@
+if(EXISTS "/Users/talef/Documents/projects/prv/gravisynth/.claude/worktrees/ai-modulation-routing/build-release/Tests/GravisynthTests[1]_tests.cmake")
+  include("/Users/talef/Documents/projects/prv/gravisynth/.claude/worktrees/ai-modulation-routing/build-release/Tests/GravisynthTests[1]_tests.cmake")
+else()
+  add_test(GravisynthTests_NOT_BUILT GravisynthTests_NOT_BUILT)
+endif()

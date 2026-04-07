@@ -184,6 +184,7 @@ public:
     bool producesMidi() const override { return false; }
 
     ModulationCategory getModulationCategory() const override { return ModulationCategory::LFO; }
+    juce::String getOutputPortLabel(int) const override { return "CV"; }
     ModuleType getModuleType() const override { return ModuleType::LFO; }
 
 private:
