@@ -14,10 +14,8 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
     appProperties.setStorageParameters(propertiesOptions);
 
     // Load AI provider preference
-    juce::String savedProviderName =
-        appProperties.getUserSettings()->getValue("aiProvider", "Ollama");
-    juce::String savedOllamaHost =
-        appProperties.getUserSettings()->getValue("ollamaHost", "http://localhost:11434");
+    juce::String savedProviderName = appProperties.getUserSettings()->getValue("aiProvider", "Ollama");
+    juce::String savedOllamaHost = appProperties.getUserSettings()->getValue("ollamaHost", "http://localhost:11434");
 
     if (provider) {
         aiService.setProvider(std::move(provider));
