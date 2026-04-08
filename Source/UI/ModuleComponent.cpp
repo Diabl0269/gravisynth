@@ -72,6 +72,7 @@ void ModuleComponent::detachFromProcessor() {
         parent->removeChildComponent(this);
 
     // Destroy attachments (they reference params)
+    bypassAttachment.reset();
     sliderAttachments.clear();
     comboAttachments.clear();
     buttonAttachments.clear();

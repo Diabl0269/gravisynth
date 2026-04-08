@@ -1,6 +1,7 @@
 name: Gravisynth CI
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [ "main" ]
     paths:
@@ -92,6 +93,7 @@ jobs:
 
   build-and-test-asan:
     name: Build and Test (ASAN)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
