@@ -70,7 +70,6 @@ CI runs via `.github/workflows/ci.yml` with 4 parallel jobs: Lint (Ubuntu), Buil
 **Optimizations:**
 - **ccache**: Compiler cache avoids recompiling unchanged files. `CMAKE_C/CXX_COMPILER_LAUNCHER=ccache`, cached at `~/.ccache` (Linux) / `~/Library/Caches/ccache` (macOS), 500M max, keyed by commit SHA with prefix restore.
 - **FetchContent caching**: `build/_deps` (JUCE 8.0.3 + GoogleTest 1.14.0) cached via `actions/cache`, keyed on `CMakeLists.txt` + `Tests/CMakeLists.txt` hashes.
-**What didn't work:** Precompiled headers (PCH) — JUCE compiles its own module `.cpp` files as part of the target and they have guards against being pre-included. On macOS, `.mm` files also need Obj-C++ mode which conflicts with C++ PCH.
 - **JUCE_WEB_BROWSER=0**: Disabled unused WebBrowserComponent, removed WebKit/libsoup deps from Linux builds.
 - **coverage.sh --report-only**: In CI, skips redundant configure/build/test and only does profdata merge + report.
 - **Separate lint job**: Instant formatting feedback (~30s) without waiting for full build.
@@ -79,13 +78,15 @@ CI runs via `.github/workflows/ci.yml` with 4 parallel jobs: Lint (Ubuntu), Buil
 
 **What didn't work:** Unity builds (`CMAKE_UNITY_BUILD`) are incompatible with JUCE — Obj-C++ `.mm` files can't be merged into C++ unity translation units.
 
+**What didn't work:** Precompiled headers (PCH) — JUCE compiles its own module `.cpp` files as part of the target and they have guards against being pre-included. On macOS, `.mm` files also need Obj-C++ mode which conflicts with C++ PCH.
+
 ## Testing Strategy
 
 - Unit tests for individual modules using GoogleTest
 - Tests cover audio processing behavior, parameter handling, and MIDI interaction
 - Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
 - Integration tests (signal chains, modulation routing)
-- Code coverage enforcement (threshold: 75%, CI pipeline enforces via `scripts/coverage.sh`)
+- Code coverage enforcement (threshold: 80%, CI pipeline enforces via `scripts/coverage.sh`)
 - ~200+ tests across 35+ suites (unit, edge case, integration, undo/redo, filter modes, port labels)
 - CI runs on Ubuntu + macOS with linting, building, testing, and coverage
 
