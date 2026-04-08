@@ -58,6 +58,14 @@ cmake --build build --target GravisynthTests
 ./build/Tests/GravisynthTests
 ```
 
+### Build and Test (Release)
+```bash
+cmake -B build-release -DCMAKE_BUILD_TYPE=Release
+cmake --build build-release
+./build-release/Tests/GravisynthTests
+```
+Use this before pushing to catch UB/segfaults that only manifest with optimizations enabled (Debug mode hides use-after-free by zero-initializing memory).
+
 ### Check Coverage
 ```bash
 bash scripts/coverage.sh
