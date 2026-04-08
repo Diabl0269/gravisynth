@@ -25,6 +25,7 @@ The project follows a modular architecture with:
 - **AttenuverterModule**: Intermediary module for modulation routing with bypass and CV amount control
 - **Port Labels**: Virtual `getInputPortLabel()`/`getOutputPortLabel()` on ModuleBase, overridden per-module for descriptive port names in the UI
 - **GravisynthUndoManager**: Snapshot-based undo/redo system wrapping `juce::UndoManager`, captures full graph state on every change
+- **AI Integration** (`Source/AI/`): AIIntegrationService orchestrates LLM-powered features via OllamaProvider; AIStateMapper translates graph state for AI context
 
 ### Audio Modules
 
@@ -37,6 +38,8 @@ The project follows a modular architecture with:
 - MIDI Keyboard: Interactive on-screen keyboard for MIDI input
 - FX Modules: Delay, Distortion, Reverb, Chorus, Phaser, Compressor, Flanger, Limiter
 - Preset System: Factory presets with categorized organization
+- Poly MIDI: Polyphonic MIDI input handling
+- Poly Sequencer: Polyphonic step sequencer
 
 ## Build System
 
@@ -65,6 +68,11 @@ cmake --build build --target GravisynthTests
 bash scripts/coverage.sh
 ```
 
+### Git Hooks
+```bash
+bash scripts/install-hooks.sh    # Install pre-push hook (runs Release build+test before push)
+```
+
 ## CI Pipeline
 
 CI runs via `.github/workflows/ci.yml` with 4 parallel jobs: Lint (Ubuntu), Build+Test+Coverage (Ubuntu, Debug), Build+Test (Ubuntu, Release), Build+Test (macOS). The Release job catches UB/segfaults that only manifest with optimizations enabled — without it, the build-artifacts workflow on main could fail despite PR CI passing.
@@ -89,12 +97,12 @@ CI runs via `.github/workflows/ci.yml` with 4 parallel jobs: Lint (Ubuntu), Buil
 - Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
 - Integration tests (signal chains, modulation routing)
 - Code coverage enforcement (threshold: 80%, CI pipeline enforces via `scripts/coverage.sh`)
-- ~200+ tests across 35+ suites (unit, edge case, integration, undo/redo, filter modes, port labels)
+- ~250 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels)
 - CI runs on Ubuntu + macOS with linting, building, testing, and coverage
 
 ## Key Files to Understand
 
-- `CMakeLists.txt`: Main build configuration (version 0.14.0)
+- `CMakeLists.txt`: Main build configuration (version 0.13.2)
 - `Source/AudioEngine.h/cpp`: Audio processing engine, device management, and modulation matrix
 - `Source/GravisynthUndoManager.h/cpp`: Snapshot-based undo/redo with `SnapshotAction`, safe detach/reattach lifecycle
 - `Source/Modules/ModuleBase.h`: Base class with `ModuleType` enum, `ModulationTarget`, `ModulationCategory`
@@ -115,5 +123,6 @@ CI runs via `.github/workflows/ci.yml` with 4 parallel jobs: Lint (Ubuntu), Buil
 - `Source/Modules/FX/CompressorModule.h`: Compressor with manual makeup gain
 - `Source/Modules/FX/FlangerModule.h`: Flanger via `juce::dsp::Chorus` with low-delay tuning
 - `Source/Modules/FX/LimiterModule.h`: Brickwall limiter with input gain drive
-- `Tests/PluginProcessorTests.cpp`: Plugin processor lifecycle, state roundtrip, MIDI input, mod routing tests
-- `Tests/`: ~240 tests across 36+ suites (unit, edge case, integration, undo/redo, filter modes, port labels, plugin)
+- `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
+- `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
+- `Tests/`: ~250 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels)
