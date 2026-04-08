@@ -6,9 +6,9 @@
 /**
  * @brief Abstract interface for graph management operations.
  *
- * Decouples UI components (GraphEditor, ModMatrixComponent, ModuleComponent)
- * from the concrete AudioEngine class, allowing both the standalone app
- * and the VST3/AU plugin to share the same UI code.
+ * Decouples UI components (GraphEditor, ModMatrixComponent, ModuleComponent) from
+ * the concrete AudioEngine class, allowing both the standalone app and the VST3/AU
+ * plugin to share the same UI code.
  */
 class IGraphManager {
 public:

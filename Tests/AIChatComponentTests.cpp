@@ -32,7 +32,7 @@ protected:
 
     void TearDown() override {
         if (!IsSkipped()) {
-            juce::MessageManager::deleteInstance();
+            // MessageManager kept alive across tests to avoid singleton corruption
             // deleteAll removed: destroys JUCE singletons that break subsequent tests
         }
     }
