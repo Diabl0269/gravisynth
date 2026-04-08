@@ -1,9 +1,9 @@
 name: Gravisynth CI
 
 on:
-  workflow_dispatch:
   pull_request:
     branches: [ "main" ]
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'Source/**'
       - 'Tests/**'
@@ -93,7 +93,7 @@ jobs:
 
   build-and-test-asan:
     name: Build and Test (ASAN)
-    if: github.event_name == 'workflow_dispatch'
+    if: contains(github.event.pull_request.labels.*.name, 'run-asan')
     runs-on: ubuntu-latest
 
     steps:
