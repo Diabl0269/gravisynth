@@ -21,7 +21,6 @@ protected:
     void TearDown() override {
         if (!IsSkipped()) {
             juce::MessageManager::deleteInstance();
-            juce::DeletedAtShutdown::deleteAll();
         }
     }
 };

@@ -33,7 +33,7 @@ protected:
     void TearDown() override {
         if (!IsSkipped()) {
             juce::MessageManager::deleteInstance();
-            juce::DeletedAtShutdown::deleteAll();
+            // deleteAll removed: destroys JUCE singletons that break subsequent tests
         }
     }
 };
