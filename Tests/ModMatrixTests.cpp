@@ -327,3 +327,147 @@ TEST_F(ModMatrixTest, ToggleModBypassWithNonExistentID) {
     routings = engine.getActiveModRoutings();
     EXPECT_FALSE(routings[0].isBypassed);
 }
+
+TEST_F(ModMatrixTest, AttenuverterAmountParameterIsAtIndex1) {
+    auto& graph = engine.getGraph();
+    graph.clear();
+
+    auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+
+    ASSERT_NE(lfoNode, nullptr);
+    ASSERT_NE(filterNode, nullptr);
+
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1);
+
+    auto routings = engine.getActiveModRoutings();
+    ASSERT_EQ(routings.size(), 1);
+
+    auto attNodeID = routings[0].attenuverterNodeID;
+    auto* attNode = graph.getNodeForId(attNodeID);
+    ASSERT_NE(attNode, nullptr);
+
+    auto* attProcessor = attNode->getProcessor();
+    ASSERT_NE(attProcessor, nullptr);
+
+    auto params = attProcessor->getParameters();
+    ASSERT_GE(params.size(), 2);
+
+    // Verify params[1] is AudioParameterFloat
+    auto* amountParam = dynamic_cast<juce::AudioParameterFloat*>(params[1]);
+    ASSERT_NE(amountParam, nullptr);
+
+    // Verify parameter ID contains "amount"
+    juce::String paramID = amountParam->getParameterID();
+    EXPECT_TRUE(paramID.containsIgnoreCase("amount"));
+}
+
+TEST_F(ModMatrixTest, ModAmountDefaultIsOne) {
+    auto& graph = engine.getGraph();
+    graph.clear();
+
+    auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+
+    ASSERT_NE(lfoNode, nullptr);
+    ASSERT_NE(filterNode, nullptr);
+
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1);
+
+    auto routings = engine.getActiveModRoutings();
+    ASSERT_EQ(routings.size(), 1);
+
+    auto attNodeID = routings[0].attenuverterNodeID;
+    auto* attNode = graph.getNodeForId(attNodeID);
+    ASSERT_NE(attNode, nullptr);
+
+    auto* attProcessor = attNode->getProcessor();
+    ASSERT_NE(attProcessor, nullptr);
+
+    auto params = attProcessor->getParameters();
+    ASSERT_GE(params.size(), 2);
+
+    auto* amountParam = dynamic_cast<juce::AudioParameterFloat*>(params[1]);
+    ASSERT_NE(amountParam, nullptr);
+
+    // Default amount should be 1.0
+    EXPECT_FLOAT_EQ(amountParam->get(), 1.0f);
+}
+
+TEST_F(ModMatrixTest, AmountParameterRoundTrip) {
+    auto& graph = engine.getGraph();
+    graph.clear();
+
+    auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+
+    ASSERT_NE(lfoNode, nullptr);
+    ASSERT_NE(filterNode, nullptr);
+
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1);
+
+    auto routings = engine.getActiveModRoutings();
+    ASSERT_EQ(routings.size(), 1);
+
+    auto attNodeID = routings[0].attenuverterNodeID;
+    auto* attNode = graph.getNodeForId(attNodeID);
+    ASSERT_NE(attNode, nullptr);
+
+    auto* attProcessor = attNode->getProcessor();
+    ASSERT_NE(attProcessor, nullptr);
+
+    auto params = attProcessor->getParameters();
+    ASSERT_GE(params.size(), 2);
+
+    auto* amountParam = dynamic_cast<juce::AudioParameterFloat*>(params[1]);
+    ASSERT_NE(amountParam, nullptr);
+
+    // Test various values
+    float testValues[] = {-1.0f, 0.0f, 0.5f, 1.0f};
+
+    for (float testValue : testValues) {
+        amountParam->setValueNotifyingHost(amountParam->convertTo0to1(testValue));
+        EXPECT_NEAR(amountParam->get(), testValue, 0.01f);
+    }
+}
+
+TEST_F(ModMatrixTest, BypassParameterIsAtIndex2) {
+    auto& graph = engine.getGraph();
+    graph.clear();
+
+    auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
+    auto filterNode = graph.addNode(std::make_unique<FilterModule>());
+
+    ASSERT_NE(lfoNode, nullptr);
+    ASSERT_NE(filterNode, nullptr);
+
+    engine.addModRouting(lfoNode->nodeID, 0, filterNode->nodeID, 1);
+
+    auto routings = engine.getActiveModRoutings();
+    ASSERT_EQ(routings.size(), 1);
+
+    auto attNodeID = routings[0].attenuverterNodeID;
+    auto* attNode = graph.getNodeForId(attNodeID);
+    ASSERT_NE(attNode, nullptr);
+
+    auto* attProcessor = attNode->getProcessor();
+    ASSERT_NE(attProcessor, nullptr);
+
+    auto params = attProcessor->getParameters();
+    ASSERT_GE(params.size(), 3);
+
+    // Verify params[2] is AudioParameterBool
+    auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(params[2]);
+    ASSERT_NE(bypassParam, nullptr);
+
+    // Verify initial value is false
+    EXPECT_FALSE(bypassParam->get());
+
+    // Set to true and verify
+    bypassParam->setValueNotifyingHost(1.0f);
+    EXPECT_TRUE(bypassParam->get());
+
+    // Set back to false and verify
+    bypassParam->setValueNotifyingHost(0.0f);
+    EXPECT_FALSE(bypassParam->get());
+}
