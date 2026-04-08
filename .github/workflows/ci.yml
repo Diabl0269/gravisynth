@@ -79,6 +79,7 @@ jobs:
       run: |
         export LLVM_PROFILE_FILE="default.profraw"
         xvfb-run ./build/Tests/GravisynthTests
+        export LLVM_PROFILE_FILE="plugin.profraw"
         xvfb-run ./build/Tests/GravisynthPluginTests
 
     - name: Check Coverage
