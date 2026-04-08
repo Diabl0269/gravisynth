@@ -9,10 +9,7 @@ protected:
         juce::MessageManager::getInstance();
     }
 
-    void TearDown() override {
-        juce::MessageManager::deleteInstance();
-        juce::DeletedAtShutdown::deleteAll();
-    }
+    void TearDown() override {}
 };
 
 TEST_F(MainComponentTest, AIPanelIsVisibleByDefault) {
