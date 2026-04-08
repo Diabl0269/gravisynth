@@ -330,7 +330,8 @@ void AIChatComponent::sendButtonClicked() {
         [this, useStructuredOutput](const juce::String& response, bool success) {
             juce::Component::SafePointer<AIChatComponent> safeThis(this);
             juce::MessageManager::callAsync([safeThis, response, success, useStructuredOutput]() {
-                if (safeThis.getComponent() == nullptr) return;
+                if (safeThis.getComponent() == nullptr)
+                    return;
                 auto* self = safeThis.getComponent();
 
                 if (!self->isWaitingForResponse) {
@@ -482,7 +483,8 @@ void AIChatComponent::refreshModels() {
 void AIChatComponent::appendDebugLog(const juce::String& msg) {
     juce::Component::SafePointer<AIChatComponent> safeThis(this);
     juce::MessageManager::callAsync([safeThis, msg]() {
-        if (safeThis.getComponent() == nullptr) return;
+        if (safeThis.getComponent() == nullptr)
+            return;
         auto* self = safeThis.getComponent();
 
         self->debugConsole.moveCaretToEnd();
