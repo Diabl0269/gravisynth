@@ -23,7 +23,7 @@ jobs:
       run: find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run --Werror
 
   build-and-test:
-    name: Build, Test, and Coverage (Ubuntu)
+    name: Build, Test, and Coverage
     runs-on: ubuntu-latest
 
     steps:
