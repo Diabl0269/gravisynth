@@ -3,7 +3,6 @@
 #include <functional>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 
 /**
  * @class GravisynthUndoManager
@@ -16,7 +15,7 @@ class GravisynthUndoManager {
 public:
     GravisynthUndoManager();
 
-    void setGraphEditor(GraphEditor* ge) { graphEditor = juce::Component::SafePointer<GraphEditor>(ge); }
+    void setGraphEditor(GraphEditor* ge) { graphEditor = ge; }
 
     juce::UndoManager& getUndoManager() { return undoManager; }
 
@@ -78,7 +77,7 @@ public:
     void beginNewTransaction() { undoManager.beginNewTransaction(); }
 
 private:
-    juce::Component::SafePointer<GraphEditor> graphEditor;
+    GraphEditor* graphEditor = nullptr;
     juce::UndoManager undoManager{30000000, 50}; // 30MB limit, 50 min transactions
     juce::var capturedBeforeState;
 
