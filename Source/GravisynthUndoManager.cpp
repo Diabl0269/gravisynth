@@ -192,7 +192,7 @@ void GravisynthUndoManager::recordStructuralChange(juce::AudioProcessorGraph& gr
 
     auto afterState = gsynth::AIStateMapper::graphToJSON(graph);
 
-    auto* ge = graphEditor;
+    auto ge = graphEditor;
     undoManager.perform(new SnapshotAction(
         beforeState, afterState, graph,
         [ge] {
@@ -234,7 +234,7 @@ void GravisynthUndoManager::pushSnapshotFromCapture(juce::AudioProcessorGraph& g
     auto afterState = gsynth::AIStateMapper::graphToJSON(graph);
 
     if (juce::JSON::toString(capturedBeforeState) != juce::JSON::toString(afterState)) {
-        auto* ge = graphEditor;
+        auto ge = graphEditor;
         undoManager.beginNewTransaction();
         undoManager.perform(new SnapshotAction(
             capturedBeforeState, afterState, graph,
