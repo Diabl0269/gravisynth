@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "../AI/AIStateMapper.h"
+#include "../PresetManager.h"
 #include "../Modules/AttenuverterModule.h"
 #include "../Modules/ModuleBase.h"
 #include "PluginEditor.h"
