@@ -29,7 +29,7 @@ GraphEditor::GraphEditor(AudioEngine& engine, GravisynthUndoManager* undoMgr)
     startTimerHz(30);
 }
 
-GraphEditor::~GraphEditor() {}
+GraphEditor::~GraphEditor() { stopTimer(); }
 
 GraphEditor::GraphContentComponent::GraphContentComponent(GraphEditor& ed)
     : editor(ed) {}
