@@ -13,7 +13,9 @@ GravisynthPluginProcessor::GravisynthPluginProcessor()
     ensureMidiInputNode();
 }
 
-GravisynthPluginProcessor::~GravisynthPluginProcessor() { processorGraph.clear(); }
+GravisynthPluginProcessor::~GravisynthPluginProcessor() {
+    processorGraph.clear();
+}
 
 void GravisynthPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     processorGraph.setPlayConfigDetails(0, 2, sampleRate, samplesPerBlock);
