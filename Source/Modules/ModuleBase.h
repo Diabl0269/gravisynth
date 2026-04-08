@@ -31,7 +31,8 @@ enum class ModuleType {
     Phaser,
     Compressor,
     Flanger,
-    Limiter
+    Limiter,
+    VoiceMixer
 };
 
 class ModuleBase : public juce::AudioProcessor {
@@ -99,6 +100,8 @@ public:
     virtual std::vector<ModulationTarget> getModulationTargets() const { return {}; }
     virtual juce::String getInputPortLabel(int channelIndex) const { return "In " + juce::String(channelIndex); }
     virtual juce::String getOutputPortLabel(int channelIndex) const { return "Out " + juce::String(channelIndex); }
+    virtual int getVisibleInputPortCount() const { return getTotalNumInputChannels(); }
+    virtual int getVisibleOutputPortCount() const { return getTotalNumOutputChannels(); }
     virtual ModulationCategory getModulationCategory() const { return ModulationCategory::Other; }
     virtual ModuleType getModuleType() const = 0;
 

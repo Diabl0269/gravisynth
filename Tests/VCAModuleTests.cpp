@@ -72,3 +72,52 @@ TEST_F(VCAModuleTest, MonoToStereoCopy) {
     // Second channel should be copy of first
     EXPECT_EQ(buffer.getSample(0, 0), buffer.getSample(1, 0));
 }
+
+TEST_F(VCAModuleTest, PolyMode_MultiVoice) {
+    auto* polyP = dynamic_cast<juce::AudioParameterBool*>(vca->getParameters()[1]);
+    ASSERT_NE(polyP, nullptr);
+    *polyP = true;
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[0]);
+    gainParam->setValueNotifyingHost(1.0f);
+
+    juce::AudioBuffer<float> polyBuffer(16, 1000);
+    polyBuffer.clear();
+
+    // Audio on ch 0 and 1, CV on ch 8 and 9
+    for (int i = 0; i < 1000; ++i) {
+        polyBuffer.setSample(0, i, 1.0f); // Voice 0 audio
+        polyBuffer.setSample(1, i, 0.5f); // Voice 1 audio
+        polyBuffer.setSample(8, i, 1.0f); // Voice 0 CV
+        polyBuffer.setSample(9, i, 0.5f); // Voice 1 CV
+    }
+
+    juce::MidiBuffer midi;
+    vca->processBlock(polyBuffer, midi);
+
+    // Voice 0: 1.0 * 1.0 * 1.0 = 1.0
+    EXPECT_NEAR(polyBuffer.getSample(0, 999), 1.0f, 0.05f);
+    // Voice 1: 0.5 * 1.0 * 0.5 = 0.25
+    EXPECT_NEAR(polyBuffer.getSample(1, 999), 0.25f, 0.05f);
+}
+
+TEST_F(VCAModuleTest, MonoMode_BackwardsCompatible) {
+    // Default poly=false
+    juce::AudioBuffer<float> buf(2, 1000);
+    buf.clear();
+    for (int i = 0; i < 1000; ++i) {
+        buf.setSample(0, i, 1.0f);
+        buf.setSample(1, i, 0.5f);
+    }
+
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[0]);
+    gainParam->setValueNotifyingHost(1.0f);
+
+    juce::MidiBuffer midi;
+    vca->processBlock(buf, midi);
+
+    // Output = audio * gain * cv = 1.0 * 1.0 * 0.5 = 0.5
+    EXPECT_NEAR(buf.getSample(0, 999), 0.5f, 0.05f);
+    // Channel 1 should be copy of channel 0 (mono-to-stereo)
+    EXPECT_EQ(buf.getSample(0, 999), buf.getSample(1, 999));
+}

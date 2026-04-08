@@ -85,6 +85,7 @@ void ModuleComponent::createControls() {
     if (auto* midiKeyboard = dynamic_cast<MidiKeyboardModule*>(module)) {
         keyboardComponent = std::make_unique<juce::MidiKeyboardComponent>(
             midiKeyboard->getKeyboardState(), juce::MidiKeyboardComponent::horizontalKeyboard);
+        keyboardComponent->setWantsKeyboardFocus(true);
         addAndMakeVisible(keyboardComponent.get());
     } else {
         const auto& params = module->getParameters();
@@ -181,6 +182,8 @@ void ModuleComponent::updateLayout() {
     int contentHeight = 40; // Header
     // Account for port label space on modules with many inputs
     int numInputs = module->getTotalNumInputChannels();
+    if (auto* mb = dynamic_cast<ModuleBase*>(module))
+        numInputs = mb->getVisibleInputPortCount();
     if (numInputs > 2)
         contentHeight = std::max(contentHeight, 30 + numInputs * 20 + 10);
     contentHeight += comboBoxes.size() * 50;
@@ -242,6 +245,10 @@ void ModuleComponent::paint(juce::Graphics& g) {
     // --- PORTS ---
     int numIns = module->getTotalNumInputChannels();
     int numOuts = module->getTotalNumOutputChannels();
+    if (auto* mb = dynamic_cast<ModuleBase*>(module)) {
+        numIns = mb->getVisibleInputPortCount();
+        numOuts = mb->getVisibleOutputPortCount();
+    }
     bool midiOutDrawn = false; // Reintroduced
                                // MIDI Output (Top Right if produces midi)
     if (module->producesMidi()) {
@@ -327,6 +334,10 @@ std::optional<ModuleComponent::Port> ModuleComponent::getPortForPoint(juce::Poin
 
     int numIns = module->getTotalNumInputChannels();
     int numOuts = module->getTotalNumOutputChannels();
+    if (auto* mb = dynamic_cast<ModuleBase*>(module)) {
+        numIns = mb->getVisibleInputPortCount();
+        numOuts = mb->getVisibleOutputPortCount();
+    }
 
     // Check for MIDI Output at fixed top-right position
     if (module->producesMidi()) {
@@ -465,9 +476,11 @@ void ModuleComponent::resized() {
     if (module->acceptsMidi())
         y += 30;
     // Push content below input port labels
-    int numInputs = module->getTotalNumInputChannels();
-    if (numInputs > 2)
-        y = std::max(y, 30 + numInputs * 20 + 10);
+    int numInputs2 = module->getTotalNumInputChannels();
+    if (auto* mb2 = dynamic_cast<ModuleBase*>(module))
+        numInputs2 = mb2->getVisibleInputPortCount();
+    if (numInputs2 > 2)
+        y = std::max(y, 30 + numInputs2 * 20 + 10);
 
     int margin = 70; // Wider margin for labels
     int contentWidth = getWidth() - (margin * 2);

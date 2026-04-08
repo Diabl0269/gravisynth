@@ -5,7 +5,7 @@
 class PolyMidiModule : public ModuleBase {
 public:
     PolyMidiModule()
-        : ModuleBase("Poly MIDI", 0, 2) {
+        : ModuleBase("Poly MIDI", 0, 16) {
         // Port 0: Pitch CV (8 channels)
         // Port 1: Gate CV (8 channels)
         enableVisualBuffer(true);
@@ -31,6 +31,7 @@ public:
         int numSamples = buffer.getNumSamples();
         int currentSample = 0;
 
+        int midiEventCount = 0;
         for (const auto metadata : midiMessages) {
             auto msg = metadata.getMessage();
             int triggerSample = msg.getTimeStamp();
@@ -44,10 +45,13 @@ public:
 
             if (msg.isNoteOn()) {
                 handleNoteOn(msg.getNoteNumber(), msg.getFloatVelocity());
+                ++midiEventCount;
             } else if (msg.isNoteOff()) {
                 handleNoteOff(msg.getNoteNumber());
+                ++midiEventCount;
             } else if (msg.isAllNotesOff()) {
                 allNotesOff();
+                ++midiEventCount;
             }
         }
 

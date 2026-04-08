@@ -4,7 +4,7 @@
 namespace gsynth {
 
 juce::StringArray PresetManager::getPresetNames() {
-    return {"Default", "Simple Lead", "Ambient Pad", "Modulated Bass", "Step Sequence", "Electric Keys"};
+    return {"Default", "Simple Lead", "Ambient Pad", "Modulated Bass", "Step Sequence", "Electric Keys", "Poly Pad"};
 }
 
 juce::Array<PresetInfo> PresetManager::getPresetList() {
@@ -15,6 +15,7 @@ juce::Array<PresetInfo> PresetManager::getPresetList() {
     presets.add({"Modulated Bass", "Bass"});
     presets.add({"Step Sequence", "Sequence"});
     presets.add({"Electric Keys", "Keys"});
+    presets.add({"Poly Pad", "Pad"});
     return presets;
 }
 
@@ -235,6 +236,79 @@ juce::String PresetManager::getPresetJSON(int index) {
     {"src": 11, "srcPort": 0, "dst": 4, "dstPort": 1},
     {"src": 5, "srcPort": 0, "dst": 2, "dstPort": 0},
     {"src": 5, "srcPort": 0, "dst": 2, "dstPort": 1}
+  ]
+})";
+
+    case 6: // Poly Pad - 8-voice polyphonic pad
+        return R"({
+  "nodes": [
+    {"id": 1, "type": "Audio Input", "position": {"x": 10, "y": 10}},
+    {"id": 2, "type": "Audio Output", "position": {"x": 1400, "y": 450}},
+    {"id": 3, "type": "MIDI Keyboard", "position": {"x": 10, "y": 700}},
+    {"id": 4, "type": "Poly MIDI", "position": {"x": 10, "y": 300}},
+    {"id": 5, "type": "Oscillator", "position": {"x": 350, "y": 10}, "params": {"waveform": "Saw", "poly": true, "unison": 2, "detune": 10.0, "level": 0.7}},
+    {"id": 6, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 1200.0, "resonance": 0.15, "poly": true}},
+    {"id": 7, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8, "poly": true}},
+    {"id": 8, "type": "Amp Env", "position": {"x": 350, "y": 450}, "params": {"attack": 0.3, "decay": 0.4, "sustain": 0.7, "release": 1.5, "poly": true}},
+    {"id": 9, "type": "Voice Mixer", "position": {"x": 950, "y": 450}, "params": {"level": 0.5}},
+    {"id": 10, "type": "Reverb", "position": {"x": 1200, "y": 10}, "params": {"roomSize": 0.8, "damping": 0.3, "wet": 0.5, "dry": 0.5, "width": 1.0}}
+  ],
+  "connections": [
+    {"src": 3, "srcPort": -1, "dst": 4, "dstPort": -1},
+    {"src": 3, "srcPort": -1, "dst": 5, "dstPort": -1},
+    {"src": 3, "srcPort": -1, "dst": 8, "dstPort": -1},
+    {"src": 4, "srcPort": 0, "dst": 5, "dstPort": 0},
+    {"src": 4, "srcPort": 1, "dst": 5, "dstPort": 1},
+    {"src": 4, "srcPort": 2, "dst": 5, "dstPort": 2},
+    {"src": 4, "srcPort": 3, "dst": 5, "dstPort": 3},
+    {"src": 4, "srcPort": 4, "dst": 5, "dstPort": 4},
+    {"src": 4, "srcPort": 5, "dst": 5, "dstPort": 5},
+    {"src": 4, "srcPort": 6, "dst": 5, "dstPort": 6},
+    {"src": 4, "srcPort": 7, "dst": 5, "dstPort": 7},
+    {"src": 4, "srcPort": 8, "dst": 8, "dstPort": 0},
+    {"src": 4, "srcPort": 9, "dst": 8, "dstPort": 1},
+    {"src": 4, "srcPort": 10, "dst": 8, "dstPort": 2},
+    {"src": 4, "srcPort": 11, "dst": 8, "dstPort": 3},
+    {"src": 4, "srcPort": 12, "dst": 8, "dstPort": 4},
+    {"src": 4, "srcPort": 13, "dst": 8, "dstPort": 5},
+    {"src": 4, "srcPort": 14, "dst": 8, "dstPort": 6},
+    {"src": 4, "srcPort": 15, "dst": 8, "dstPort": 7},
+    {"src": 5, "srcPort": 0, "dst": 6, "dstPort": 0},
+    {"src": 5, "srcPort": 1, "dst": 6, "dstPort": 1},
+    {"src": 5, "srcPort": 2, "dst": 6, "dstPort": 2},
+    {"src": 5, "srcPort": 3, "dst": 6, "dstPort": 3},
+    {"src": 5, "srcPort": 4, "dst": 6, "dstPort": 4},
+    {"src": 5, "srcPort": 5, "dst": 6, "dstPort": 5},
+    {"src": 5, "srcPort": 6, "dst": 6, "dstPort": 6},
+    {"src": 5, "srcPort": 7, "dst": 6, "dstPort": 7},
+    {"src": 6, "srcPort": 0, "dst": 7, "dstPort": 0},
+    {"src": 6, "srcPort": 1, "dst": 7, "dstPort": 1},
+    {"src": 6, "srcPort": 2, "dst": 7, "dstPort": 2},
+    {"src": 6, "srcPort": 3, "dst": 7, "dstPort": 3},
+    {"src": 6, "srcPort": 4, "dst": 7, "dstPort": 4},
+    {"src": 6, "srcPort": 5, "dst": 7, "dstPort": 5},
+    {"src": 6, "srcPort": 6, "dst": 7, "dstPort": 6},
+    {"src": 6, "srcPort": 7, "dst": 7, "dstPort": 7},
+    {"src": 8, "srcPort": 0, "dst": 7, "dstPort": 8},
+    {"src": 8, "srcPort": 1, "dst": 7, "dstPort": 9},
+    {"src": 8, "srcPort": 2, "dst": 7, "dstPort": 10},
+    {"src": 8, "srcPort": 3, "dst": 7, "dstPort": 11},
+    {"src": 8, "srcPort": 4, "dst": 7, "dstPort": 12},
+    {"src": 8, "srcPort": 5, "dst": 7, "dstPort": 13},
+    {"src": 8, "srcPort": 6, "dst": 7, "dstPort": 14},
+    {"src": 8, "srcPort": 7, "dst": 7, "dstPort": 15},
+    {"src": 7, "srcPort": 0, "dst": 9, "dstPort": 0},
+    {"src": 7, "srcPort": 1, "dst": 9, "dstPort": 1},
+    {"src": 7, "srcPort": 2, "dst": 9, "dstPort": 2},
+    {"src": 7, "srcPort": 3, "dst": 9, "dstPort": 3},
+    {"src": 7, "srcPort": 4, "dst": 9, "dstPort": 4},
+    {"src": 7, "srcPort": 5, "dst": 9, "dstPort": 5},
+    {"src": 7, "srcPort": 6, "dst": 9, "dstPort": 6},
+    {"src": 7, "srcPort": 7, "dst": 9, "dstPort": 7},
+    {"src": 9, "srcPort": 0, "dst": 10, "dstPort": 0},
+    {"src": 9, "srcPort": 1, "dst": 10, "dstPort": 1},
+    {"src": 10, "srcPort": 0, "dst": 2, "dstPort": 0},
+    {"src": 10, "srcPort": 1, "dst": 2, "dstPort": 1}
   ]
 })";
 

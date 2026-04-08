@@ -164,3 +164,51 @@ TEST_F(OscillatorTest, ModulatesTuning) {
     float rms = cvBuffer.getRMSLevel(0, 0, cvBuffer.getNumSamples());
     EXPECT_GT(rms, 0.0f);
 }
+
+TEST_F(OscillatorTest, PolyMode_IndependentVoices) {
+    // Enable poly mode
+    auto* polyP = dynamic_cast<juce::AudioParameterBool*>(oscillator.getParameters()[5]);
+    ASSERT_NE(polyP, nullptr);
+    *polyP = true;
+
+    // Create poly buffer: 14 inputs, but we need at least 14 channels for the graph
+    juce::AudioBuffer<float> polyBuffer(14, 512);
+    polyBuffer.clear();
+
+    // Set different pitch CVs: voice 0 = 440Hz, voice 1 = 880Hz
+    for (int i = 0; i < 512; ++i) {
+        polyBuffer.setSample(0, i, 440.0f); // Voice 0: A4
+        polyBuffer.setSample(1, i, 880.0f); // Voice 1: A5
+    }
+
+    oscillator.processBlock(polyBuffer, midiMessages);
+
+    // Both voices should produce non-zero output
+    EXPECT_GT(polyBuffer.getRMSLevel(0, 0, 512), 0.0f);
+    EXPECT_GT(polyBuffer.getRMSLevel(1, 0, 512), 0.0f);
+}
+
+TEST_F(OscillatorTest, MonoMode_BackwardsCompatible) {
+    // Default: poly should be off
+    auto noteOn = juce::MidiMessage::noteOn(1, 69, (juce::uint8)100);
+    midiMessages.addEvent(noteOn, 0);
+    oscillator.processBlock(buffer, midiMessages);
+    EXPECT_GT(buffer.getRMSLevel(0, 0, 512), 0.0f);
+}
+
+TEST_F(OscillatorTest, Unison_MonoMode) {
+    // Find unison and detune params
+    auto* unisonP = dynamic_cast<juce::AudioParameterInt*>(oscillator.getParameters()[6]);
+    auto* detuneP = dynamic_cast<juce::AudioParameterFloat*>(oscillator.getParameters()[7]);
+    ASSERT_NE(unisonP, nullptr);
+    ASSERT_NE(detuneP, nullptr);
+
+    *unisonP = 4;
+    detuneP->setValueNotifyingHost(detuneP->getNormalisableRange().convertTo0to1(20.0f));
+
+    auto noteOn = juce::MidiMessage::noteOn(1, 69, (juce::uint8)100);
+    midiMessages.addEvent(noteOn, 0);
+    oscillator.processBlock(buffer, midiMessages);
+
+    EXPECT_GT(buffer.getRMSLevel(0, 0, 512), 0.0f);
+}
