@@ -91,7 +91,7 @@ jobs:
           default.profraw
 
   build-and-test-macos:
-    name: Build and Test (macOS Release)
+    name: Build and Test (macOS)
     runs-on: macos-latest
 
     steps:
@@ -139,7 +139,7 @@ jobs:
       run: ./GravisynthTests
 
   build-and-test-windows:
-    name: Build and Test (Windows Release)
+    name: Build and Test (Windows)
     runs-on: windows-latest
 
     steps:

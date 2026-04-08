@@ -56,9 +56,12 @@ target_include_directories(GravisynthTests PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
 )
 
+target_compile_definitions(GravisynthTests PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+
 # Link JUCE specifics if needed
 target_link_libraries(GravisynthTests PRIVATE
     juce::juce_core
+    juce::juce_events
     juce::juce_audio_basics
     juce::juce_dsp
 )
