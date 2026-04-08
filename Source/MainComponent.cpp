@@ -240,7 +240,11 @@ void MainComponent::timerCallback() {
 }
 
 void MainComponent::aiPatchApplied() {
-    juce::MessageManager::callAsync([this]() { graphEditor.updateComponents(); });
+    juce::Component::SafePointer<MainComponent> safeThis(this);
+    juce::MessageManager::callAsync([safeThis]() {
+        if (auto* self = safeThis.getComponent())
+            self->graphEditor.updateComponents();
+    });
 }
 
 //==============================================================================
