@@ -61,6 +61,18 @@ cmake --build build --target GravisynthTests
 ./build/Tests/GravisynthTests
 ```
 
+### Build and Test (Release)
+A pre-push git hook automatically runs Release build + tests before every push. Install it with:
+```bash
+bash scripts/install-hooks.sh
+```
+The first push configures the `build-release` directory; subsequent pushes do fast incremental rebuilds. This catches UB/segfaults that only manifest with optimizations enabled (Debug mode hides use-after-free by zero-initializing memory).
+
+To run manually:
+```bash
+bash scripts/pre-push-release-test.sh
+```
+
 ### Check Coverage
 ```bash
 bash scripts/coverage.sh

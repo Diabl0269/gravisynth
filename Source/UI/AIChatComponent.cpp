@@ -234,6 +234,7 @@ AIChatComponent::AIChatComponent(AIIntegrationService& service)
 }
 
 AIChatComponent::~AIChatComponent() {
+    stopTimer();
 #ifndef NDEBUG
     juce::Logger::setCurrentLogger(nullptr);
 #endif
