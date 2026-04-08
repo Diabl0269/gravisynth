@@ -23,7 +23,7 @@ jobs:
       run: find Source Tests -name "*.h" -o -name "*.cpp" | xargs clang-format --dry-run --Werror
 
   build-and-test:
-    name: Build, Test, and Coverage
+    name: Build, Test, and Coverage (Ubuntu)
     runs-on: ubuntu-latest
 
     steps:
@@ -90,57 +90,8 @@ jobs:
           default.profdata
           default.profraw
 
-  build-and-test-release:
-    name: Build and Test (Release)
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install Dependencies
-      uses: awalsh128/cache-apt-pkgs-action@latest
-      with:
-        packages: cmake ninja-build libasound2-dev libx11-dev libxinerama-dev libxext-dev libxcomposite-dev libxcursor-dev libxrandr-dev libxrender-dev libfontconfig1-dev libfreetype6-dev libglu1-mesa-dev libcurl4-openssl-dev libgtk-3-dev libjack-jackd2-dev freeglut3-dev pkg-config llvm clang ccache xvfb
-        version: 1.0
-
-    - name: Cache FetchContent Dependencies
-      uses: actions/cache@v4
-      with:
-        path: build/_deps
-        key: ${{ runner.os }}-deps-${{ hashFiles('CMakeLists.txt', 'Tests/CMakeLists.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-deps-
-
-    - name: Cache ccache
-      uses: actions/cache@v4
-      with:
-        path: ~/.ccache
-        key: ${{ runner.os }}-release-ccache-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-release-ccache-
-
-    - name: Configure ccache
-      run: |
-        ccache --set-config=max_size=500M
-        ccache --zero-stats
-
-    - name: Configure CMake
-      run: |
-        export CC=clang
-        export CXX=clang++
-        cmake -B build -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-
-    - name: Build
-      run: cmake --build build
-
-    - name: Run Tests
-      run: xvfb-run ./build/Tests/GravisynthTests
-
   build-and-test-macos:
-    name: Build and Test (macOS)
+    name: Build and Test (macOS Release)
     runs-on: macos-latest
 
     steps:
@@ -188,7 +139,7 @@ jobs:
       run: ./GravisynthTests
 
   build-and-test-windows:
-    name: Build and Test (Windows)
+    name: Build and Test (Windows Release)
     runs-on: windows-latest
 
     steps:

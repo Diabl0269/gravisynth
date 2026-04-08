@@ -85,12 +85,11 @@ bash scripts/install-hooks.sh    # Install pre-push hook (runs Release build+tes
 
 ## CI Pipeline
 
-CI runs via `.github/workflows/ci.yml` on PRs only (5 parallel jobs):
+CI runs via `.github/workflows/ci.yml` on PRs only (4 parallel jobs):
 - **Lint** (Ubuntu, ~30s) — clang-format check
 - **Build, Test, and Coverage** (Ubuntu Debug) — coverage threshold 80%
-- **Build and Test** (Ubuntu Release) — catches UB/segfaults only visible with optimizations
-- **Build and Test** (macOS Release) — cross-platform validation
-- **Build and Test** (Windows Release) — cross-platform validation
+- **Build and Test** (macOS Release) — catches Release-mode UB/segfaults + cross-platform
+- **Build and Test** (Windows Release) — catches Release-mode UB/segfaults + cross-platform
 
 Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs): build+package on Ubuntu/macOS/Windows (no tests — CI already ran them), then tag+release.
 
