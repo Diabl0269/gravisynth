@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../IGraphManager.h"
-#include "../PresetManager.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 
 class GravisynthPluginProcessor
