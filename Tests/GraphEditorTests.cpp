@@ -306,9 +306,7 @@ TEST_F(GraphEditorTest, ReplaceModulePreservesMidiConnections) {
     EXPECT_TRUE(midiConnFound);
 }
 
-TEST_F(GraphEditorTest, DISABLED_ReplaceModuleIsUndoable) {
-    // TODO: Intermittent segfault on macOS CI Release during applyJSONToGraph.
-    // Passes locally on macOS Release. Needs AddressSanitizer to diagnose.
+TEST_F(GraphEditorTest, ReplaceModuleIsUndoable) {
     AudioEngine engine;
     GravisynthUndoManager undoMgr;
     GraphEditor editor(engine, &undoMgr);
