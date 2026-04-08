@@ -16,7 +16,7 @@ class MainComponent
     , public juce::Timer
     , private gsynth::AIIntegrationService::Listener {
 public:
-    MainComponent();
+    MainComponent(std::unique_ptr<gsynth::AIProvider> provider = nullptr);
     ~MainComponent() override;
 
     void timerCallback() override;
