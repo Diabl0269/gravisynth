@@ -1,8 +1,8 @@
 #include "PluginProcessor.h"
 #include "../AI/AIStateMapper.h"
-#include "../PresetManager.h"
 #include "../Modules/AttenuverterModule.h"
 #include "../Modules/ModuleBase.h"
+#include "../PresetManager.h"
 #include "PluginEditor.h"
 #include <map>
 
@@ -14,9 +14,7 @@ GravisynthPluginProcessor::GravisynthPluginProcessor()
     ensureMidiInputNode();
 }
 
-GravisynthPluginProcessor::~GravisynthPluginProcessor() {
-    processorGraph.clear();
-}
+GravisynthPluginProcessor::~GravisynthPluginProcessor() { processorGraph.clear(); }
 
 void GravisynthPluginProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     processorGraph.setPlayConfigDetails(0, 2, sampleRate, samplesPerBlock);
