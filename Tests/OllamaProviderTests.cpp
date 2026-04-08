@@ -80,8 +80,15 @@ public:
 
     int read(void* destBuffer, int maxBytesToRead) override {
         juce::ignoreUnused(destBuffer, maxBytesToRead);
-        juce::Thread::sleep(delayInMs); // Simulate a long delay
-        return 0;                       // Return 0 to indicate no data read, or error
+        // Sleep in small increments so the thread can be stopped cleanly
+        int elapsed = 0;
+        while (elapsed < delayInMs) {
+            if (juce::Thread::currentThreadShouldExit())
+                return 0;
+            juce::Thread::sleep(100);
+            elapsed += 100;
+        }
+        return 0;
     }
 
 private:
@@ -130,7 +137,7 @@ protected:
         int timeoutMs = options.getConnectionTimeoutMs();
         int delayMs = timeoutMs + 1000; // Delay for 1 second longer than the timeout
         if (timeoutMs == 0)
-            delayMs = 121000; // Default to 2 min + 1 sec if no timeout set
+            delayMs = 4000; // Default to 4 seconds if no timeout set
 
         return std::make_unique<SlowInputStream>(delayMs);
     }
@@ -212,6 +219,7 @@ TEST_F(OllamaProviderTest, SendPromptTimeoutFails) {
         conversation, [&callback](const juce::String& response, bool success) { callback(response, success); });
 
     auto result = callback.getResult();
+    mockProviderSlowStream.stopThread(5000);
     ASSERT_FALSE(std::get<1>(result)); // Should be unsuccessful
     // The response text on timeout is "Error: Could not connect to Ollama at "
     // So we can check for that string or a part of it.

@@ -1,8 +1,6 @@
 name: Gravisynth CI
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
     paths:
@@ -188,3 +186,20 @@ jobs:
     - name: Run Tests
       working-directory: ./build/Tests
       run: ./GravisynthTests
+
+  build-and-test-windows:
+    name: Build and Test (Windows)
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Run Tests
+      run: ./build/Tests/Release/GravisynthTests.exe
+      shell: bash
