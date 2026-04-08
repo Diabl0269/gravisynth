@@ -10,8 +10,10 @@ protected:
     }
 
     void TearDown() override {
+        // Only delete MessageManager, not all shutdown singletons.
+        // deleteAll() destroys JUCE audio/device singletons that can't be
+        // cleanly recreated, causing segfaults in subsequent test fixtures.
         juce::MessageManager::deleteInstance();
-        juce::DeletedAtShutdown::deleteAll();
     }
 };
 
