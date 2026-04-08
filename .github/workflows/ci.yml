@@ -184,6 +184,14 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Cache FetchContent Dependencies
+      uses: actions/cache@v4
+      with:
+        path: build/_deps
+        key: ${{ runner.os }}-deps-${{ hashFiles('CMakeLists.txt', 'Tests/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
     - name: Configure CMake
       run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
