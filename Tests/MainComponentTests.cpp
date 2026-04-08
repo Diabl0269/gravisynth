@@ -2,15 +2,7 @@
 #include <gtest/gtest.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-class MainComponentTest : public ::testing::Test {
-protected:
-    void SetUp() override {
-        // JUCE requires a MessageManager to be running for UI components
-        juce::MessageManager::getInstance();
-    }
-
-    void TearDown() override {}
-};
+class MainComponentTest : public ::testing::Test {};
 
 TEST_F(MainComponentTest, AIPanelIsVisibleByDefault) {
     MainComponent mainComp;

@@ -6,9 +6,6 @@
 
 class ModuleComponentTest : public ::testing::Test {
 protected:
-    void SetUp() override { juce::MessageManager::getInstance(); }
-
-    void TearDown() override {}
 };
 
 TEST_F(ModuleComponentTest, InitializationAndResizing) {

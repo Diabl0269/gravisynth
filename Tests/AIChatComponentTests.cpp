@@ -28,9 +28,6 @@ private:
 
 class AIChatComponentTest : public ::testing::Test {
 protected:
-    void SetUp() override { juce::MessageManager::getInstance(); }
-
-    void TearDown() override {}
 };
 
 TEST_F(AIChatComponentTest, InitializationAndResizing) {

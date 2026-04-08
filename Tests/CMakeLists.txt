@@ -45,7 +45,7 @@ add_executable(GravisynthTests
 )
 
 target_link_libraries(GravisynthTests PRIVATE
-    GTest::gtest_main
+    GTest::gtest
     GravisynthCore
 )
 

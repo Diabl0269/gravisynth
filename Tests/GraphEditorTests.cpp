@@ -13,12 +13,7 @@
 // Define a dummy component to act as the drag source
 class DummyDragSource : public juce::Component {};
 
-class GraphEditorTest : public ::testing::Test {
-protected:
-    void SetUp() override { juce::MessageManager::getInstance(); }
-
-    void TearDown() override {}
-};
+class GraphEditorTest : public ::testing::Test {};
 
 TEST_F(GraphEditorTest, InitializationAndResizing) {
     AudioEngine engine;
