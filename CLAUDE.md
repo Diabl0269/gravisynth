@@ -85,7 +85,13 @@ bash scripts/install-hooks.sh    # Install pre-push hook (runs Release build+tes
 
 ## CI Pipeline
 
-CI runs via `.github/workflows/ci.yml` with 4 parallel jobs: Lint (Ubuntu), Build+Test+Coverage (Ubuntu, Debug), Build+Test (Ubuntu, Release), Build+Test (macOS). The Release job catches UB/segfaults that only manifest with optimizations enabled — without it, the build-artifacts workflow on main could fail despite PR CI passing.
+CI runs via `.github/workflows/ci.yml` on PRs only (4 parallel jobs):
+- **Lint** (Ubuntu, ~30s) — clang-format check
+- **Build, Test, and Coverage** (Ubuntu Debug) — coverage threshold 80%
+- **Build and Test** (macOS) — Release build, catches UB/segfaults + cross-platform
+- **Build and Test** (Windows) — Release build, catches UB/segfaults + cross-platform
+
+Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs): build+package on Ubuntu/macOS/Windows (no tests — CI already ran them), then tag+release.
 
 **Optimizations:**
 - **ccache**: Compiler cache avoids recompiling unchanged files. `CMAKE_C/CXX_COMPILER_LAUNCHER=ccache`, cached at `~/.ccache` (Linux) / `~/Library/Caches/ccache` (macOS), 500M max, keyed by commit SHA with prefix restore.

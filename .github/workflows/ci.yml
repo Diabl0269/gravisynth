@@ -1,10 +1,9 @@
 name: Gravisynth CI
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'Source/**'
       - 'Tests/**'
@@ -92,8 +91,9 @@ jobs:
           default.profdata
           default.profraw
 
-  build-and-test-release:
-    name: Build and Test (Release)
+  build-and-test-asan:
+    name: Build and Test (ASAN)
+    if: contains(github.event.pull_request.labels.*.name, 'run-asan')
     runs-on: ubuntu-latest
 
     steps:
@@ -102,7 +102,7 @@ jobs:
     - name: Install Dependencies
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: cmake ninja-build libasound2-dev libx11-dev libxinerama-dev libxext-dev libxcomposite-dev libxcursor-dev libxrandr-dev libxrender-dev libfontconfig1-dev libfreetype6-dev libglu1-mesa-dev libcurl4-openssl-dev libgtk-3-dev libjack-jackd2-dev freeglut3-dev pkg-config llvm clang ccache xvfb
+        packages: cmake ninja-build libasound2-dev libx11-dev libxinerama-dev libxext-dev libxcomposite-dev libxcursor-dev libxrandr-dev libxrender-dev libfontconfig1-dev libfreetype6-dev libglu1-mesa-dev libcurl4-openssl-dev libgtk-3-dev libjack-jackd2-dev freeglut3-dev pkg-config clang xvfb
         version: 1.0
 
     - name: Cache FetchContent Dependencies
@@ -113,33 +113,23 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-deps-
 
-    - name: Cache ccache
-      uses: actions/cache@v4
-      with:
-        path: ~/.ccache
-        key: ${{ runner.os }}-release-ccache-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-release-ccache-
-
-    - name: Configure ccache
-      run: |
-        ccache --set-config=max_size=500M
-        ccache --zero-stats
-
     - name: Configure CMake
       run: |
         export CC=clang
         export CXX=clang++
         cmake -B build -G Ninja \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+          -DCMAKE_C_FLAGS="-fsanitize=address -fno-omit-frame-pointer" \
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
 
     - name: Build
-      run: cmake --build build
+      run: cmake --build build --target GravisynthTests
 
     - name: Run Tests
       run: xvfb-run ./build/Tests/GravisynthTests
+      env:
+        ASAN_OPTIONS: detect_leaks=0
 
   build-and-test-macos:
     name: Build and Test (macOS)
@@ -188,3 +178,28 @@ jobs:
     - name: Run Tests
       working-directory: ./build/Tests
       run: ./GravisynthTests
+
+  build-and-test-windows:
+    name: Build and Test (Windows)
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Cache FetchContent Dependencies
+      uses: actions/cache@v4
+      with:
+        path: build/_deps
+        key: ${{ runner.os }}-deps-${{ hashFiles('CMakeLists.txt', 'Tests/CMakeLists.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Run Tests
+      run: ./build/Tests/Release/GravisynthTests.exe
+      shell: bash

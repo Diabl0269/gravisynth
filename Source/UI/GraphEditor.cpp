@@ -283,6 +283,7 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
 void GraphEditor::detachAllModuleComponents() {
     for (auto* comp : content.getModules())
         comp->detachFromProcessor();
+    content.getModules().clear(); // Remove after detach so ~ModuleComponent doesn't double-detach freed params
     modMatrix.detachAllRows();
     modMatrix.clearRows();
 }

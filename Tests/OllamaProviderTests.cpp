@@ -69,23 +69,34 @@ public:
     SlowInputStream(int delayMs)
         : delayInMs(delayMs) {}
 
-    bool failedToOpen() const { return false; }         // Always "opens" successfully
-    juce::int64 getTotalLength() override { return 1; } // A minimal length to make read work
-    juce::int64 getPosition() override { return 0; }
+    bool failedToOpen() const { return false; }
+    juce::int64 getTotalLength() override { return 1; }
+    juce::int64 getPosition() override { return readCalled ? 1 : 0; }
     bool setPosition(juce::int64 newPosition) override {
         juce::ignoreUnused(newPosition);
         return false;
     }
-    bool isExhausted() override { return false; }
+    bool isExhausted() override { return readCalled; }
 
     int read(void* destBuffer, int maxBytesToRead) override {
         juce::ignoreUnused(destBuffer, maxBytesToRead);
-        juce::Thread::sleep(delayInMs); // Simulate a long delay
-        return 0;                       // Return 0 to indicate no data read, or error
+        if (readCalled)
+            return 0;
+        // Sleep in small increments so the thread can be stopped cleanly
+        int elapsed = 0;
+        while (elapsed < delayInMs) {
+            if (juce::Thread::currentThreadShouldExit())
+                return 0;
+            juce::Thread::sleep(100);
+            elapsed += 100;
+        }
+        readCalled = true;
+        return 0;
     }
 
 private:
     int delayInMs;
+    bool readCalled = false;
 };
 
 class OllamaProviderTest : public ::testing::Test {
@@ -124,15 +135,10 @@ protected:
     // A factory that returns a stream that takes a long time to respond
     static std::unique_ptr<juce::InputStream> createSlowStream(const juce::URL& url,
                                                                const juce::URL::InputStreamOptions& options) {
-        juce::ignoreUnused(url);
-        // Extract timeout from options. Use a value slightly larger than the actual timeout
-        // to ensure the timeout mechanism triggers.
-        int timeoutMs = options.getConnectionTimeoutMs();
-        int delayMs = timeoutMs + 1000; // Delay for 1 second longer than the timeout
-        if (timeoutMs == 0)
-            delayMs = 121000; // Default to 2 min + 1 sec if no timeout set
-
-        return std::make_unique<SlowInputStream>(delayMs);
+        juce::ignoreUnused(url, options);
+        // Always use a short delay — the test verifies timeout behavior,
+        // not the actual timeout duration. 4 seconds is enough.
+        return std::make_unique<SlowInputStream>(4000);
     }
 
     gsynth::OllamaProvider mockProviderFailingStreams{"http://mock-host:11434", createFailingStream};
@@ -212,6 +218,7 @@ TEST_F(OllamaProviderTest, SendPromptTimeoutFails) {
         conversation, [&callback](const juce::String& response, bool success) { callback(response, success); });
 
     auto result = callback.getResult();
+    mockProviderSlowStream.stopThread(5000);
     ASSERT_FALSE(std::get<1>(result)); // Should be unsuccessful
     // The response text on timeout is "Error: Could not connect to Ollama at "
     // So we can check for that string or a part of it.
