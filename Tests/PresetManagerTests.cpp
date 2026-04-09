@@ -3,7 +3,7 @@
 
 TEST(PresetManagerTest, ListPresets) {
     auto names = gsynth::PresetManager::getPresetNames();
-    ASSERT_EQ(names.size(), 6);
+    ASSERT_EQ(names.size(), 7);
     EXPECT_EQ(names[0], "Default");
     EXPECT_EQ(names[1], "Simple Lead");
 }

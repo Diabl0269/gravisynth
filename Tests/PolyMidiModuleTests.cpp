@@ -94,3 +94,5 @@ TEST_F(PolyMidiModuleTest, RenderChunk) {
     EXPECT_GT(buffer.getSample(0, 511), 200.0f);
     EXPECT_GT(buffer.getSample(8, 511), 0.9f);
 }
+
+TEST_F(PolyMidiModuleTest, HasSixteenOutputChannels) { EXPECT_EQ(module->getTotalNumOutputChannels(), 16); }

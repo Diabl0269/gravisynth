@@ -18,6 +18,7 @@
 #include "../Modules/PolySequencerModule.h"
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
+#include "../Modules/VoiceMixerModule.h"
 #include <functional> // For std::function
 #include <map>
 #include <set>
@@ -54,7 +55,8 @@ static const std::unordered_map<juce::String, ModuleFactoryFunc> moduleFactory =
     {"Phaser", []() { return std::make_unique<PhaserModule>(); }},
     {"Compressor", []() { return std::make_unique<CompressorModule>(); }},
     {"Flanger", []() { return std::make_unique<FlangerModule>(); }},
-    {"Limiter", []() { return std::make_unique<LimiterModule>(); }}};
+    {"Limiter", []() { return std::make_unique<LimiterModule>(); }},
+    {"Voice Mixer", []() { return std::make_unique<VoiceMixerModule>(); }}};
 
 bool AIStateMapper::validatePatchJSON(const juce::var& json) {
     if (!json.isObject()) {
@@ -137,7 +139,7 @@ static juce::String getFactoryTypeName(juce::AudioProcessor* processor) {
         case ModuleType::MidiKeyboard:
             return "MIDI Keyboard";
         case ModuleType::PolyMidi:
-            return "MIDI Keyboard";
+            return "Poly MIDI";
         case ModuleType::Attenuverter:
             return "Attenuverter";
         case ModuleType::Delay:
@@ -156,6 +158,8 @@ static juce::String getFactoryTypeName(juce::AudioProcessor* processor) {
             return "Flanger";
         case ModuleType::Limiter:
             return "Limiter";
+        case ModuleType::VoiceMixer:
+            return "Voice Mixer";
         }
     }
     return processor->getName();
