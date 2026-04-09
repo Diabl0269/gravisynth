@@ -38,3 +38,4 @@ coverage/
 worktrees/
 build-asan/
 build-release/
+build-test/

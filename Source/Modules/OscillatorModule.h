@@ -6,7 +6,8 @@
 class OscillatorModule : public ModuleBase {
 public:
     OscillatorModule()
-        : ModuleBase("Oscillator", 6, 1) // 1 pitch mod, 5 param mod inputs, 1 output
+        : ModuleBase("Oscillator", 14,
+                     8) // 8 per-voice pitch CV inputs, 6 shared mod CV inputs (8-13), 8 per-voice audio outputs
     {
         addParameter(waveformParam = new juce::AudioParameterChoice("waveform", "Waveform",
                                                                     {"Sine", "Square", "Saw", "Triangle"}, 0));
@@ -14,6 +15,9 @@ public:
         addParameter(coarseParam = new juce::AudioParameterInt(juce::ParameterID("coarse", 1), "Coarse", -12, 12, 0));
         addParameter(fineParam = new juce::AudioParameterFloat("fine", "Fine", -100.0f, 100.0f, 0.0f));
         addParameter(levelParam = new juce::AudioParameterFloat("level", "Level", 0.0f, 1.0f, 1.0f));
+        addParameter(polyParam = new juce::AudioParameterBool("poly", "Poly", false));
+        addParameter(unisonParam = new juce::AudioParameterInt(juce::ParameterID("unison", 1), "Unison", 1, 8, 1));
+        addParameter(detuneParam = new juce::AudioParameterFloat("detune", "Detune", 0.0f, 100.0f, 0.0f));
 
         enableVisualBuffer(true);
     }
@@ -21,13 +25,15 @@ public:
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
         juce::ignoreUnused(samplesPerBlock);
         currentSampleRate = sampleRate;
-        smoothedFreq.reset(sampleRate, 0.005); // 5ms glide
-        // Initialize to default frequency to avoid pitch sweep from 0 on first processBlock
-        float initPitch =
-            lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() + (fineParam->get() / 100.0f);
+
+        float initPitch = voices[0].lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() +
+                          (fineParam->get() / 100.0f);
         float initFreq = 440.0f * std::pow(2.0f, (initPitch - 69.0f) / 12.0f);
-        smoothedFreq.setCurrentAndTargetValue(initFreq);
-        debugLogCounter = 0;
+
+        for (int v = 0; v < MAX_VOICES; ++v) {
+            voices[v].smoothedFreq.reset(sampleRate, 0.005);
+            voices[v].smoothedFreq.setCurrentAndTargetValue(initFreq);
+        }
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
@@ -36,29 +42,76 @@ public:
             return;
         }
 
-        // Process MIDI for Pitch
+        // Always process MIDI for voice 0 (fallback when no pitch CV connected)
         for (const auto metadata : midiMessages) {
             auto msg = metadata.getMessage();
-            if (msg.isNoteOn()) {
-                lastMidiNote = (float)msg.getNoteNumber();
-            }
+            if (msg.isNoteOn())
+                voices[0].lastMidiNote = (float)msg.getNoteNumber();
         }
+
+        if (polyParam->get()) {
+            processPolyMode(buffer, buffer.getNumSamples());
+        } else {
+            processMonoMode(buffer, midiMessages);
+        }
+    }
+
+    float getTargetFrequency() const {
+        float totalPitch = voices[0].lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() +
+                           (fineParam->get() / 100.0f);
+        return 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
+    }
+
+    std::vector<ModulationTarget> getModulationTargets() const override {
+        if (polyParam->get())
+            return {{"Waveform", 8}, {"Octave", 9}, {"Coarse", 10}, {"Fine", 11}, {"Level", 12}};
+        return {{"Pitch", 0}, {"Waveform", 1}, {"Octave", 2}, {"Coarse", 3}, {"Fine", 4}, {"Level", 5}};
+    }
+    juce::String getInputPortLabel(int i) const override {
+        const juce::String labels[] = {"Pitch", "Waveform", "Octave", "Coarse", "Fine", "Level"};
+        return (i >= 0 && i < 6) ? labels[i] : ModuleBase::getInputPortLabel(i);
+    }
+    juce::String getOutputPortLabel(int) const override { return "Audio"; }
+    int getVisibleInputPortCount() const override { return 6; }
+    int getVisibleOutputPortCount() const override { return 1; }
+    ModulationCategory getModulationCategory() const override { return ModulationCategory::Oscillator; }
+    ModuleType getModuleType() const override { return ModuleType::Oscillator; }
+
+private:
+    // -------------------------------------------------------------------------
+    // Constants
+    // -------------------------------------------------------------------------
+    static constexpr int MAX_VOICES = 8;
+    static constexpr int MAX_UNISON = 8;
+    static constexpr int CROSSFADE_SAMPLES = 64;
+
+    // -------------------------------------------------------------------------
+    // Per-voice state
+    // -------------------------------------------------------------------------
+    struct UnisonOsc {
+        float phase = 0.0f;
+    };
+
+    struct VoiceState {
+        UnisonOsc unisonOscs[MAX_UNISON];
+        juce::SmoothedValue<float> smoothedFreq;
+        float lastMidiNote = 69.0f;
+        int previousWaveform = 0;
+        int fadingFromWaveform = 0;
+        int crossfadeSamplesRemaining = 0;
+    };
+
+    VoiceState voices[MAX_VOICES];
+
+    // -------------------------------------------------------------------------
+    // Mono mode processing (voice 0 only, MIDI driven)
+    // -------------------------------------------------------------------------
+    void processMonoMode(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) {
+        juce::ignoreUnused(midiMessages); // MIDI already processed in processBlock
 
         if (buffer.getNumChannels() == 0)
             return;
 
-        // Clear input-only CV channels (1+) to prevent JUCE buffer pool garbage
-        // being misread as CV modulation. Connected sources refill before processBlock.
-        for (int ch = 1; ch < buffer.getNumChannels(); ++ch) {
-            buffer.clear(ch, 0, buffer.getNumSamples());
-        }
-
-        float totalPitch =
-            lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() + (fineParam->get() / 100.0f);
-        float targetFreq = 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
-        smoothedFreq.setTargetValue(targetFreq);
-
-        int baseWaveform = waveformParam->getIndex();
         int numSamples = buffer.getNumSamples();
 
         // Clear input-only CV channels (1+) to prevent JUCE buffer pool garbage
@@ -67,14 +120,20 @@ public:
             buffer.clear(ch, 0, numSamples);
         }
 
+        float totalPitch = voices[0].lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() +
+                           (fineParam->get() / 100.0f);
+        float targetFreq = 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
+        voices[0].smoothedFreq.setTargetValue(targetFreq);
+
+        int baseWaveform = waveformParam->getIndex();
+
         // Channel 0 is shared between CV pitch input and audio output.
-        // Save CV input data before overwriting with output to prevent feedback.
+        // In mono mode, ignore ch0 pitch CV (it may contain Hz values from PolyMidi
+        // which would be misinterpreted as octave-shift CV).
         juce::HeapBlock<float> cvPitchSaved(numSamples);
         juce::HeapBlock<float> cvWaveformSaved(numSamples);
-        if (buffer.getNumChannels() > 0)
-            juce::FloatVectorOperations::copy(cvPitchSaved, buffer.getReadPointer(0), numSamples);
-        else
-            juce::FloatVectorOperations::clear(cvPitchSaved, numSamples);
+        juce::FloatVectorOperations::clear(cvPitchSaved, numSamples);
+        // Mono mode: read CV from original channels 1-5 (backward compatible)
         if (buffer.getNumChannels() > 1)
             juce::FloatVectorOperations::copy(cvWaveformSaved, buffer.getReadPointer(1), numSamples);
         else
@@ -90,24 +149,11 @@ public:
         buffer.clear();
         auto* ch0 = buffer.getWritePointer(0);
 
-#ifndef NDEBUG
-        // Log pitch debug info sparingly: first 5 calls, then every ~10 seconds
-        bool shouldLog = (debugLogCounter < 5) || (debugLogCounter % 5000 == 0);
-        if (shouldLog && numSamples > 0) {
-            float cvSample0 = cvPitchCh ? cvPitchCh[0] : -999.0f;
-            float cvOctSample0 = cvOctaveCh ? cvOctaveCh[0] : -999.0f;
-            juce::Logger::writeToLog(
-                "OSC [" + getName() + "] #" + juce::String(debugLogCounter) +
-                " freq=" + juce::String(smoothedFreq.getTargetValue(), 1) + " midi=" + juce::String(lastMidiNote) +
-                " oct=" + juce::String(octaveParam->get()) + " coarse=" + juce::String(coarseParam->get()) +
-                " fine=" + juce::String(fineParam->get(), 1) + " cv0=" + juce::String(cvSample0, 4) +
-                " cvOct=" + juce::String(cvOctSample0, 4));
-        }
-        ++debugLogCounter;
-#endif
+        int unisonCount = unisonParam->get();
+        float detuneCents = detuneParam->get();
 
         for (int i = 0; i < numSamples; ++i) {
-            float baseFreq = smoothedFreq.getNextValue();
+            float baseFreq = voices[0].smoothedFreq.getNextValue();
 
             float cvPitch = cvPitchCh ? cvPitchCh[i] : 0.0f;
             float freq = baseFreq;
@@ -145,32 +191,46 @@ public:
             }
 
             float dt = static_cast<float>(freq / currentSampleRate);
-            float sample;
 
-            if (waveform != previousWaveform) {
-                fadingFromWaveform = previousWaveform;
-                crossfadeSamplesRemaining = CROSSFADE_SAMPLES;
-                previousWaveform = waveform;
-            }
-
-            if (crossfadeSamplesRemaining > 0) {
-                float alpha = static_cast<float>(crossfadeSamplesRemaining) / CROSSFADE_SAMPLES;
-                float oldSample = generateSample(fadingFromWaveform, phase, dt);
-                float newSample = generateSample(waveform, phase, dt);
-                sample = oldSample * alpha + newSample * (1.0f - alpha);
-                --crossfadeSamplesRemaining;
-            } else {
-                sample = generateSample(waveform, phase, dt);
+            if (waveform != voices[0].previousWaveform) {
+                voices[0].fadingFromWaveform = voices[0].previousWaveform;
+                voices[0].crossfadeSamplesRemaining = CROSSFADE_SAMPLES;
+                voices[0].previousWaveform = waveform;
             }
 
             float level = levelParam->get();
             if (cvLevelCh)
                 level = juce::jlimit(0.0f, 1.0f, level + cvLevelCh[i]);
-            ch0[i] = sample * level;
 
-            phase += dt;
-            if (phase >= 1.0f)
-                phase -= 1.0f;
+            // Unison generation
+            float sample = 0.0f;
+            for (int u = 0; u < unisonCount; ++u) {
+                float detuneOffset = (unisonCount > 1) ? detuneCents * (2.0f * u / (unisonCount - 1) - 1.0f) : 0.0f;
+                float detuneMultiplier = std::pow(2.0f, detuneOffset / 1200.0f);
+                float uniDt = dt * detuneMultiplier;
+
+                float uniSample;
+                if (voices[0].crossfadeSamplesRemaining > 0) {
+                    float alpha = static_cast<float>(voices[0].crossfadeSamplesRemaining) / CROSSFADE_SAMPLES;
+                    float oldSample =
+                        generateSample(voices[0].fadingFromWaveform, voices[0].unisonOscs[u].phase, uniDt);
+                    float newSample = generateSample(waveform, voices[0].unisonOscs[u].phase, uniDt);
+                    uniSample = oldSample * alpha + newSample * (1.0f - alpha);
+                } else {
+                    uniSample = generateSample(waveform, voices[0].unisonOscs[u].phase, uniDt);
+                }
+
+                sample += uniSample;
+                voices[0].unisonOscs[u].phase += uniDt;
+                if (voices[0].unisonOscs[u].phase >= 1.0f)
+                    voices[0].unisonOscs[u].phase -= 1.0f;
+            }
+            sample /= (float)unisonCount;
+
+            if (voices[0].crossfadeSamplesRemaining > 0)
+                --voices[0].crossfadeSamplesRemaining;
+
+            ch0[i] = sample * level;
         }
 
         // Push to visual buffer
@@ -181,24 +241,85 @@ public:
         }
     }
 
-    float getTargetFrequency() const {
-        float totalPitch =
-            lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() + (fineParam->get() / 100.0f);
-        return 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
+    // -------------------------------------------------------------------------
+    // Poly mode processing (voices 0-7, pitch CV driven)
+    // -------------------------------------------------------------------------
+    void processPolyMode(juce::AudioBuffer<float>& buffer, int numSamples) {
+        int numChannels = buffer.getNumChannels();
+        float level = levelParam->get();
+        int ns = std::min(numSamples, 4096);
+
+        // Save pitch CVs (channels 0-7) before clearing buffer
+        for (int v = 0; v < MAX_VOICES; ++v) {
+            if (v < numChannels)
+                std::copy_n(buffer.getReadPointer(v), ns, pitchCVCache[v].data());
+            else
+                std::fill_n(pitchCVCache[v].data(), ns, 0.0f);
+        }
+
+        buffer.clear();
+
+        for (int v = 0; v < MAX_VOICES && v < numChannels; ++v) {
+            float* output = buffer.getWritePointer(v);
+            const float* pitchCVs = pitchCVCache[v].data();
+
+            // Check first sample to skip inactive voices
+            float firstPitch = pitchCVs[0];
+            if (firstPitch < 20.0f && v == 0) {
+                // Voice 0 MIDI fallback
+                float totalPitch = voices[0].lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() +
+                                   (fineParam->get() / 100.0f);
+                firstPitch = 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
+            }
+            if (firstPitch < 20.0f)
+                continue; // Skip entirely
+
+            // Get base frequency for this voice (use first sample)
+            float basePitchHz = pitchCVs[0];
+            if (basePitchHz < 20.0f && v == 0) {
+                float totalPitch = voices[0].lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() +
+                                   (fineParam->get() / 100.0f);
+                basePitchHz = 440.0f * std::pow(2.0f, (totalPitch - 69.0f) / 12.0f);
+            }
+            if (basePitchHz < 20.0f)
+                continue;
+
+            float freq = juce::jlimit(20.0f, 20000.0f, basePitchHz);
+            float baseDt = freq / (float)currentSampleRate;
+            int wf = waveformParam->getIndex();
+            int unisonCount = unisonParam->get();
+            float detuneCents = detuneParam->get();
+
+            // Pre-compute unison dt values (avoid pow in sample loop)
+            float uniDts[MAX_UNISON];
+            for (int u = 0; u < unisonCount; ++u) {
+                float offset = (unisonCount > 1) ? detuneCents * (2.0f * u / (unisonCount - 1) - 1.0f) : 0.0f;
+                uniDts[u] = baseDt * std::pow(2.0f, offset / 1200.0f);
+            }
+
+            for (int s = 0; s < numSamples; ++s) {
+                float sample = 0.0f;
+                for (int u = 0; u < unisonCount; ++u) {
+                    sample += generateSample(wf, voices[v].unisonOscs[u].phase, uniDts[u]);
+                    voices[v].unisonOscs[u].phase += uniDts[u];
+                    if (voices[v].unisonOscs[u].phase >= 1.0f)
+                        voices[v].unisonOscs[u].phase -= 1.0f;
+                }
+                output[s] = (sample / (float)unisonCount) * level;
+            }
+        }
+
+        // Push voice 0 to visual buffer
+        if (auto* vb = getVisualBuffer()) {
+            const float* ch0 = buffer.getReadPointer(0);
+            for (int s = 0; s < numSamples; ++s)
+                vb->pushSample(ch0[s]);
+        }
     }
 
-    std::vector<ModulationTarget> getModulationTargets() const override {
-        return {{"Pitch", 0}, {"Waveform", 1}, {"Octave", 2}, {"Coarse", 3}, {"Fine", 4}, {"Level", 5}};
-    }
-    juce::String getInputPortLabel(int i) const override {
-        const juce::String labels[] = {"Pitch", "Waveform", "Octave", "Coarse", "Fine", "Level"};
-        return (i >= 0 && i < 6) ? labels[i] : ModuleBase::getInputPortLabel(i);
-    }
-    juce::String getOutputPortLabel(int) const override { return "Audio"; }
-    ModulationCategory getModulationCategory() const override { return ModulationCategory::Oscillator; }
-    ModuleType getModuleType() const override { return ModuleType::Oscillator; }
-
-private:
+    // -------------------------------------------------------------------------
+    // Waveform generators
+    // -------------------------------------------------------------------------
     float generateSample(int waveform, float phase, float dt) const {
         switch (waveform) {
         case 0:
@@ -262,23 +383,26 @@ private:
         return 0.0f;
     }
 
-    float phase = 0.0f;
+    // -------------------------------------------------------------------------
+    // Member variables
+    // -------------------------------------------------------------------------
     double currentSampleRate = 44100.0;
-    float lastMidiNote = 69.0f; // Default to A4 (440Hz)
 
-    // Waveform crossfade tracking
-    int previousWaveform = 0;
-    int fadingFromWaveform = 0;
-    int crossfadeSamplesRemaining = 0;
-    static constexpr int CROSSFADE_SAMPLES = 64;
+    // Pre-allocated buffers to avoid heap allocation in audio thread
+    std::array<std::array<float, 4096>, MAX_VOICES> pitchCVCache{};
+    std::array<float, 4096> waveformCVCache{};
+    std::array<float, 4096> octaveCVCache{};
+    std::array<float, 4096> coarseCVCache{};
+    std::array<float, 4096> fineCVCache{};
+    std::array<float, 4096> levelCVCache{};
 
-    juce::SmoothedValue<float> smoothedFreq;
-    int debugLogCounter = 0;
-    juce::AudioParameterChoice* waveformParam;
-    juce::AudioParameterInt* octaveParam;
-    juce::AudioParameterInt* coarseParam;
-    juce::AudioParameterFloat* fineParam;
-    juce::AudioParameterFloat* levelParam;
-
+    juce::AudioParameterChoice* waveformParam = nullptr;
+    juce::AudioParameterInt* octaveParam = nullptr;
+    juce::AudioParameterInt* coarseParam = nullptr;
+    juce::AudioParameterFloat* fineParam = nullptr;
+    juce::AudioParameterFloat* levelParam = nullptr;
+    juce::AudioParameterBool* polyParam = nullptr;
+    juce::AudioParameterInt* unisonParam = nullptr;
+    juce::AudioParameterFloat* detuneParam = nullptr;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorModule)
 };

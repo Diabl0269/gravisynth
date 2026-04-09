@@ -1,18 +1,21 @@
 #pragma once
 
 #include "ModuleBase.h"
+#include <cmath>
 
 class VCAModule : public ModuleBase {
 public:
     VCAModule()
-        : ModuleBase("VCA", 2, 1) // 1 Audio In, 1 CV In (from ADSR?), 1 Output
+        : ModuleBase("VCA", 16,
+                     8) // 0-7: per-voice audio, 8-15: per-voice CV, outputs 0-7: gated audio (poly sums to ch0/1)
     {
         addParameter(gainParam = new juce::AudioParameterFloat("gain", "Gain", 0.0f, 1.0f, 0.5f));
+        addParameter(polyParam = new juce::AudioParameterBool("poly", "Poly", false));
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
         juce::ignoreUnused(samplesPerBlock);
-        smoothedGain.reset(sampleRate, 0.01); // Increased smoothing for anti-click
+        smoothedGain.reset(sampleRate, 0.01);
         smoothedGain.setCurrentAndTargetValue(*gainParam);
     }
 
@@ -22,33 +25,77 @@ public:
 
         juce::ignoreUnused(midiMessages);
 
-        auto totalNumInputChannels = getTotalNumInputChannels();
-
-        auto* audioData = (totalNumInputChannels > 0) ? buffer.getWritePointer(0) : nullptr;
-        const float* cvData = (totalNumInputChannels > 1) ? buffer.getReadPointer(1) : nullptr;
-
-        if (audioData == nullptr)
+        int numSamples = buffer.getNumSamples();
+        int numChannels = buffer.getNumChannels();
+        if (numChannels == 0 || numSamples == 0)
             return;
 
         smoothedGain.setTargetValue(*gainParam);
-        int numSamples = buffer.getNumSamples();
 
-        for (int sample = 0; sample < numSamples; ++sample) {
-            float cv = (cvData != nullptr) ? cvData[sample] : 1.0f;
-            audioData[sample] *= smoothedGain.getNextValue() * cv;
-        }
+        if (!polyParam->get()) {
+            // --- Mono mode: read CV from ch1 (legacy) or ch8 (poly layout fallback) ---
+            auto* audioData = buffer.getWritePointer(0);
+            const float* cvData = (numChannels > 1) ? buffer.getReadPointer(1) : nullptr;
 
-        if (buffer.getNumChannels() > 1) {
-            buffer.copyFrom(1, 0, buffer, 0, 0, numSamples);
+            // If ch1 has no signal, try ch8 (poly envelope routing)
+            if (cvData != nullptr && numChannels > 8) {
+                float rms1 = 0.0f;
+                for (int s = 0; s < std::min(numSamples, 64); ++s)
+                    rms1 += cvData[s] * cvData[s];
+                if (rms1 < 1e-6f)
+                    cvData = buffer.getReadPointer(8);
+            }
+
+            for (int s = 0; s < numSamples; ++s) {
+                float cv = (cvData != nullptr) ? cvData[s] : 1.0f;
+                audioData[s] *= smoothedGain.getNextValue() * cv;
+            }
+
+            if (numChannels > 1) {
+                buffer.copyFrom(1, 0, buffer, 0, 0, numSamples);
+            }
+        } else {
+            // --- Poly mode: 8 voices summed to stereo (ch0/ch1) ---
+            // Each voice is multiplied by its envelope CV and the master gain,
+            // then all voices are accumulated into a single stereo sum.
+            // A fixed 1/MAX_VOICES normalization prevents hot signals from clipping,
+            // and std::tanh provides gentle soft saturation as a safety net.
+            static constexpr float kNorm = 1.0f / static_cast<float>(MAX_VOICES);
+
+            if (numChannels >= 2) {
+                auto* outL = buffer.getWritePointer(0);
+                auto* outR = buffer.getWritePointer(1);
+
+                for (int s = 0; s < numSamples; ++s) {
+                    float gain = smoothedGain.getNextValue();
+                    float sum = 0.0f;
+                    for (int v = 0; v < MAX_VOICES && v < numChannels; ++v) {
+                        float audio = buffer.getSample(v, s);
+                        float cv = (v + MAX_VOICES < numChannels) ? buffer.getSample(v + MAX_VOICES, s) : 1.0f;
+                        sum += audio * gain * cv;
+                    }
+                    float mixed = std::tanh(sum * kNorm);
+                    outL[s] = mixed;
+                    outR[s] = mixed;
+                }
+
+                // Zero out voice channels 2-7 so they don't leak downstream
+                for (int v = 2; v < MAX_VOICES && v < numChannels; ++v)
+                    buffer.clear(v, 0, numSamples);
+            }
         }
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"CV", 1}}; }
-    juce::String getInputPortLabel(int i) const override { return i == 0 ? "Audio" : "CV"; }
+    juce::String getInputPortLabel(int i) const override { return (i == 0) ? "Audio" : "CV"; }
     juce::String getOutputPortLabel(int) const override { return "Audio"; }
+    int getVisibleInputPortCount() const override { return 2; }
+    int getVisibleOutputPortCount() const override { return 1; }
     ModuleType getModuleType() const override { return ModuleType::VCA; }
 
 private:
-    juce::AudioParameterFloat* gainParam;
+    static constexpr int MAX_VOICES = 8;
+    juce::AudioParameterFloat* gainParam = nullptr;
+    juce::AudioParameterBool* polyParam = nullptr;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedGain;
 };

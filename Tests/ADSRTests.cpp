@@ -332,3 +332,48 @@ TEST_F(ADSRTest, ParameterChangesDuringPlayback) {
     float rmsAfterChange = buffer.getRMSLevel(0, 0, buffer.getNumSamples());
     EXPECT_NEAR(rmsAfterChange, 0.6f, 0.1f);
 }
+
+TEST_F(ADSRTest, PolyMode_IndependentEnvelopes) {
+    // Enable poly mode
+    auto* polyP = dynamic_cast<juce::AudioParameterBool*>(adsr.getParameters()[5]);
+    ASSERT_NE(polyP, nullptr);
+    *polyP = true;
+
+    juce::AudioBuffer<float> polyBuffer(8, 512);
+    polyBuffer.clear();
+
+    // Gate voice 0 ON, voice 1 OFF
+    for (int i = 0; i < 512; ++i) {
+        polyBuffer.setSample(0, i, 1.0f); // Voice 0: gate on
+        polyBuffer.setSample(1, i, 0.0f); // Voice 1: gate off
+    }
+
+    juce::MidiBuffer emptyMidi;
+    adsr.processBlock(polyBuffer, emptyMidi);
+
+    // Voice 0 should have envelope output > 0
+    EXPECT_GT(polyBuffer.getRMSLevel(0, 0, 512), 0.0f);
+    // Voice 1 should be near zero (no gate)
+    EXPECT_NEAR(polyBuffer.getRMSLevel(1, 0, 512), 0.0f, 0.01f);
+}
+
+TEST_F(ADSRTest, PolyMode_GateEdgeDetection) {
+    auto* polyP = dynamic_cast<juce::AudioParameterBool*>(adsr.getParameters()[5]);
+    *polyP = true;
+
+    // Block 1: gate ON
+    juce::AudioBuffer<float> polyBuffer(8, 512);
+    polyBuffer.clear();
+    for (int i = 0; i < 512; ++i)
+        polyBuffer.setSample(0, i, 1.0f);
+
+    juce::MidiBuffer emptyMidi;
+    adsr.processBlock(polyBuffer, emptyMidi);
+    float rmsAfterOn = polyBuffer.getRMSLevel(0, 0, 512);
+    EXPECT_GT(rmsAfterOn, 0.0f);
+
+    // Block 2: gate OFF (release)
+    polyBuffer.clear();
+    adsr.processBlock(polyBuffer, emptyMidi);
+    // Envelope should start decaying
+}
