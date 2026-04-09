@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../AudioEngine.h"
 #include "../GravisynthUndoManager.h"
+#include "../IGraphManager.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 
@@ -9,7 +9,7 @@ class ModMatrixComponent
     : public juce::Component
     , public juce::Timer {
 public:
-    ModMatrixComponent(AudioEngine& engine, GravisynthUndoManager* undoMgr = nullptr);
+    ModMatrixComponent(IGraphManager& manager, GravisynthUndoManager* undoMgr = nullptr);
     ~ModMatrixComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -27,7 +27,7 @@ public:
     void detachAllRows();
 
 private:
-    AudioEngine& audioEngine;
+    IGraphManager& graphManager;
     GravisynthUndoManager* undoManager = nullptr;
     bool isSourceMenuFlat = false;
 
@@ -69,7 +69,7 @@ private:
         std::map<int, float> gestureStartValues;
 
         void detach();
-        void refresh(const AudioEngine::ModRoutingInfo& info);
+        void refresh(const IGraphManager::ModRoutingInfo& info);
         void populateCombos();
     };
 

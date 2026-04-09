@@ -78,6 +78,8 @@ jobs:
       run: |
         export LLVM_PROFILE_FILE="default.profraw"
         xvfb-run ./build/Tests/GravisynthTests
+        export LLVM_PROFILE_FILE="plugin.profraw"
+        xvfb-run ./build/Tests/GravisynthPluginTests
 
     - name: Check Coverage
       run: xvfb-run bash scripts/coverage.sh --report-only
@@ -177,7 +179,9 @@ jobs:
 
     - name: Run Tests
       working-directory: ./build/Tests
-      run: ./GravisynthTests
+      run: |
+        ./GravisynthTests
+        ./GravisynthPluginTests
 
   build-and-test-windows:
     name: Build and Test (Windows)
@@ -201,5 +205,7 @@ jobs:
       run: cmake --build build --config Release
 
     - name: Run Tests
-      run: ./build/Tests/Release/GravisynthTests.exe
+      run: |
+        ./build/Tests/Release/GravisynthTests.exe
+        ./build/Tests/Release/GravisynthPluginTests.exe
       shell: bash

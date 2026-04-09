@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../AudioEngine.h"
 #include "../GravisynthUndoManager.h"
+#include "../IGraphManager.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 class ModuleComponent;
@@ -12,10 +12,10 @@ class GraphEditor
     , public juce::Timer
     , public juce::DragAndDropTarget {
 public:
-    GraphEditor(AudioEngine& engine, GravisynthUndoManager* undoMgr = nullptr);
+    GraphEditor(IGraphManager& manager, GravisynthUndoManager* undoMgr = nullptr);
     ~GraphEditor() override;
 
-    AudioEngine& getAudioEngine() { return audioEngine; }
+    IGraphManager& getGraphManager() { return graphManager; }
     void detachAllModuleComponents();
 
     void paint(juce::Graphics& g) override;
@@ -67,7 +67,7 @@ private:
         juce::OwnedArray<ModuleComponent> moduleComponents;
     };
 
-    AudioEngine& audioEngine;
+    IGraphManager& graphManager;
     GraphContentComponent content;
     ModMatrixComponent modMatrix;
     bool isMatrixVisible = true;

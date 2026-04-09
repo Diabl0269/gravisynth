@@ -76,7 +76,7 @@ void ModuleComponent::detachFromProcessor() {
     // If the processor is gone, release ownership to avoid use-after-free in ~ParameterAttachment.
     bool processorAlive = false;
     if (module != nullptr) {
-        for (auto* node : owner.getAudioEngine().getGraph().getNodes()) {
+        for (auto* node : owner.getGraphManager().getGraph().getNodes()) {
             if (node->getProcessor() == module) {
                 processorAlive = true;
                 break;
@@ -103,7 +103,7 @@ void ModuleComponent::detachFromProcessor() {
     if (module == nullptr)
         return;
 
-    if (auto* node = owner.getAudioEngine().getGraph().getNodeForId(nodeId)) {
+    if (auto* node = owner.getGraphManager().getGraph().getNodeForId(nodeId)) {
         for (auto* param : node->getProcessor()->getParameters())
             param->removeListener(this);
     }
@@ -602,13 +602,13 @@ void ModuleComponent::parameterGestureChanged(int parameterIndex, bool gestureIs
     if (gestureIsStarting) {
         // Capture full graph snapshot at gesture start
         gestureStartValues[parameterIndex] = 1.0f; // flag that gesture is active
-        undoManager->captureBeforeState(owner.getAudioEngine().getGraph());
+        undoManager->captureBeforeState(owner.getGraphManager().getGraph());
     } else {
         auto it = gestureStartValues.find(parameterIndex);
         if (it != gestureStartValues.end()) {
             // Capture after snapshot and push as undo action
             auto* graphEditor = &owner;
-            undoManager->pushSnapshotFromCapture(owner.getAudioEngine().getGraph());
+            undoManager->pushSnapshotFromCapture(owner.getGraphManager().getGraph());
             gestureStartValues.erase(it);
         }
     }
@@ -704,7 +704,7 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
         } else {
             dragStartPosition = getPosition();
             if (undoManager)
-                undoManager->captureBeforeState(owner.getAudioEngine().getGraph());
+                undoManager->captureBeforeState(owner.getGraphManager().getGraph());
             dragger.startDraggingComponent(this, e);
         }
     }
@@ -729,6 +729,6 @@ void ModuleComponent::mouseUp(const juce::MouseEvent& e) {
     if (getPortForPoint(e.getMouseDownPosition())) {
         owner.endConnectionDrag(e.getScreenPosition());
     } else if (undoManager && getPosition() != dragStartPosition) {
-        undoManager->pushSnapshotFromCapture(owner.getAudioEngine().getGraph());
+        undoManager->pushSnapshotFromCapture(owner.getGraphManager().getGraph());
     }
 }

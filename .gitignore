@@ -38,3 +38,5 @@ coverage/
 worktrees/
 build-asan/
 build-release/
+build-rel*/
+build-release/

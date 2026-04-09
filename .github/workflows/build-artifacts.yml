@@ -86,6 +86,11 @@ jobs:
             find build -name Gravisynth -type f -exec cp {} artifact/ \;
         fi
         chmod +x artifact/Gravisynth
+        # Package VST3 plugin
+        VST3_PATH=$(find build -name "Gravisynth.vst3" -type d | head -n 1)
+        if [ -n "$VST3_PATH" ]; then
+          tar -czf artifact/Gravisynth-VST3-Linux-x64.tar.gz -C "$(dirname "$VST3_PATH")" "$(basename "$VST3_PATH")"
+        fi
 
     # Package macOS
     - name: Package macOS Artifact
@@ -105,6 +110,20 @@ jobs:
 
         ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" artifact/${{ matrix.artifact_name }}.zip
 
+        # Package VST3 plugin
+        VST3_PATH=$(find build -name "Gravisynth.vst3" -type d | head -n 1)
+        if [ -n "$VST3_PATH" ]; then
+          codesign --force --deep -s - "$VST3_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$VST3_PATH" artifact/Gravisynth-VST3-macOS-arm64.zip
+        fi
+
+        # Package AU plugin
+        AU_PATH=$(find build -name "Gravisynth.component" -type d | head -n 1)
+        if [ -n "$AU_PATH" ]; then
+          codesign --force --deep -s - "$AU_PATH"
+          ditto -c -k --sequesterRsrc --keepParent "$AU_PATH" artifact/Gravisynth-AU-macOS-arm64.zip
+        fi
+
     # Package Windows
     - name: Package Windows Artifact
       if: runner.os == 'Windows'
@@ -112,6 +131,11 @@ jobs:
       run: |
         New-Item -ItemType Directory -Force -Path artifact
         Get-ChildItem -Path build -Recurse -Filter Gravisynth.exe | Copy-Item -Destination artifact\
+        # Package VST3 plugin
+        $vst3 = Get-ChildItem -Path build -Recurse -Directory -Filter "Gravisynth.vst3" | Select-Object -First 1
+        if ($vst3) {
+          Compress-Archive -Path $vst3.FullName -DestinationPath artifact\Gravisynth-VST3-Windows-x64.zip
+        }
 
     # Upload Artifact
     - name: Upload Artifact
