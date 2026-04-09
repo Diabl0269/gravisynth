@@ -16,7 +16,7 @@ TEST_F(LFOModuleTest, WaveformOutput) {
     juce::MidiBuffer midi;
 
     // Test Sine
-    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(lfo->getParameters()[0]);
+    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(lfo->getParameters()[1]);
     shapeParam->setValueNotifyingHost(0.0f); // Sine
 
     lfo->processBlock(buffer, midi);
@@ -38,7 +38,7 @@ TEST_F(LFOModuleTest, WaveformOutputTriangle) {
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
-    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[0]);
+    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[1]);
     shapeParam->setValueNotifyingHost(1.0f / (shapeParam->choices.size() - 1)); // Triangle (assuming 2nd choice)
 
     lfo->processBlock(buffer, midi);
@@ -60,7 +60,7 @@ TEST_F(LFOModuleTest, WaveformOutputSaw) {
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
-    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[0]);
+    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[1]);
     shapeParam->setValueNotifyingHost(2.0f / (shapeParam->choices.size() - 1)); // Saw (assuming 3rd choice)
 
     lfo->processBlock(buffer, midi);
@@ -81,7 +81,7 @@ TEST_F(LFOModuleTest, WaveformOutputSquare) {
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
-    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[0]);
+    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[1]);
     shapeParam->setValueNotifyingHost(3.0f / (shapeParam->choices.size() - 1)); // Square (assuming 4th choice)
 
     lfo->processBlock(buffer, midi);
@@ -114,8 +114,8 @@ TEST_F(LFOModuleTest, HzModeUsesRateHzParam) {
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
-    auto* mode = dynamic_cast<juce::AudioParameterBool*>(params[1]); // AudioParameterBool
-    auto* rateHz = dynamic_cast<juce::AudioParameterFloat*>(params[3]);
+    auto* mode = dynamic_cast<juce::AudioParameterBool*>(params[2]); // AudioParameterBool
+    auto* rateHz = dynamic_cast<juce::AudioParameterFloat*>(params[4]);
     mode->setValueNotifyingHost(0.0f); // Hz mode (false)
     rateHz->setValueNotifyingHost(rateHz->getNormalisableRange().convertTo0to1(10.0f));
 
@@ -130,8 +130,8 @@ TEST_F(LFOModuleTest, HzModeUsesRateHzParam) {
 
 TEST_F(LFOModuleTest, SyncModeAllSubdivisions) {
     auto params = lfo->getParameters();
-    auto* mode = dynamic_cast<juce::AudioParameterBool*>(params[1]); // AudioParameterBool
-    auto* syncRate = dynamic_cast<juce::AudioParameterChoice*>(params[4]);
+    auto* mode = dynamic_cast<juce::AudioParameterBool*>(params[2]); // AudioParameterBool
+    auto* syncRate = dynamic_cast<juce::AudioParameterChoice*>(params[5]);
     mode->setValueNotifyingHost(1.0f); // Sync mode (true)
 
     for (int i = 0; i <= 5; ++i) {
@@ -146,10 +146,10 @@ TEST_F(LFOModuleTest, GlideParameter) {
     juce::AudioBuffer<float> buffer(1, 512);
     juce::MidiBuffer midi;
     auto params = lfo->getParameters();
-    auto* glideParam = dynamic_cast<juce::AudioParameterFloat*>(params[7]);
-    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[0]);
-    auto* rateHzParam = dynamic_cast<juce::AudioParameterFloat*>(params[3]);
-    auto* mode = dynamic_cast<juce::AudioParameterBool*>(params[1]);
+    auto* glideParam = dynamic_cast<juce::AudioParameterFloat*>(params[8]);
+    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[1]);
+    auto* rateHzParam = dynamic_cast<juce::AudioParameterFloat*>(params[4]);
+    auto* mode = dynamic_cast<juce::AudioParameterBool*>(params[2]);
     mode->setValueNotifyingHost(0.0f); // Hz mode so we control rate
 
     shapeParam->setValueNotifyingHost(1.0f); // S&H wave (normalized choice or index, index 4)
@@ -182,9 +182,9 @@ TEST_F(LFOModuleTest, LevelParameter) {
     juce::MidiBuffer midi;
 
     auto params = lfo->getParameters();
-    auto* levelParam = dynamic_cast<juce::AudioParameterFloat*>(params[6]); // Level parameter (assuming index 6)
-    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[0]);
-    auto* rateHzParam = dynamic_cast<juce::AudioParameterFloat*>(params[3]);
+    auto* levelParam = dynamic_cast<juce::AudioParameterFloat*>(params[7]); // Level parameter (assuming index 7)
+    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(params[1]);
+    auto* rateHzParam = dynamic_cast<juce::AudioParameterFloat*>(params[4]);
 
     shapeParam->setValueNotifyingHost(0.0f);  // Sine wave
     rateHzParam->setValueNotifyingHost(1.0f); // 1 Hz rate
@@ -227,7 +227,7 @@ TEST_F(LFOModuleTest, BipolarUnipolar) {
     juce::AudioBuffer<float> buffer(1, 512);
     juce::MidiBuffer midi;
 
-    auto* bipolarParam = dynamic_cast<juce::AudioParameterBool*>(lfo->getParameters()[2]);
+    auto* bipolarParam = dynamic_cast<juce::AudioParameterBool*>(lfo->getParameters()[3]);
 
     // Unipolar
     bipolarParam->setValueNotifyingHost(0.0f);
@@ -254,7 +254,7 @@ TEST_F(LFOModuleTest, Retrigger) {
     juce::AudioBuffer<float> buffer(1, 512);
     juce::MidiBuffer midi;
 
-    auto* retrigParam = dynamic_cast<juce::AudioParameterBool*>(lfo->getParameters()[5]);
+    auto* retrigParam = dynamic_cast<juce::AudioParameterBool*>(lfo->getParameters()[6]);
     retrigParam->setValueNotifyingHost(1.0f);
 
     // Process a bit to advance phase
@@ -272,13 +272,13 @@ TEST_F(LFOModuleTest, SampleAndHold) {
     juce::AudioBuffer<float> buffer(1, 44100);
     juce::MidiBuffer midi;
 
-    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(lfo->getParameters()[0]);
+    auto* shapeParam = dynamic_cast<juce::AudioParameterChoice*>(lfo->getParameters()[1]);
     shapeParam->setValueNotifyingHost(1.0f); // S&H is index 4, but setValue is normalized.
     // Wait, let's use getParameters() index.
     // LFO params: shape, mode, bipolar, rateHz, rateSync, retrig, level, glide
 
     auto params = lfo->getParameters();
-    auto* shape = dynamic_cast<juce::AudioParameterChoice*>(params[0]);
+    auto* shape = dynamic_cast<juce::AudioParameterChoice*>(params[1]);
     *shape = 4; // S&H
 
     lfo->processBlock(buffer, midi);

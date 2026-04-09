@@ -19,7 +19,7 @@ TEST_F(VCAModuleTest, GainApplication) {
         buffer.setSample(0, i, 1.0f);
     }
 
-    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[0]);
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[1]);
     ASSERT_NE(gainParam, nullptr);
     gainParam->setValueNotifyingHost(0.5f); // 0.5 normalized
 
@@ -51,7 +51,7 @@ TEST_F(VCAModuleTest, CVControl) {
         buffer.setSample(1, i, 0.5f);
     }
 
-    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[0]);
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[1]);
     gainParam->setValueNotifyingHost(1.0f); // Set gain to max
 
     juce::MidiBuffer midi;
@@ -74,11 +74,11 @@ TEST_F(VCAModuleTest, MonoToStereoCopy) {
 }
 
 TEST_F(VCAModuleTest, PolyMode_MultiVoice) {
-    auto* polyP = dynamic_cast<juce::AudioParameterBool*>(vca->getParameters()[1]);
+    auto* polyP = dynamic_cast<juce::AudioParameterBool*>(vca->getParameters()[2]);
     ASSERT_NE(polyP, nullptr);
     *polyP = true;
 
-    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[0]);
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[1]);
     gainParam->setValueNotifyingHost(1.0f);
 
     juce::AudioBuffer<float> polyBuffer(16, 1000);
@@ -95,10 +95,12 @@ TEST_F(VCAModuleTest, PolyMode_MultiVoice) {
     juce::MidiBuffer midi;
     vca->processBlock(polyBuffer, midi);
 
-    // Voice 0: 1.0 * 1.0 * 1.0 = 1.0
-    EXPECT_NEAR(polyBuffer.getSample(0, 999), 1.0f, 0.05f);
-    // Voice 1: 0.5 * 1.0 * 0.5 = 0.25
-    EXPECT_NEAR(polyBuffer.getSample(1, 999), 0.25f, 0.05f);
+    // VCA poly sums voices to stereo via tanh(sum * 0.125)
+    // Voice 0: 1.0 * 1.0 * 1.0 = 1.0, Voice 1: 0.5 * 1.0 * 0.5 = 0.25
+    // Sum = 1.25, tanh(1.25 * 0.125) = tanh(0.15625) ≈ 0.155
+    float expected = std::tanh((1.0f + 0.25f) * 0.125f);
+    EXPECT_NEAR(polyBuffer.getSample(0, 999), expected, 0.05f); // Left
+    EXPECT_NEAR(polyBuffer.getSample(1, 999), expected, 0.05f); // Right (same as left)
 }
 
 TEST_F(VCAModuleTest, MonoMode_BackwardsCompatible) {
@@ -110,7 +112,7 @@ TEST_F(VCAModuleTest, MonoMode_BackwardsCompatible) {
         buf.setSample(1, i, 0.5f);
     }
 
-    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[0]);
+    auto* gainParam = dynamic_cast<juce::AudioParameterFloat*>(vca->getParameters()[1]);
     gainParam->setValueNotifyingHost(1.0f);
 
     juce::MidiBuffer midi;

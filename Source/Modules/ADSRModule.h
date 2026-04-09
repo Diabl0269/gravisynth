@@ -22,6 +22,11 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed()) {
+            buffer.clear();
+            return;
+        }
+
         float a = std::max(static_cast<float>(*attackParam), 0.002f);
         float d = *decayParam;
         float s = *sustainParam;

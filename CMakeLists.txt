@@ -81,16 +81,17 @@ target_link_libraries(GravisynthCore PUBLIC
     juce::juce_dsp
 )
 
+target_compile_definitions(GravisynthCore PUBLIC JUCE_WEB_BROWSER=0)
+
 if(UNIX AND NOT APPLE)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
-    pkg_check_modules(WEBKIT REQUIRED webkit2gtk-4.1)
-    
+
     find_package(CURL REQUIRED)
 
     # Link to Core so JUCE modules compiled within it find the headers
-    target_link_libraries(GravisynthCore PUBLIC ${GTK3_LIBRARIES} ${WEBKIT_LIBRARIES} CURL::libcurl)
-    target_include_directories(GravisynthCore PUBLIC ${GTK3_INCLUDE_DIRS} ${WEBKIT_INCLUDE_DIRS})
+    target_link_libraries(GravisynthCore PUBLIC ${GTK3_LIBRARIES} CURL::libcurl)
+    target_include_directories(GravisynthCore PUBLIC ${GTK3_INCLUDE_DIRS})
 endif()
 
 target_include_directories(GravisynthCore PUBLIC
@@ -145,9 +146,11 @@ target_link_libraries(Gravisynth PRIVATE
     juce::juce_dsp
 )
 
+target_compile_definitions(Gravisynth PRIVATE JUCE_WEB_BROWSER=0)
+
 if(UNIX AND NOT APPLE)
-    target_link_libraries(Gravisynth PRIVATE ${GTK3_LIBRARIES} ${WEBKIT_LIBRARIES})
-    target_include_directories(Gravisynth PRIVATE ${GTK3_INCLUDE_DIRS} ${WEBKIT_INCLUDE_DIRS})
+    target_link_libraries(Gravisynth PRIVATE ${GTK3_LIBRARIES})
+    target_include_directories(Gravisynth PRIVATE ${GTK3_INCLUDE_DIRS})
 endif()
 
 # Enable strict warnings to catch issues early

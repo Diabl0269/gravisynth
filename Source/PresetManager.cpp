@@ -240,6 +240,7 @@ juce::String PresetManager::getPresetJSON(int index) {
 })";
 
     case 6: // Poly Pad - 8-voice polyphonic pad
+        // VCA sums all 8 voices to stereo (ch0/ch1) internally; no VoiceMixer needed.
         return R"({
   "nodes": [
     {"id": 1, "type": "Audio Input", "position": {"x": 10, "y": 10}},
@@ -250,7 +251,6 @@ juce::String PresetManager::getPresetJSON(int index) {
     {"id": 6, "type": "Filter", "position": {"x": 650, "y": 10}, "params": {"cutoff": 1200.0, "resonance": 0.15, "poly": true}},
     {"id": 7, "type": "VCA", "position": {"x": 950, "y": 10}, "params": {"gain": 0.8, "poly": true}},
     {"id": 8, "type": "Amp Env", "position": {"x": 350, "y": 450}, "params": {"attack": 0.3, "decay": 0.4, "sustain": 0.7, "release": 1.5, "poly": true}},
-    {"id": 9, "type": "Voice Mixer", "position": {"x": 950, "y": 450}, "params": {"level": 0.5}},
     {"id": 10, "type": "Reverb", "position": {"x": 1200, "y": 10}, "params": {"roomSize": 0.8, "damping": 0.3, "wet": 0.5, "dry": 0.5, "width": 1.0}}
   ],
   "connections": [
@@ -297,16 +297,8 @@ juce::String PresetManager::getPresetJSON(int index) {
     {"src": 8, "srcPort": 5, "dst": 7, "dstPort": 13},
     {"src": 8, "srcPort": 6, "dst": 7, "dstPort": 14},
     {"src": 8, "srcPort": 7, "dst": 7, "dstPort": 15},
-    {"src": 7, "srcPort": 0, "dst": 9, "dstPort": 0},
-    {"src": 7, "srcPort": 1, "dst": 9, "dstPort": 1},
-    {"src": 7, "srcPort": 2, "dst": 9, "dstPort": 2},
-    {"src": 7, "srcPort": 3, "dst": 9, "dstPort": 3},
-    {"src": 7, "srcPort": 4, "dst": 9, "dstPort": 4},
-    {"src": 7, "srcPort": 5, "dst": 9, "dstPort": 5},
-    {"src": 7, "srcPort": 6, "dst": 9, "dstPort": 6},
-    {"src": 7, "srcPort": 7, "dst": 9, "dstPort": 7},
-    {"src": 9, "srcPort": 0, "dst": 10, "dstPort": 0},
-    {"src": 9, "srcPort": 1, "dst": 10, "dstPort": 1},
+    {"src": 7, "srcPort": 0, "dst": 10, "dstPort": 0},
+    {"src": 7, "srcPort": 1, "dst": 10, "dstPort": 1},
     {"src": 10, "srcPort": 0, "dst": 2, "dstPort": 0},
     {"src": 10, "srcPort": 1, "dst": 2, "dstPort": 1}
   ]

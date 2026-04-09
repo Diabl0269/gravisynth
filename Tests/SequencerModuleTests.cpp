@@ -23,7 +23,7 @@ TEST_F(SequencerModuleTest, GeneratesMidiWhenRunning) {
     juce::AudioBuffer<float> buffer(2, 512);
     juce::MidiBuffer midi;
 
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
     runParam->setValueNotifyingHost(1.0f);
 
     // Initial state: samplesUntilNextBeat = 0
@@ -46,7 +46,7 @@ TEST_F(SequencerModuleTest, StepsAdvance) {
     juce::AudioBuffer<float> buffer(2, 512);
     juce::MidiBuffer midi;
 
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
     runParam->setValueNotifyingHost(1.0f);
 
     int initialStep = seq->currentActiveStep;
@@ -80,7 +80,7 @@ TEST_F(SequencerModuleTest, SendsFilterEnvCC) {
     juce::AudioBuffer<float> buffer(2, 512);
     juce::MidiBuffer midi;
 
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
     runParam->setValueNotifyingHost(1.0f);
 
     seq->processBlock(buffer, midi);
@@ -100,11 +100,11 @@ TEST_F(SequencerModuleTest, RestStepSendsNoteOff) {
     juce::AudioBuffer<float> buffer(2, 512);
     juce::MidiBuffer midi;
 
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
     runParam->setValueNotifyingHost(1.0f);
 
     // Set step 0 pitch to 0 (rest)
-    auto* step0 = dynamic_cast<juce::AudioParameterInt*>(seq->getParameters()[10 + 0]);
+    auto* step0 = dynamic_cast<juce::AudioParameterInt*>(seq->getParameters()[11 + 0]);
     *step0 = 0;
 
     // Trigger step 0 — should produce no NoteOn, but should handle rest path
@@ -122,7 +122,7 @@ TEST_F(SequencerModuleTest, NoteOffFiredAfterGateDuration) {
     juce::AudioBuffer<float> buffer(2, 512);
     juce::MidiBuffer midi;
 
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
     runParam->setValueNotifyingHost(1.0f);
 
     // Trigger step 0 — sends note on
@@ -147,8 +147,8 @@ TEST_F(SequencerModuleTest, BPMChangeAffectsTempo) {
     juce::AudioBuffer<float> buffer(2, 512);
     juce::MidiBuffer midi;
 
-    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[0]);
-    auto* bpmParam = dynamic_cast<juce::AudioParameterFloat*>(seq->getParameters()[1]);
+    auto* runParam = dynamic_cast<juce::AudioParameterBool*>(seq->getParameters()[1]);
+    auto* bpmParam = dynamic_cast<juce::AudioParameterFloat*>(seq->getParameters()[2]);
     runParam->setValueNotifyingHost(1.0f);
 
     // Set fast BPM and trigger step 0

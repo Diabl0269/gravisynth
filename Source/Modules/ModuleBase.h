@@ -43,11 +43,16 @@ public:
                   .withInput("Input", juce::AudioChannelSet::discreteChannels(std::max(1, numInputs)), numInputs > 0)
                   .withOutput("Output", juce::AudioChannelSet::discreteChannels(std::max(1, numOutputs)),
                               numOutputs > 0))
-        , moduleName(name) {}
+        , moduleName(name) {
+        addParameter(bypassedParam = new juce::AudioParameterBool("bypassed", "Bypassed", false));
+    }
 
     ~ModuleBase() override = default;
 
     const juce::String getName() const override { return moduleName; }
+
+    bool isBypassed() const { return bypassedParam->get(); }
+    void setBypassed(bool b) { bypassedParam->setValueNotifyingHost(b ? 1.0f : 0.0f); }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override = 0;
     void releaseResources() override {}
@@ -112,6 +117,9 @@ public:
         else if (!enable)
             visualBuffer = nullptr;
     }
+
+protected:
+    juce::AudioParameterBool* bypassedParam = nullptr;
 
 private:
     juce::String moduleName;

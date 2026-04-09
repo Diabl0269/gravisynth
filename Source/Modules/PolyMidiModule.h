@@ -26,6 +26,11 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed()) {
+            buffer.clear();
+            return;
+        }
+
         buffer.clear();
 
         int numSamples = buffer.getNumSamples();
@@ -79,6 +84,9 @@ public:
         return mask;
     }
     ModuleType getModuleType() const override { return ModuleType::PolyMidi; }
+    int getVisibleOutputPortCount() const override { return 1; }
+    juce::String getOutputPortLabel(int) const override { return "Poly Out"; }
+    int getVisibleInputPortCount() const override { return 0; }
 
 private:
     static constexpr int MAX_VOICES = 8;

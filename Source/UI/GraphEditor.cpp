@@ -51,11 +51,16 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
             continue;
 
         // Hide poly connections that exceed visible port counts
+        // Skip drawing if source channel exceeds visible output ports
         if (connection.source.channelIndex != juce::AudioProcessorGraph::midiChannelIndex) {
             if (auto* srcMb = dynamic_cast<ModuleBase*>(node1->getProcessor())) {
                 if (connection.source.channelIndex >= srcMb->getVisibleOutputPortCount())
                     continue;
             }
+        }
+
+        // Skip drawing if destination channel exceeds visible input ports
+        if (connection.destination.channelIndex != juce::AudioProcessorGraph::midiChannelIndex) {
             if (auto* dstMb = dynamic_cast<ModuleBase*>(node2->getProcessor())) {
                 if (connection.destination.channelIndex >= dstMb->getVisibleInputPortCount())
                     continue;
@@ -94,7 +99,7 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
                     g.drawLine(p1.toFloat().x, p1.toFloat().y, p2.toFloat().x, p2.toFloat().y, 2.0f);
 
                     float amt = 0.0f;
-                    if (auto* p = node2->getProcessor()->getParameters()[0]) {
+                    if (auto* p = node2->getProcessor()->getParameters()[1]) {
                         amt = p->getValue();
                         amt = amt * 2.0f - 1.0f; // 0 to 1 back to -1.0 to 1.0
                     }
@@ -362,7 +367,12 @@ void GraphEditor::updateComponents() {
 
     // Refresh mod matrix to pick up any new/removed attenuverter routings
     // Use callAsync to avoid re-entrancy during graph modification
-    juce::MessageManager::callAsync([this]() { modMatrix.updateRowsFromGraph(); });
+    // SafePointer guards against the GraphEditor being destroyed before the callback fires
+    juce::Component::SafePointer<GraphEditor> safeThis(this);
+    juce::MessageManager::callAsync([safeThis]() {
+        if (auto* self = safeThis.getComponent())
+            self->modMatrix.updateRowsFromGraph();
+    });
 
     repaint();
 }
@@ -428,7 +438,7 @@ void GraphEditor::mouseDrag(const juce::MouseEvent& e) {
             auto& graph = audioEngine.getGraph();
             auto* node = graph.getNodeForId(draggingAttenuverterNodeId);
             if (node) {
-                if (auto* p = dynamic_cast<juce::AudioParameterFloat*>(node->getProcessor()->getParameters()[0])) {
+                if (auto* p = dynamic_cast<juce::AudioParameterFloat*>(node->getProcessor()->getParameters()[1])) {
                     float delta = (e.getPosition().y - lastMousePos.y) * -0.01f;
                     float currentVal = p->get(); // -1 to 1
                     currentVal = juce::jlimit(-1.0f, 1.0f, currentVal + delta);
@@ -554,6 +564,177 @@ void GraphEditor::deleteModule(ModuleComponent* module) {
         modMatrix.clearRows();
         graph.removeNode(nodeId);
         updateComponents();
+    }
+    repaint();
+}
+
+void GraphEditor::replaceModule(ModuleComponent* moduleComp, const juce::String& newModuleType) {
+    auto& graph = audioEngine.getGraph();
+
+    // Find the old node by processor pointer (same pattern as deleteModule)
+    juce::AudioProcessorGraph::NodeID oldNodeId;
+    for (auto* n : graph.getNodes()) {
+        if (n->getProcessor() == moduleComp->getModule()) {
+            oldNodeId = n->nodeID;
+            break;
+        }
+    }
+    if (oldNodeId.uid == 0)
+        return;
+
+    // Use shared_ptr to make the lambda copyable (std::function requires it)
+    auto newModuleTypeCopy = newModuleType;
+
+    auto doReplace = [this, &graph, oldNodeId, newModuleTypeCopy] {
+        auto* oldNode = graph.getNodeForId(oldNodeId);
+        if (!oldNode)
+            return;
+
+        // 1. Create the new module
+        auto newProcessor = gsynth::AIStateMapper::createModule(newModuleTypeCopy);
+        if (!newProcessor)
+            return;
+
+        // 2. Snapshot old module's properties
+        int posX = oldNode->properties.getWithDefault("x", 0);
+        int posY = oldNode->properties.getWithDefault("y", 0);
+        auto* oldProc = oldNode->getProcessor();
+        int oldNumInputs = oldProc->getTotalNumInputChannels();
+        int oldNumOutputs = oldProc->getTotalNumOutputChannels();
+        bool oldAcceptsMidi = oldProc->acceptsMidi();
+        bool oldProducesMidi = oldProc->producesMidi();
+
+        // 3. Get new module capabilities before addNode moves it
+        int newNumInputs = newProcessor->getTotalNumInputChannels();
+        int newNumOutputs = newProcessor->getTotalNumOutputChannels();
+        bool newAcceptsMidi = newProcessor->acceptsMidi();
+        bool newProducesMidi = newProcessor->producesMidi();
+
+        // 4. Collect all connections involving the old node
+        struct ConnectionInfo {
+            juce::AudioProcessorGraph::NodeID otherNodeId;
+            int otherChannelIndex;
+            int oldChannelIndex;
+            bool isIncoming; // true = other->old, false = old->other
+            bool isMidi;
+        };
+        std::vector<ConnectionInfo> directConnections;
+
+        struct ModRoutingRewire {
+            juce::AudioProcessorGraph::NodeID attenuverterId;
+            int channelOnOldModule;
+            bool oldModuleIsSource;
+        };
+        std::vector<ModRoutingRewire> modRoutings;
+
+        for (auto& conn : graph.getConnections()) {
+            bool srcIsOld = (conn.source.nodeID == oldNodeId);
+            bool dstIsOld = (conn.destination.nodeID == oldNodeId);
+            if (!srcIsOld && !dstIsOld)
+                continue;
+
+            // Check if this involves an attenuverter
+            if (srcIsOld) {
+                auto* dstNode = graph.getNodeForId(conn.destination.nodeID);
+                if (dstNode && dynamic_cast<AttenuverterModule*>(dstNode->getProcessor())) {
+                    ModRoutingRewire rw;
+                    rw.attenuverterId = conn.destination.nodeID;
+                    rw.channelOnOldModule = conn.source.channelIndex;
+                    rw.oldModuleIsSource = true;
+                    modRoutings.push_back(rw);
+                    continue;
+                }
+            }
+            if (dstIsOld) {
+                auto* srcNode = graph.getNodeForId(conn.source.nodeID);
+                if (srcNode && dynamic_cast<AttenuverterModule*>(srcNode->getProcessor())) {
+                    ModRoutingRewire rw;
+                    rw.attenuverterId = conn.source.nodeID;
+                    rw.channelOnOldModule = conn.destination.channelIndex;
+                    rw.oldModuleIsSource = false;
+                    modRoutings.push_back(rw);
+                    continue;
+                }
+            }
+
+            // Direct connection (not attenuverter-mediated)
+            ConnectionInfo ci;
+            bool isMidiConn =
+                (srcIsOld && conn.source.channelIndex == juce::AudioProcessorGraph::midiChannelIndex) ||
+                (dstIsOld && conn.destination.channelIndex == juce::AudioProcessorGraph::midiChannelIndex);
+            ci.isMidi = isMidiConn;
+            if (srcIsOld) {
+                ci.otherNodeId = conn.destination.nodeID;
+                ci.otherChannelIndex = conn.destination.channelIndex;
+                ci.oldChannelIndex = conn.source.channelIndex;
+                ci.isIncoming = false;
+            } else {
+                ci.otherNodeId = conn.source.nodeID;
+                ci.otherChannelIndex = conn.source.channelIndex;
+                ci.oldChannelIndex = conn.destination.channelIndex;
+                ci.isIncoming = true;
+            }
+            directConnections.push_back(ci);
+        }
+
+        // 5. Add the new node to the graph
+        auto newNode = graph.addNode(std::move(newProcessor));
+        if (!newNode)
+            return;
+        auto newNodeId = newNode->nodeID;
+        newNode->properties.set("x", posX);
+        newNode->properties.set("y", posY);
+
+        // 6. Remove the old node (this removes all its connections)
+        modMatrix.clearRows();
+        graph.removeNode(oldNodeId);
+
+        // 7. Re-create compatible direct connections
+        for (auto& ci : directConnections) {
+            if (ci.isMidi) {
+                if (ci.isIncoming && newAcceptsMidi) {
+                    graph.addConnection({{ci.otherNodeId, juce::AudioProcessorGraph::midiChannelIndex},
+                                         {newNodeId, juce::AudioProcessorGraph::midiChannelIndex}});
+                } else if (!ci.isIncoming && newProducesMidi) {
+                    graph.addConnection({{newNodeId, juce::AudioProcessorGraph::midiChannelIndex},
+                                         {ci.otherNodeId, juce::AudioProcessorGraph::midiChannelIndex}});
+                }
+            } else {
+                if (ci.isIncoming && ci.oldChannelIndex < newNumInputs) {
+                    graph.addConnection({{ci.otherNodeId, ci.otherChannelIndex}, {newNodeId, ci.oldChannelIndex}});
+                } else if (!ci.isIncoming && ci.oldChannelIndex < newNumOutputs) {
+                    graph.addConnection({{newNodeId, ci.oldChannelIndex}, {ci.otherNodeId, ci.otherChannelIndex}});
+                }
+            }
+        }
+
+        // 8. Re-create compatible modulation routings
+        // removeNode(oldNodeId) only removes connections TO/FROM oldNodeId.
+        // For mod routings: source->attenuverter->dest
+        // If old was source: old->atten connection is removed, atten->dest survives
+        // If old was dest: atten->old connection is removed, source->atten survives
+        // We only need to re-add the destroyed leg.
+        for (auto& rw : modRoutings) {
+            if (rw.oldModuleIsSource) {
+                if (rw.channelOnOldModule < newNumOutputs) {
+                    graph.addConnection({{newNodeId, rw.channelOnOldModule}, {rw.attenuverterId, 0}});
+                }
+            } else {
+                if (rw.channelOnOldModule < newNumInputs) {
+                    graph.addConnection({{rw.attenuverterId, 0}, {newNodeId, rw.channelOnOldModule}});
+                }
+            }
+        }
+
+        // 9. Refresh UI
+        updateComponents();
+        audioEngine.updateModuleNames();
+    };
+
+    if (undoManager) {
+        undoManager->recordStructuralChange(graph, doReplace);
+    } else {
+        doReplace();
     }
     repaint();
 }

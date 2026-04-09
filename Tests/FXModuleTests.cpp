@@ -39,7 +39,7 @@ TEST_F(AttenuverterModuleTest, ProcessBlockAttenuatesSignal) {
         buffer.setSample(0, i, 1.0f);
 
     // Set amount param to 0.5 via the first float parameter
-    auto* amountParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[0]);
+    auto* amountParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1]);
     ASSERT_NE(amountParam, nullptr);
     amountParam->setValueNotifyingHost(0.75f); // normalized: maps to 0.75 in [-1,1] range => 0.5
 
@@ -62,7 +62,7 @@ TEST_F(AttenuverterModuleTest, ProcessBlockBypassClearsSilent) {
         buffer.setSample(0, i, 1.0f);
 
     // Enable bypass (second parameter)
-    auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(module->getParameters()[1]);
+    auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(module->getParameters()[2]);
     ASSERT_NE(bypassParam, nullptr);
     bypassParam->setValueNotifyingHost(1.0f); // true
 
@@ -85,7 +85,7 @@ TEST_F(AttenuverterModuleTest, ProcessBlockWithCVAmountModulation) {
         buffer.setSample(0, i, 1.0f);
 
     // Set base amount to 0.0 so the CV alone controls the output
-    auto* amountParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[0]);
+    auto* amountParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1]);
     ASSERT_NE(amountParam, nullptr);
     amountParam->setValueNotifyingHost(0.5f); // normalized 0.5 => 0.0 in [-1,1]
 
@@ -143,7 +143,7 @@ TEST_F(DelayModuleTest, ProcessBlockPassesSignalThrough) {
 }
 
 TEST_F(DelayModuleTest, FeedbackParameterExists) {
-    auto* feedbackParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1]);
+    auto* feedbackParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[2]);
     ASSERT_NE(feedbackParam, nullptr);
     EXPECT_FLOAT_EQ(feedbackParam->get(), 0.5f); // default
 }
@@ -207,8 +207,8 @@ TEST_F(DistortionModuleTest, HighDriveClipsSignal) {
     lowDrive.prepareToPlay(44100.0, 512);
     highDrive.prepareToPlay(44100.0, 512);
 
-    auto* driveParamLow = dynamic_cast<juce::AudioParameterFloat*>(lowDrive.getParameters()[0]);
-    auto* driveParamHigh = dynamic_cast<juce::AudioParameterFloat*>(highDrive.getParameters()[0]);
+    auto* driveParamLow = dynamic_cast<juce::AudioParameterFloat*>(lowDrive.getParameters()[1]);
+    auto* driveParamHigh = dynamic_cast<juce::AudioParameterFloat*>(highDrive.getParameters()[1]);
     ASSERT_NE(driveParamLow, nullptr);
     ASSERT_NE(driveParamHigh, nullptr);
 
@@ -216,8 +216,8 @@ TEST_F(DistortionModuleTest, HighDriveClipsSignal) {
     driveParamHigh->setValueNotifyingHost(1.0f); // max drive (20.0)
 
     // Set mix=1.0 (fully wet) on both so we hear the distortion effect clearly
-    auto* mixParamLow = dynamic_cast<juce::AudioParameterFloat*>(lowDrive.getParameters()[1]);
-    auto* mixParamHigh = dynamic_cast<juce::AudioParameterFloat*>(highDrive.getParameters()[1]);
+    auto* mixParamLow = dynamic_cast<juce::AudioParameterFloat*>(lowDrive.getParameters()[2]);
+    auto* mixParamHigh = dynamic_cast<juce::AudioParameterFloat*>(highDrive.getParameters()[2]);
     mixParamLow->setValueNotifyingHost(1.0f);
     mixParamHigh->setValueNotifyingHost(1.0f);
 
@@ -324,8 +324,8 @@ TEST_F(ReverbModuleTest, MonoProcessingDoesNotCrash) {
 
 TEST_F(ReverbModuleTest, RoomSizeParameterIsApplied) {
     // Just verify the parameters exist and are the right types
-    auto* roomSizeParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[0]);
-    auto* dampingParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1]);
+    auto* roomSizeParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1]);
+    auto* dampingParam = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[2]);
     ASSERT_NE(roomSizeParam, nullptr);
     ASSERT_NE(dampingParam, nullptr);
 

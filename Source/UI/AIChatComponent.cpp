@@ -328,15 +328,20 @@ void AIChatComponent::sendButtonClicked() {
     aiService.sendMessage(
         text,
         [this, useStructuredOutput](const juce::String& response, bool success) {
-            juce::MessageManager::callAsync([this, response, success, useStructuredOutput]() {
-                if (!isWaitingForResponse) {
+            juce::Component::SafePointer<AIChatComponent> safeThis(this);
+            juce::MessageManager::callAsync([safeThis, response, success, useStructuredOutput]() {
+                if (safeThis.getComponent() == nullptr)
+                    return;
+                auto* self = safeThis.getComponent();
+
+                if (!self->isWaitingForResponse) {
                     return;
                 } // Ignore late responses if a timeout already occurred
 
-                stopTimer(); // Cancel timeout
-                isWaitingForResponse = false;
-                sendButton.setEnabled(true);
-                inputField.setReadOnly(false);
+                self->stopTimer(); // Cancel timeout
+                self->isWaitingForResponse = false;
+                self->sendButton.setEnabled(true);
+                self->inputField.setReadOnly(false);
 
                 if (success) {
                     juce::String json;
@@ -364,13 +369,13 @@ void AIChatComponent::sendButtonClicked() {
                         }
                     }
 
-                    messages.push_back({"assistant", cleanText.trim(), json});
+                    self->messages.push_back({"assistant", cleanText.trim(), json});
                 } else {
-                    messages.push_back({"assistant", "Error: " + response, ""});
+                    self->messages.push_back({"assistant", "Error: " + response, ""});
                 }
 
-                updateChatDisplay();
-                inputField.grabKeyboardFocus();
+                self->updateChatDisplay();
+                self->inputField.grabKeyboardFocus();
             });
         },
         useStructuredOutput);
@@ -476,9 +481,14 @@ void AIChatComponent::refreshModels() {
 
 #ifndef NDEBUG
 void AIChatComponent::appendDebugLog(const juce::String& msg) {
-    juce::MessageManager::callAsync([this, msg]() {
-        debugConsole.moveCaretToEnd();
-        debugConsole.insertTextAtCaret(msg + "\n");
+    juce::Component::SafePointer<AIChatComponent> safeThis(this);
+    juce::MessageManager::callAsync([safeThis, msg]() {
+        if (safeThis.getComponent() == nullptr)
+            return;
+        auto* self = safeThis.getComponent();
+
+        self->debugConsole.moveCaretToEnd();
+        self->debugConsole.insertTextAtCaret(msg + "\n");
     });
 }
 

@@ -47,6 +47,11 @@ public:
     void releaseResources() override {}
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed()) {
+            buffer.clear();
+            return;
+        }
+
         auto* channelData0 = buffer.getWritePointer(0);
 
         // Process MIDI for Retrig

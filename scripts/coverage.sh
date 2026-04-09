@@ -1,15 +1,24 @@
 #!/bin/bash
 set -e
 
-# Configure with coverage enabled
-cmake -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
+REPORT_ONLY=false
+for arg in "$@"; do
+  case $arg in
+    --report-only) REPORT_ONLY=true ;;
+  esac
+done
 
-# Build the tests
-cmake --build build --target GravisynthTests
+if [ "$REPORT_ONLY" = false ]; then
+  # Configure with coverage enabled
+  cmake -B build -DCMAKE_BUILD_TYPE=Debug -DENABLE_COVERAGE=ON
 
-# Run the tests
-export LLVM_PROFILE_FILE="default.profraw"
-./build/Tests/GravisynthTests
+  # Build the tests
+  cmake --build build --target GravisynthTests
+
+  # Run the tests
+  export LLVM_PROFILE_FILE="default.profraw"
+  ./build/Tests/GravisynthTests
+fi
 
 # Generate coverage report
 echo "Merging profile data..."
@@ -41,12 +50,12 @@ TOTAL_COVERAGE=$(echo "$REPORT" | grep "TOTAL" | awk '{print $10}' | sed 's/%//'
 echo "Total Line Coverage: $TOTAL_COVERAGE%"
 
 # Threshold check (awk for float comparison to avoid installing bc)
-PASS=$(awk -v cov="$TOTAL_COVERAGE" 'BEGIN {print (cov >= 75.0) ? 1 : 0}')
+PASS=$(awk -v cov="$TOTAL_COVERAGE" 'BEGIN {print (cov >= 80.0) ? 1 : 0}')
 
 if [ "$PASS" -eq 1 ]; then
   echo "Coverage check passed."
   exit 0
 else
-  echo "Error: Coverage ($TOTAL_COVERAGE%) is below threshold (75.0%)"
+  echo "Error: Coverage ($TOTAL_COVERAGE%) is below threshold (80.0%)"
   exit 1
 fi

@@ -76,6 +76,9 @@ private:
     std::unique_ptr<juce::ToggleButton> spectrumToggle;
     std::unique_ptr<juce::MidiKeyboardComponent> keyboardComponent;
 
+    std::unique_ptr<juce::TextButton> bypassButton;
+    std::unique_ptr<juce::ButtonParameterAttachment> bypassAttachment;
+
     GravisynthUndoManager* undoManager = nullptr;
     std::map<int, float> gestureStartValues;
     juce::Point<int> dragStartPosition;

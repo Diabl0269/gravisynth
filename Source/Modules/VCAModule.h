@@ -1,11 +1,13 @@
 #pragma once
 
 #include "ModuleBase.h"
+#include <cmath>
 
 class VCAModule : public ModuleBase {
 public:
     VCAModule()
-        : ModuleBase("VCA", 16, 8) // 0-7: per-voice audio, 8-15: per-voice CV, outputs 0-7: gated audio
+        : ModuleBase("VCA", 16,
+                     8) // 0-7: per-voice audio, 8-15: per-voice CV, outputs 0-7: gated audio (poly sums to ch0/1)
     {
         addParameter(gainParam = new juce::AudioParameterFloat("gain", "Gain", 0.0f, 1.0f, 0.5f));
         addParameter(polyParam = new juce::AudioParameterBool("poly", "Poly", false));
@@ -18,6 +20,9 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed())
+            return;
+
         juce::ignoreUnused(midiMessages);
 
         int numSamples = buffer.getNumSamples();
@@ -50,16 +55,34 @@ public:
                 buffer.copyFrom(1, 0, buffer, 0, 0, numSamples);
             }
         } else {
-            // --- Poly mode: 8 voices ---
-            for (int s = 0; s < numSamples; ++s) {
-                float gain = smoothedGain.getNextValue();
-                for (int v = 0; v < MAX_VOICES && v < numChannels; ++v) {
-                    float audio = buffer.getSample(v, s);
-                    float cv = (v + MAX_VOICES < numChannels) ? buffer.getSample(v + MAX_VOICES, s) : 1.0f;
-                    buffer.setSample(v, s, audio * gain * cv);
+            // --- Poly mode: 8 voices summed to stereo (ch0/ch1) ---
+            // Each voice is multiplied by its envelope CV and the master gain,
+            // then all voices are accumulated into a single stereo sum.
+            // A fixed 1/MAX_VOICES normalization prevents hot signals from clipping,
+            // and std::tanh provides gentle soft saturation as a safety net.
+            static constexpr float kNorm = 1.0f / static_cast<float>(MAX_VOICES);
+
+            if (numChannels >= 2) {
+                auto* outL = buffer.getWritePointer(0);
+                auto* outR = buffer.getWritePointer(1);
+
+                for (int s = 0; s < numSamples; ++s) {
+                    float gain = smoothedGain.getNextValue();
+                    float sum = 0.0f;
+                    for (int v = 0; v < MAX_VOICES && v < numChannels; ++v) {
+                        float audio = buffer.getSample(v, s);
+                        float cv = (v + MAX_VOICES < numChannels) ? buffer.getSample(v + MAX_VOICES, s) : 1.0f;
+                        sum += audio * gain * cv;
+                    }
+                    float mixed = std::tanh(sum * kNorm);
+                    outL[s] = mixed;
+                    outR[s] = mixed;
                 }
+
+                // Zero out voice channels 2-7 so they don't leak downstream
+                for (int v = 2; v < MAX_VOICES && v < numChannels; ++v)
+                    buffer.clear(v, 0, numSamples);
             }
-            // No stereo copy in poly mode
         }
     }
 

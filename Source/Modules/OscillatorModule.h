@@ -37,6 +37,11 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed()) {
+            buffer.clear();
+            return;
+        }
+
         // Always process MIDI for voice 0 (fallback when no pitch CV connected)
         for (const auto metadata : midiMessages) {
             auto msg = metadata.getMessage();
