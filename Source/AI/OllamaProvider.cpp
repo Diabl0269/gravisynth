@@ -15,7 +15,9 @@ juce::String OllamaProvider::getCurrentModel() const { return currentModel; }
 
 void OllamaProvider::fetchAvailableModels(std::function<void(const juce::StringArray& models, bool success)> callback) {
     // Run on a separate thread to avoid blocking UI
-    juce::Thread::launch([this, callback]() {
+    if (discoveryThread.joinable())
+        discoveryThread.join();
+    discoveryThread = std::thread([this, callback]() {
         DBG("AI Discovery STARTED: " + ollamaHost + "/api/tags");
         juce::URL url(ollamaHost + "/api/tags");
         juce::StringArray models;

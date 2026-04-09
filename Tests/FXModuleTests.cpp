@@ -670,6 +670,7 @@ TEST_F(LimiterModuleTest, ModuleTypeAndCategoryAreCorrect) {
 
 TEST(PortLabelTests, OscillatorPortLabels) {
     OscillatorModule osc;
+    // Default mono mode: original channel layout
     EXPECT_EQ(osc.getInputPortLabel(0), "Pitch");
     EXPECT_EQ(osc.getInputPortLabel(1), "Waveform");
     EXPECT_EQ(osc.getInputPortLabel(2), "Octave");
@@ -681,6 +682,7 @@ TEST(PortLabelTests, OscillatorPortLabels) {
 
 TEST(PortLabelTests, FilterPortLabels) {
     FilterModule filter;
+    // Default mono mode: original 4-input layout
     EXPECT_EQ(filter.getInputPortLabel(0), "Audio");
     EXPECT_EQ(filter.getInputPortLabel(1), "Cutoff");
     EXPECT_EQ(filter.getInputPortLabel(2), "Resonance");
@@ -690,6 +692,7 @@ TEST(PortLabelTests, FilterPortLabels) {
 
 TEST(PortLabelTests, VCAPortLabels) {
     VCAModule vca;
+    // Default mono mode: original 2-input layout
     EXPECT_EQ(vca.getInputPortLabel(0), "Audio");
     EXPECT_EQ(vca.getInputPortLabel(1), "CV");
     EXPECT_EQ(vca.getOutputPortLabel(0), "Audio");

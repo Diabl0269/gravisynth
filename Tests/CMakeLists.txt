@@ -32,6 +32,7 @@ add_executable(GravisynthTests
     AIIntegrationServiceTests.cpp
     ModMatrixTests.cpp
     FXModuleTests.cpp
+    VoiceMixerModuleTests.cpp
     EdgeCaseTests.cpp
     IntegrationTests.cpp
     UndoRedoTests.cpp
@@ -45,7 +46,7 @@ add_executable(GravisynthTests
 )
 
 target_link_libraries(GravisynthTests PRIVATE
-    GTest::gtest_main
+    GTest::gtest
     GravisynthCore
 )
 
@@ -56,9 +57,12 @@ target_include_directories(GravisynthTests PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
 )
 
+target_compile_definitions(GravisynthTests PRIVATE JUCE_MODAL_LOOPS_PERMITTED=1)
+
 # Link JUCE specifics if needed
 target_link_libraries(GravisynthTests PRIVATE
     juce::juce_core
+    juce::juce_events
     juce::juce_audio_basics
     juce::juce_dsp
 )

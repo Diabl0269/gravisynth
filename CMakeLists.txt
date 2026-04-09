@@ -43,6 +43,7 @@ add_library(GravisynthCore STATIC
     Source/Modules/ADSRModule.h
     Source/Modules/FilterModule.h
     Source/Modules/VCAModule.h
+    Source/Modules/VoiceMixerModule.h
     Source/Modules/SequencerModule.h
     Source/Modules/MidiKeyboardModule.h
     Source/Modules/LFOModule.h

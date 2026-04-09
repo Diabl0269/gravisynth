@@ -63,7 +63,7 @@ TEST_F(ModuleBypassTest, BypassedEffectPassesAudioThrough) {
 
     // Create a buffer with the right number of input channels
     int numChannels = filter.getTotalNumInputChannels();
-    EXPECT_EQ(numChannels, 4);
+    EXPECT_EQ(numChannels, 11);
 
     juce::AudioBuffer<float> buffer(numChannels, blockSize);
     juce::MidiBuffer midiBuffer;
@@ -128,7 +128,7 @@ TEST_F(ModuleBypassTest, BypassedSourceOutputsSilence) {
 
     // Create a buffer with the right number of output channels
     int numChannels = oscillator.getTotalNumOutputChannels();
-    EXPECT_EQ(numChannels, 1);
+    EXPECT_EQ(numChannels, 8);
 
     juce::AudioBuffer<float> buffer(numChannels, blockSize);
     juce::MidiBuffer midiBuffer;

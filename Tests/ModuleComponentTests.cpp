@@ -7,14 +7,6 @@
 
 class ModuleComponentTest : public ::testing::Test {
 protected:
-    void SetUp() override { juce::MessageManager::getInstance(); }
-
-    void TearDown() override {
-        if (!IsSkipped()) {
-            // MessageManager kept alive across tests to avoid singleton corruption
-            // deleteAll removed: destroys JUCE singletons that break subsequent tests
-        }
-    }
 };
 
 TEST_F(ModuleComponentTest, InitializationAndResizing) {

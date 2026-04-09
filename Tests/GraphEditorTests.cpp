@@ -14,16 +14,7 @@
 // Define a dummy component to act as the drag source
 class DummyDragSource : public juce::Component {};
 
-class GraphEditorTest : public ::testing::Test {
-protected:
-    void SetUp() override { juce::MessageManager::getInstance(); }
-
-    void TearDown() override {
-        if (!IsSkipped()) {
-            // MessageManager kept alive across tests to avoid singleton corruption
-        }
-    }
-};
+class GraphEditorTest : public ::testing::Test {};
 
 TEST_F(GraphEditorTest, InitializationAndResizing) {
     AudioEngine engine;
@@ -225,8 +216,8 @@ TEST_F(GraphEditorTest, ReplaceModuleDropsIncompatibleConnections) {
     auto lfoNode = graph.addNode(std::make_unique<LFOModule>());
     auto oscNode = graph.addNode(std::make_unique<OscillatorModule>());
 
-    // Connect LFO output 0 -> Oscillator input 5 (Oscillator has 6 inputs)
-    graph.addConnection({{lfoNode->nodeID, 0}, {oscNode->nodeID, 5}});
+    // Connect LFO output 0 -> Oscillator input 13 (Oscillator has 14 inputs)
+    graph.addConnection({{lfoNode->nodeID, 0}, {oscNode->nodeID, 13}});
     editor.updateComponents();
 
     // Find the oscillator ModuleComponent
@@ -242,21 +233,21 @@ TEST_F(GraphEditorTest, ReplaceModuleDropsIncompatibleConnections) {
     }
     ASSERT_NE(oscComp, nullptr);
 
-    // Replace Oscillator (6 inputs) with VCA (2 inputs) — channel 5 is incompatible
-    editor.replaceModule(oscComp, "VCA");
+    // Replace Oscillator (14 inputs) with LFO (1 input) — channel 13 is incompatible
+    editor.replaceModule(oscComp, "LFO");
 
-    // Find the new VCA node
-    juce::AudioProcessorGraph::NodeID vcaNodeId;
+    // Find the new LFO node (replacement)
+    juce::AudioProcessorGraph::NodeID newNodeId;
     for (auto* node : graph.getNodes()) {
-        if (dynamic_cast<VCAModule*>(node->getProcessor()))
-            vcaNodeId = node->nodeID;
+        if (node->nodeID != lfoNode->nodeID && dynamic_cast<LFOModule*>(node->getProcessor()))
+            newNodeId = node->nodeID;
     }
-    EXPECT_NE(vcaNodeId.uid, 0u);
+    EXPECT_NE(newNodeId.uid, 0u);
 
-    // Verify NO connection from LFO to VCA (channel 5 doesn't exist on VCA)
+    // Verify NO connection from LFO to replacement (channel 13 doesn't exist on LFO)
     bool connectionFound = false;
     for (auto& conn : graph.getConnections()) {
-        if (conn.source.nodeID == lfoNode->nodeID && conn.destination.nodeID == vcaNodeId) {
+        if (conn.source.nodeID == lfoNode->nodeID && conn.destination.nodeID == newNodeId) {
             connectionFound = true;
             break;
         }

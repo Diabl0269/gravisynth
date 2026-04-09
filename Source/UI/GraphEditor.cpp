@@ -14,8 +14,10 @@
 #include "../Modules/LFOModule.h"
 #include "../Modules/MidiKeyboardModule.h"
 #include "../Modules/OscillatorModule.h"
+#include "../Modules/PolyMidiModule.h"
 #include "../Modules/SequencerModule.h"
 #include "../Modules/VCAModule.h"
+#include "../Modules/VoiceMixerModule.h"
 #include "ModuleComponent.h"
 
 GraphEditor::GraphEditor(IGraphManager& manager, GravisynthUndoManager* undoMgr)
@@ -29,7 +31,7 @@ GraphEditor::GraphEditor(IGraphManager& manager, GravisynthUndoManager* undoMgr)
     startTimerHz(30);
 }
 
-GraphEditor::~GraphEditor() {}
+GraphEditor::~GraphEditor() { stopTimer(); }
 
 GraphEditor::GraphContentComponent::GraphContentComponent(GraphEditor& ed)
     : editor(ed) {}
@@ -47,6 +49,23 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
 
         if (!node1 || !node2)
             continue;
+
+        // Hide poly connections that exceed visible port counts
+        // Skip drawing if source channel exceeds visible output ports
+        if (connection.source.channelIndex != juce::AudioProcessorGraph::midiChannelIndex) {
+            if (auto* srcMb = dynamic_cast<ModuleBase*>(node1->getProcessor())) {
+                if (connection.source.channelIndex >= srcMb->getVisibleOutputPortCount())
+                    continue;
+            }
+        }
+
+        // Skip drawing if destination channel exceeds visible input ports
+        if (connection.destination.channelIndex != juce::AudioProcessorGraph::midiChannelIndex) {
+            if (auto* dstMb = dynamic_cast<ModuleBase*>(node2->getProcessor())) {
+                if (connection.destination.channelIndex >= dstMb->getVisibleInputPortCount())
+                    continue;
+            }
+        }
 
         if (dynamic_cast<AttenuverterModule*>(node2->getProcessor()) != nullptr) {
             juce::AudioProcessorGraph::Node* realDstNode = nullptr;
@@ -283,6 +302,7 @@ void GraphEditor::endConnectionDrag(juce::Point<int> screenPos) {
 void GraphEditor::detachAllModuleComponents() {
     for (auto* comp : content.getModules())
         comp->detachFromProcessor();
+    content.getModules().clear(); // Remove after detach so ~ModuleComponent doesn't double-detach freed params
     modMatrix.detachAllRows();
     modMatrix.clearRows();
 }
@@ -814,6 +834,10 @@ void GraphEditor::itemDropped(const SourceDetails& dragSourceDetails) {
         newProcessor = std::make_unique<FlangerModule>();
     else if (name == "Limiter")
         newProcessor = std::make_unique<LimiterModule>();
+    else if (name == "Poly MIDI")
+        newProcessor = std::make_unique<PolyMidiModule>();
+    else if (name == "Voice Mixer")
+        newProcessor = std::make_unique<VoiceMixerModule>();
 
     if (newProcessor) {
         auto& graph = graphManager.getGraph();

@@ -147,3 +147,45 @@ TEST_F(FilterTest, NotchProcessesWithoutCrash) {
 
     filter.processBlock(buffer, midiMessages);
 }
+
+TEST_F(FilterTest, PolyMode_IndependentFiltering) {
+    auto* polyP = dynamic_cast<juce::AudioParameterBool*>(filter.getParameters()[5]);
+    ASSERT_NE(polyP, nullptr);
+    *polyP = true;
+
+    filter.prepareToPlay(44100.0, 512);
+
+    juce::AudioBuffer<float> polyBuffer(11, 512);
+    polyBuffer.clear();
+
+    // Fill voice 0 with noise, voice 1 with silence
+    juce::Random r;
+    for (int i = 0; i < 512; ++i)
+        polyBuffer.setSample(0, i, r.nextFloat() * 2.0f - 1.0f);
+
+    juce::MidiBuffer midi;
+    filter.processBlock(polyBuffer, midi);
+
+    // Voice 0 should have output, voice 1 should be silent
+    EXPECT_GT(polyBuffer.getRMSLevel(0, 0, 512), 0.0f);
+    EXPECT_NEAR(polyBuffer.getRMSLevel(1, 0, 512), 0.0f, 1e-6f);
+}
+
+TEST_F(FilterTest, PolyMode_NoBleed) {
+    auto* polyP = dynamic_cast<juce::AudioParameterBool*>(filter.getParameters()[5]);
+    *polyP = true;
+    filter.prepareToPlay(44100.0, 512);
+
+    juce::AudioBuffer<float> polyBuffer(11, 512);
+    polyBuffer.clear();
+
+    // Strong signal only on voice 0
+    for (int i = 0; i < 512; ++i)
+        polyBuffer.setSample(0, i, 1.0f);
+
+    juce::MidiBuffer midi;
+    filter.processBlock(polyBuffer, midi);
+
+    // Voice 1 should remain silent (no bleed)
+    EXPECT_NEAR(polyBuffer.getRMSLevel(1, 0, 512), 0.0f, 1e-6f);
+}

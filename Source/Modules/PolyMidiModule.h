@@ -5,7 +5,7 @@
 class PolyMidiModule : public ModuleBase {
 public:
     PolyMidiModule()
-        : ModuleBase("Poly MIDI", 0, 2) {
+        : ModuleBase("Poly MIDI", 0, 16) {
         // Port 0: Pitch CV (8 channels)
         // Port 1: Gate CV (8 channels)
         enableVisualBuffer(true);
@@ -36,6 +36,7 @@ public:
         int numSamples = buffer.getNumSamples();
         int currentSample = 0;
 
+        int midiEventCount = 0;
         for (const auto metadata : midiMessages) {
             auto msg = metadata.getMessage();
             int triggerSample = msg.getTimeStamp();
@@ -49,10 +50,13 @@ public:
 
             if (msg.isNoteOn()) {
                 handleNoteOn(msg.getNoteNumber(), msg.getFloatVelocity());
+                ++midiEventCount;
             } else if (msg.isNoteOff()) {
                 handleNoteOff(msg.getNoteNumber());
+                ++midiEventCount;
             } else if (msg.isAllNotesOff()) {
                 allNotesOff();
+                ++midiEventCount;
             }
         }
 
@@ -80,6 +84,9 @@ public:
         return mask;
     }
     ModuleType getModuleType() const override { return ModuleType::PolyMidi; }
+    int getVisibleOutputPortCount() const override { return 1; }
+    juce::String getOutputPortLabel(int) const override { return "Poly Out"; }
+    int getVisibleInputPortCount() const override { return 0; }
 
 private:
     static constexpr int MAX_VOICES = 8;
