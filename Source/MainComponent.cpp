@@ -1,7 +1,7 @@
 #include "MainComponent.h"
 #include "AI/OllamaProvider.h"
 
-MainComponent::MainComponent()
+MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
     : graphEditor(audioEngine, &undoManager)
     , aiService(audioEngine.getGraph())
     , aiChatComponent(aiService) {
@@ -14,14 +14,14 @@ MainComponent::MainComponent()
     appProperties.setStorageParameters(propertiesOptions);
 
     // Load AI provider preference
-    juce::String savedProviderName =
-        appProperties.getUserSettings()->getValue("aiProvider", "Ollama"); // Default to Ollama
+    juce::String savedProviderName = appProperties.getUserSettings()->getValue("aiProvider", "Ollama");
     juce::String savedOllamaHost = appProperties.getUserSettings()->getValue("ollamaHost", "http://localhost:11434");
 
-    if (savedProviderName == "Ollama") {
+    if (provider) {
+        aiService.setProvider(std::move(provider));
+    } else if (savedProviderName == "Ollama") {
         aiService.setProvider(std::make_unique<gsynth::OllamaProvider>(savedOllamaHost));
     }
-    // else if (savedProviderName == "OtherProvider") { ... }
 
     aiChatComponent.refreshModels();
 

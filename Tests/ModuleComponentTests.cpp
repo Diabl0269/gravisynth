@@ -6,14 +6,6 @@
 
 class ModuleComponentTest : public ::testing::Test {
 protected:
-    void SetUp() override { juce::MessageManager::getInstance(); }
-
-    void TearDown() override {
-        if (!IsSkipped()) {
-            juce::MessageManager::deleteInstance();
-            juce::DeletedAtShutdown::deleteAll();
-        }
-    }
 };
 
 TEST_F(ModuleComponentTest, InitializationAndResizing) {

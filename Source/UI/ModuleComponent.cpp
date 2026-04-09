@@ -71,10 +71,34 @@ void ModuleComponent::detachFromProcessor() {
     if (auto* parent = getParentComponent())
         parent->removeChildComponent(this);
 
-    // Destroy attachments (they reference params)
-    sliderAttachments.clear();
-    comboAttachments.clear();
-    buttonAttachments.clear();
+    // Destroy attachments ONLY if the processor is still alive (node exists in graph).
+    // During undo, graph.clear() may have already freed the processor and its parameters.
+    // If the processor is gone, release ownership to avoid use-after-free in ~ParameterAttachment.
+    bool processorAlive = false;
+    if (module != nullptr) {
+        for (auto* node : owner.getAudioEngine().getGraph().getNodes()) {
+            if (node->getProcessor() == module) {
+                processorAlive = true;
+                break;
+            }
+        }
+    }
+    if (processorAlive) {
+        bypassAttachment.reset();
+        sliderAttachments.clear();
+        comboAttachments.clear();
+        buttonAttachments.clear();
+    } else {
+        // Processor already freed — leak attachments to avoid use-after-free
+        // in ~ParameterAttachment which calls parameter->removeListener()
+        (void)bypassAttachment.release();
+        while (sliderAttachments.size() > 0)
+            (void)sliderAttachments.removeAndReturn(sliderAttachments.size() - 1);
+        while (comboAttachments.size() > 0)
+            (void)comboAttachments.removeAndReturn(comboAttachments.size() - 1);
+        while (buttonAttachments.size() > 0)
+            (void)buttonAttachments.removeAndReturn(buttonAttachments.size() - 1);
+    }
 
     if (module == nullptr)
         return;

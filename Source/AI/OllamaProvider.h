@@ -3,6 +3,7 @@
 #include "AIProvider.h"
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
+#include <thread>
 #include <vector>
 
 namespace gsynth {
@@ -26,7 +27,11 @@ public:
         , ollamaHost(host)
         , createStream(std::move(streamFactory)) {}
 
-    ~OllamaProvider() override { stopThread(2000); }
+    ~OllamaProvider() override {
+        stopThread(2000);
+        if (discoveryThread.joinable())
+            discoveryThread.join();
+    }
 
     void sendPrompt(const std::vector<Message>& conversation, CompletionCallback callback,
                     const juce::var& responseSchema = juce::var()) override {
@@ -54,6 +59,7 @@ private:
     juce::String currentModel;
     InputStreamFactory createStream; // Member variable for the stream factory
     bool isTestMode = false;
+    std::thread discoveryThread;
 
     struct Request {
         std::vector<Message> conversation;

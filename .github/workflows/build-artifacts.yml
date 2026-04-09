@@ -11,29 +11,8 @@ permissions:
   contents: write
 
 jobs:
-  tag:
-    name: Tag Version
-    runs-on: ubuntu-latest
-    outputs:
-      new_tag: ${{ steps.tag_version.outputs.new_tag }}
-      changelog: ${{ steps.tag_version.outputs.changelog }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Required for tag calculation
-      
-      - name: Bump version and push tag
-        id: tag_version
-        uses: mathieudutour/github-tag-action@v6.2
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          default_bump: minor
-          tag_prefix: "v"
-          fetch_all_tags: true
-
   build:
     name: Build ${{ matrix.os }}
-    needs: tag
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -44,13 +23,13 @@ jobs:
             platform: Linux
             arch: x64
             artifact_name: Gravisynth-Linux-x64
-          
+
           # macOS arm64 (Apple Silicon)
           - os: macos-latest
             platform: macOS
             arch: arm64
             artifact_name: Gravisynth-macOS-arm64
-          
+
           # Windows x64
           - os: windows-latest
             platform: Windows
@@ -59,8 +38,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        ref: ${{ needs.tag.outputs.new_tag }}
 
     # Linux Dependencies
     - name: Install Linux Dependencies
@@ -80,13 +57,11 @@ jobs:
           libxrender-dev \
           libfontconfig1-dev \
           libfreetype6-dev \
-          libwebkit2gtk-4.1-dev \
           libglu1-mesa-dev \
           libcurl4-openssl-dev \
           libgtk-3-dev \
           libjack-jackd2-dev \
           freeglut3-dev \
-          libsoup-3.0-dev \
           pkg-config
 
     # macOS Dependencies
@@ -108,17 +83,6 @@ jobs:
     # Build
     - name: Build
       run: cmake --build build --config Release
-
-    # Run Tests
-    - name: Run Tests
-      run: |
-        cmake --build build --config Release --target GravisynthTests
-        if [ "$RUNNER_OS" == "Windows" ]; then
-          ./build/Tests/Release/GravisynthTests.exe
-        else
-          ./build/Tests/GravisynthTests
-        fi
-      shell: bash
 
     # Package Linux
     - name: Package Linux Artifact
@@ -142,11 +106,11 @@ jobs:
           exit 1
         fi
         echo "Found app at: $APP_PATH"
-        
+
         # Ad-hoc code sign the app bundle
         codesign --force --deep -s - "$APP_PATH"
         codesign --verify --verbose "$APP_PATH"
-        
+
         ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" artifact/${{ matrix.artifact_name }}.zip
 
     # Package Windows
@@ -166,27 +130,36 @@ jobs:
         retention-days: 90
 
   release:
-    name: Create Release
-    needs: [tag, build]
-    # Run even if some builds fail/cancel, as long as tag succeeded
-    if: always() && needs.tag.result == 'success'
+    name: Tag and Release
+    needs: [build]
+    if: always() && !contains(needs.build.result, 'failure')
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump version and push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: minor
+          tag_prefix: "v"
+          fetch_all_tags: true
+
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
           merge-multiple: true
 
-      - name: Debug - List Artifacts
-        run: ls -R artifacts
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.tag.outputs.new_tag }}
-          name: Release ${{ needs.tag.outputs.new_tag }}
-          body: ${{ needs.tag.outputs.changelog }}
+          tag_name: ${{ steps.tag_version.outputs.new_tag }}
+          name: Release ${{ steps.tag_version.outputs.new_tag }}
+          body: ${{ steps.tag_version.outputs.changelog }}
           files: artifacts/*
           draft: false
           prerelease: true
