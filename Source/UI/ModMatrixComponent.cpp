@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <map>
 
-ModMatrixComponent::ModMatrixComponent(AudioEngine& engine, GravisynthUndoManager* undoMgr)
-    : audioEngine(engine)
+ModMatrixComponent::ModMatrixComponent(IGraphManager& manager, GravisynthUndoManager* undoMgr)
+    : graphManager(manager)
     , undoManager(undoMgr) {
     addAndMakeVisible(viewport);
     viewport.setViewedComponent(&contentContainer);
@@ -92,11 +92,11 @@ void ModMatrixComponent::resized() {
 void ModMatrixComponent::timerCallback() { updateRowsFromGraph(); }
 
 void ModMatrixComponent::updateRowsFromGraph() {
-    auto activeRoutings = audioEngine.getActiveModRoutings();
+    auto activeRoutings = graphManager.getActiveModRoutings();
 
     // Stable sort by NodeID so row numbers are consistent
     std::sort(activeRoutings.begin(), activeRoutings.end(),
-              [](const AudioEngine::ModRoutingInfo& a, const AudioEngine::ModRoutingInfo& b) {
+              [](const IGraphManager::ModRoutingInfo& a, const IGraphManager::ModRoutingInfo& b) {
                   return a.attenuverterNodeID.uid < b.attenuverterNodeID.uid;
               });
 
@@ -150,9 +150,9 @@ void ModMatrixComponent::updateRowsFromGraph() {
     }
 
     // Refresh combo items if the number of nodes in graph changed
-    int currentNodeCount = audioEngine.getGraph().getNumNodes();
+    int currentNodeCount = graphManager.getGraph().getNumNodes();
     if (currentNodeCount != lastNodeCount) {
-        audioEngine.updateModuleNames();
+        graphManager.updateModuleNames();
         for (auto& row : rows)
             row->populateCombos();
         lastNodeCount = currentNodeCount;
@@ -166,7 +166,7 @@ void ModMatrixComponent::updateRowsFromGraph() {
 
 void ModMatrixComponent::addModulation() {
     // Just add an unconnected attenuverter node to create an "empty" row
-    audioEngine.addEmptyModRouting();
+    graphManager.addEmptyModRouting();
     updateRowsFromGraph();
 }
 
@@ -194,10 +194,10 @@ ModMatrixComponent::ModRow::ModRow(ModMatrixComponent& o, juce::AudioProcessorGr
     destCombo.addListener(this);
     deleteButton.onClick = [this] {
         if (owner.undoManager) {
-            owner.undoManager->recordStructuralChange(owner.audioEngine.getGraph(),
-                                                      [this] { owner.audioEngine.removeModRouting(attenuverterId); });
+            owner.undoManager->recordStructuralChange(owner.graphManager.getGraph(),
+                                                      [this] { owner.graphManager.removeModRouting(attenuverterId); });
         } else {
-            owner.audioEngine.removeModRouting(attenuverterId);
+            owner.graphManager.removeModRouting(attenuverterId);
         }
     };
 
@@ -209,7 +209,7 @@ ModMatrixComponent::ModRow::ModRow(ModMatrixComponent& o, juce::AudioProcessorGr
     bypassToggle.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
 
     // Attach to attenuverter params
-    if (auto* node = owner.audioEngine.getGraph().getNodeForId(attenuverterId)) {
+    if (auto* node = owner.graphManager.getGraph().getNodeForId(attenuverterId)) {
         const auto& params = node->getProcessor()->getParameters();
         if (params.size() > 1) {
             if (auto* param = dynamic_cast<juce::AudioParameterFloat*>(params[1])) {
@@ -261,7 +261,7 @@ void ModMatrixComponent::ModRow::detach() {
     amountAttachment.reset();
     bypassAttachment.reset();
 
-    if (auto* node = owner.audioEngine.getGraph().getNodeForId(attenuverterId)) {
+    if (auto* node = owner.graphManager.getGraph().getNodeForId(attenuverterId)) {
         for (auto* p : node->getProcessor()->getParameters())
             p->removeListener(this);
     }
@@ -282,11 +282,11 @@ void ModMatrixComponent::ModRow::parameterGestureChanged(int parameterIndex, boo
 
     if (gestureIsStarting) {
         gestureStartValues[parameterIndex] = 1.0f;
-        owner.undoManager->captureBeforeState(owner.audioEngine.getGraph());
+        owner.undoManager->captureBeforeState(owner.graphManager.getGraph());
     } else {
         auto it = gestureStartValues.find(parameterIndex);
         if (it != gestureStartValues.end()) {
-            owner.undoManager->pushSnapshotFromCapture(owner.audioEngine.getGraph());
+            owner.undoManager->pushSnapshotFromCapture(owner.graphManager.getGraph());
             gestureStartValues.erase(it);
         }
     }
@@ -296,7 +296,7 @@ void ModMatrixComponent::ModRow::populateCombos() {
     sourceCombo.clear(juce::dontSendNotification);
     destCombo.clear(juce::dontSendNotification);
 
-    auto& graph = owner.audioEngine.getGraph();
+    auto& graph = owner.graphManager.getGraph();
     bool useGroups = !owner.isSourceMenuFlat;
 
     std::map<ModulationCategory, juce::String> categoryNames = {{ModulationCategory::Envelope, "Envelopes"},
@@ -393,7 +393,7 @@ void ModMatrixComponent::ModRow::populateCombos() {
     }
 }
 
-void ModMatrixComponent::ModRow::refresh(const AudioEngine::ModRoutingInfo& info) {
+void ModMatrixComponent::ModRow::refresh(const IGraphManager::ModRoutingInfo& info) {
     int srcId = (int)((info.sourceNodeID.uid << 8) | (uint32_t)info.sourceChannelIndex);
     sourceCombo.setSelectedId(srcId, juce::dontSendNotification);
     int destId = (int)((info.destNodeID.uid << 8) | (uint32_t)info.destChannelIndex);
@@ -413,7 +413,7 @@ void ModMatrixComponent::ModRow::comboBoxChanged(juce::ComboBox* comboBox) {
 
         if (srcNodeId != 0 || dstNodeId != 0) {
             auto doReroute = [this, srcNodeId, srcChannel, dstNodeId, dstChannel] {
-                auto& graph = owner.audioEngine.getGraph();
+                auto& graph = owner.graphManager.getGraph();
 
                 for (auto& conn : graph.getConnections()) {
                     if (conn.destination.nodeID == attenuverterId && conn.destination.channelIndex == 0) {
@@ -437,7 +437,7 @@ void ModMatrixComponent::ModRow::comboBoxChanged(juce::ComboBox* comboBox) {
             };
 
             if (owner.undoManager) {
-                owner.undoManager->recordStructuralChange(owner.audioEngine.getGraph(), doReroute);
+                owner.undoManager->recordStructuralChange(owner.graphManager.getGraph(), doReroute);
             } else {
                 doReroute();
             }

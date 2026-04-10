@@ -36,6 +36,7 @@ add_library(GravisynthCore STATIC
     Source/GravisynthUndoManager.h
     Source/PresetManager.cpp
     Source/PresetManager.h
+    Source/IGraphManager.h
     # Modules
     Source/Modules/ModuleBase.h
     Source/Modules/OscillatorModule.h
@@ -98,6 +99,9 @@ target_include_directories(GravisynthCore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/Source
 )
 
+# Required for plugin shared library linking on Linux
+set_target_properties(GravisynthCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 if(MSVC)
     target_compile_options(GravisynthCore PRIVATE /W4)
 else()
@@ -158,6 +162,75 @@ if(MSVC)
     target_compile_options(Gravisynth PRIVATE /W4)
 else()
     target_compile_options(Gravisynth PRIVATE -Wall -Wextra)
+endif()
+
+# Plugin target (VST3/AU)
+juce_add_plugin(GravisynthPlugin
+    PRODUCT_NAME "Gravisynth"
+    COMPANY_NAME "Gravisynth"
+    PLUGIN_MANUFACTURER_CODE Grvs
+    PLUGIN_CODE Gvsn
+    FORMATS VST3 AU
+    IS_SYNTH TRUE
+    NEEDS_MIDI_INPUT TRUE
+    NEEDS_MIDI_OUTPUT FALSE
+    IS_MIDI_EFFECT FALSE
+    EDITOR_WANTS_KEYBOARD_FOCUS TRUE
+    COPY_PLUGIN_AFTER_BUILD TRUE
+    VST3_CATEGORIES "Instrument" "Synth"
+    AU_MAIN_TYPE "kAudioUnitType_MusicDevice"
+    BUNDLE_ID "com.gravisynth.plugin"
+    VERSION "${PROJECT_VERSION}"
+)
+
+juce_generate_juce_header(GravisynthPlugin)
+
+target_sources(GravisynthPlugin PRIVATE
+    Source/Plugin/PluginProcessor.cpp
+    Source/Plugin/PluginProcessor.h
+    Source/Plugin/PluginEditor.cpp
+    Source/Plugin/PluginEditor.h
+    Source/UI/GraphEditor.cpp
+    Source/UI/GraphEditor.h
+    Source/UI/ModuleComponent.cpp
+    Source/UI/ModuleComponent.h
+    Source/UI/ModMatrixComponent.cpp
+    Source/UI/ModMatrixComponent.h
+    Source/UI/AIChatComponent.cpp
+    Source/UI/FrequencyResponseComponent.h
+    Source/UI/ScopeComponent.h
+    Source/UI/ModuleLibraryComponent.h
+)
+
+target_link_libraries(GravisynthPlugin PRIVATE
+    GravisynthCore
+    juce::juce_core
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_data_structures
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_dsp
+)
+
+target_include_directories(GravisynthPlugin PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source
+)
+
+if(UNIX AND NOT APPLE)
+    target_link_libraries(GravisynthPlugin PRIVATE ${GTK3_LIBRARIES} ${WEBKIT_LIBRARIES})
+    target_include_directories(GravisynthPlugin PRIVATE ${GTK3_INCLUDE_DIRS} ${WEBKIT_INCLUDE_DIRS})
+endif()
+
+if(MSVC)
+    target_compile_options(GravisynthPlugin PRIVATE /W4)
+else()
+    target_compile_options(GravisynthPlugin PRIVATE -Wall -Wextra)
 endif()
 
 add_subdirectory(Tests)

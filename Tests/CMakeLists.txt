@@ -71,3 +71,28 @@ target_link_libraries(GravisynthTests PRIVATE
 
 include(GoogleTest)
 gtest_discover_tests(GravisynthTests)
+
+# Separate test target for plugin tests to avoid symbol conflicts with main test binary
+add_executable(GravisynthPluginTests
+    PluginProcessorTests.cpp
+    ../Source/Plugin/PluginProcessor.cpp
+    ../Source/Plugin/PluginEditor.cpp
+    ../Source/UI/GraphEditor.cpp
+    ../Source/UI/ModMatrixComponent.cpp
+    ../Source/UI/AIChatComponent.cpp
+    ../Source/UI/ModuleComponent.cpp
+)
+
+target_link_libraries(GravisynthPluginTests PRIVATE
+    GTest::gtest_main
+    GravisynthCore
+    juce::juce_core
+    juce::juce_audio_basics
+    juce::juce_dsp
+)
+
+target_include_directories(GravisynthPluginTests PRIVATE
+    ${CMAKE_SOURCE_DIR}/Source
+)
+
+gtest_discover_tests(GravisynthPluginTests)
