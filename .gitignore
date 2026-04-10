@@ -40,3 +40,4 @@ build-asan/
 build-release/
 build-rel*/
 build-release/
+Tests/reference/wav/

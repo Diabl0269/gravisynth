@@ -80,6 +80,24 @@ bash scripts/pre-push-release-test.sh
 bash scripts/coverage.sh
 ```
 
+### Run E2E Tests
+```bash
+# Audio rendering tests only
+./build/Tests/GravisynthTests --gtest_filter="AudioRendering*"
+
+# Workflow tests only  
+./build/Tests/GravisynthTests --gtest_filter="Workflow*"
+
+# Snapshot/reference tests only
+./build/Tests/GravisynthTests --gtest_filter="*Snapshot*"
+
+# Regenerate reference files after intentional DSP changes
+bash scripts/update-reference.sh
+
+# Convert reference files to WAV for listening
+bash scripts/play-reference.sh
+```
+
 ### Git Hooks
 ```bash
 bash scripts/install-hooks.sh    # Install pre-push hook (runs Release build+test before push)
@@ -117,6 +135,11 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 - Code coverage enforcement (threshold: 80%, CI pipeline enforces via `scripts/coverage.sh`)
 - ~250 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels)
 - CI runs on Ubuntu + macOS with linting, building, testing, and coverage
+- **Audio rendering tests** (`Tests/AudioRenderingTests.cpp`): End-to-end signal chain tests that process audio through modules and verify output. Tests cover oscillator output, frequency accuracy, signal chains (Osc→Filter→VCA), sequencer-driven patches, all 8 FX modules, preset rendering, ADSR envelope shape, LFO modulation, and modulation parameter changes
+- **Reference snapshot tests**: Binary `.raw` files in `Tests/reference/` store expected audio output. Tests compare rendered audio sample-by-sample (tolerance: 1e-5) to catch subtle DSP regressions. Auto-generated on first run; regenerate with `bash scripts/update-reference.sh`
+- **Workflow tests** (`Tests/WorkflowTests.cpp`): Multi-step UI interaction tests using JUCE component APIs. Tests cover module drop/delete, undo/redo, connection management, mod routing, preset loading, and module replacement
+- **Test helpers** (`Tests/TestAudioHelpers.h`): Shared utilities for rendering modules, computing RMS, estimating frequency, silence detection, and reference file I/O
+- All tests run headlessly — no audio device, no display server needed
 
 ## Key Files to Understand
 
@@ -144,3 +167,8 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 - `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
 - `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
 - `Tests/`: ~250 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels)
+- `Tests/AudioRenderingTests.cpp`: E2E audio rendering tests with signal chain verification and snapshot comparison
+- `Tests/WorkflowTests.cpp`: Multi-step UI workflow tests (undo/redo, module lifecycle, preset loading)
+- `Tests/TestAudioHelpers.h`: Shared test utilities (rendering, RMS, frequency estimation, reference I/O)
+- `Tests/reference/`: Binary reference audio files for snapshot comparison tests
+- `scripts/update-reference.sh`: Regenerates audio reference files (run when DSP changes are intentional)

@@ -298,6 +298,10 @@ TEST_F(WorkflowTest, PresetLoadDoesNotCrash) {
     EXPECT_NO_FATAL_FAILURE({
         for (int i = 0; i < presetNames.size(); ++i) {
             SCOPED_TRACE(testing::Message() << "Loading preset " << i << ": " << presetNames[i]);
+            // Detach UI from current graph nodes BEFORE loading a new preset.
+            // loadPreset clears the graph (destroying processors), so UI components
+            // must release their references first to avoid use-after-free.
+            editor().detachAllModuleComponents();
             gsynth::PresetManager::loadPreset(i, graph());
             editor().updateComponents();
             EXPECT_GT(nodeCount(), 0);
