@@ -38,6 +38,8 @@ add_executable(GravisynthTests
     UndoRedoTests.cpp
     PresetManagerTests.cpp
     ModuleBypassTests.cpp
+    AudioRenderingTests.cpp
+    WorkflowTests.cpp
     ../Source/MainComponent.cpp
     ../Source/UI/GraphEditor.cpp
     ../Source/UI/ModMatrixComponent.cpp

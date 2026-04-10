@@ -35,7 +35,16 @@ public:
         if (toggleModMatrixButton.onClick)
             toggleModMatrixButton.onClick();
     }
+    void simulateUndoClick() {
+        if (undoButton.onClick)
+            undoButton.onClick();
+    }
+    void simulateRedoClick() {
+        if (redoButton.onClick)
+            redoButton.onClick();
+    }
     GraphEditor& getGraphEditor() { return graphEditor; }
+    GravisynthUndoManager& getUndoManager() { return undoManager; }
 
 private:
     // AIIntegrationService::Listener
