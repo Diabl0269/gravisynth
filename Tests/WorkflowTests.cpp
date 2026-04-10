@@ -1,6 +1,7 @@
 #include "AI/AIProvider.h"
 #include "AudioEngine.h"
 #include "GravisynthUndoManager.h"
+#include "IGraphManager.h"
 #include "MainComponent.h"
 #include "Modules/ADSRModule.h"
 #include "Modules/FilterModule.h"
@@ -49,7 +50,7 @@ protected:
         mainComp = std::make_unique<MainComponent>(std::make_unique<MockProvider>());
         mainComp->setSize(1024, 768);
         // Close the audio device so tests don't route audio to speakers
-        engine().getDeviceManager().closeAudioDevice();
+        mainComp->getDeviceManager().closeAudioDevice();
     }
 
     void TearDown() override { mainComp.reset(); }
@@ -58,8 +59,8 @@ protected:
 
     // Convenience accessors
     GraphEditor& editor() { return mainComp->getGraphEditor(); }
-    AudioEngine& engine() { return editor().getAudioEngine(); }
-    juce::AudioProcessorGraph& graph() { return engine().getGraph(); }
+    IGraphManager& graphManager() { return editor().getGraphManager(); }
+    juce::AudioProcessorGraph& graph() { return graphManager().getGraph(); }
 
     // Drop a module at a specified position
     void dropModule(const juce::String& type, juce::Point<int> pos = {100, 100}) {
@@ -278,14 +279,14 @@ TEST_F(WorkflowTest, ModRoutingUndoRedo) {
     auto oscId = oscNode->nodeID;
 
     // Add modulation routing
-    int initialRoutings = static_cast<int>(engine().getActiveModRoutings().size());
-    engine().addModRouting(lfoId, 0, oscId, 0);
+    int initialRoutings = static_cast<int>(graphManager().getActiveModRoutings().size());
+    graphManager().addModRouting(lfoId, 0, oscId, 0);
 
-    EXPECT_EQ(static_cast<int>(engine().getActiveModRoutings().size()), initialRoutings + 1);
+    EXPECT_EQ(static_cast<int>(graphManager().getActiveModRoutings().size()), initialRoutings + 1);
 
     // Note: Direct engine API undo/redo would be via GravisynthUndoManager
     // For this test we verify the routing was added correctly
-    auto routings = engine().getActiveModRoutings();
+    auto routings = graphManager().getActiveModRoutings();
     EXPECT_GT(routings.size(), static_cast<size_t>(initialRoutings));
 }
 

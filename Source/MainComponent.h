@@ -45,6 +45,7 @@ public:
     }
     GraphEditor& getGraphEditor() { return graphEditor; }
     GravisynthUndoManager& getUndoManager() { return undoManager; }
+    juce::AudioDeviceManager& getDeviceManager() { return audioEngine.getDeviceManager(); }
 
 private:
     // AIIntegrationService::Listener
