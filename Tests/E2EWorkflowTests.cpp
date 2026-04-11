@@ -56,23 +56,19 @@ protected:
         pumpMessages(100);
     }
 
-    // Stop all component timers to avoid message queue accumulation during pumpMessages().
-    // UI timers (30-60 Hz) are not needed for test correctness and cause CI runners to hang.
-    void stopAllTimers() {
-        mainComp->stopTimer();
-        editor().stopTimer();
-        auto* content = editor().getChildComponent(0);
-        if (content) {
-            for (auto* child : content->getChildren()) {
-                if (auto* timer = dynamic_cast<juce::Timer*>(child))
-                    timer->stopTimer();
-                // Also stop timers on child components (e.g. FrequencyResponseComponent, ScopeComponent)
-                for (int i = 0; i < child->getNumChildComponents(); ++i) {
-                    if (auto* subTimer = dynamic_cast<juce::Timer*>(child->getChildComponent(i)))
-                        subTimer->stopTimer();
-                }
-            }
-        }
+    // Recursively stop all component timers to avoid message queue accumulation during
+    // pumpMessages(). UI timers (10-60 Hz on MainComponent, GraphEditor, ModuleComponent,
+    // ModMatrixComponent, ScopeComponent, FrequencyResponseComponent) are not needed for
+    // test correctness and cause CI runners to hang.
+    void stopAllTimers() { stopTimersRecursive(mainComp.get()); }
+
+    void stopTimersRecursive(juce::Component* comp) {
+        if (!comp)
+            return;
+        if (auto* timer = dynamic_cast<juce::Timer*>(comp))
+            timer->stopTimer();
+        for (int i = 0; i < comp->getNumChildComponents(); ++i)
+            stopTimersRecursive(comp->getChildComponent(i));
     }
 
     void TearDown() override {
