@@ -72,9 +72,7 @@ protected:
         return nullptr; // Will be addressed with new hooks
     }
 
-    void pumpMessages(int ms = 50) {
-        juce::MessageManager::getInstance()->runDispatchLoopUntil(ms);
-    }
+    void pumpMessages(int ms = 50) { juce::MessageManager::getInstance()->runDispatchLoopUntil(ms); }
 
     void dropModule(const juce::String& type, juce::Point<int> pos = {300, 300}) {
         e2e::DummyDragSource dummySource;
@@ -106,7 +104,7 @@ protected:
     }
 
     ModuleComponent* findNewModule(const juce::String& name,
-                                    const std::set<juce::AudioProcessorGraph::NodeID>& initialNodes) {
+                                   const std::set<juce::AudioProcessorGraph::NodeID>& initialNodes) {
         auto* content = editor().getChildComponent(0);
         if (content) {
             for (auto* child : content->getChildren()) {
@@ -228,10 +226,9 @@ TEST_F(E2EWorkflowTest, DropModule_CreatesNode) {
 }
 
 TEST_F(E2EWorkflowTest, DropAllModuleTypes_NoCrash) {
-    const juce::StringArray moduleTypes = {"Oscillator", "Filter", "ADSR", "VCA", "Sequencer", "LFO",
-                                           "Distortion", "Delay", "Reverb", "MidiKeyboard", "Chorus",
-                                           "Phaser", "Compressor", "Flanger", "Limiter", "Poly MIDI",
-                                           "Voice Mixer"};
+    const juce::StringArray moduleTypes = {"Oscillator", "Filter",  "ADSR",    "VCA",          "Sequencer",  "LFO",
+                                           "Distortion", "Delay",   "Reverb",  "MidiKeyboard", "Chorus",     "Phaser",
+                                           "Compressor", "Flanger", "Limiter", "Poly MIDI",    "Voice Mixer"};
 
     for (const auto& type : moduleTypes) {
         auto nodeBefore = nodeCount();
@@ -667,7 +664,8 @@ TEST_F(E2EWorkflowTest, StressTest_AllPresetsWithModifications) {
     const std::vector<int> presetIndicesToTest = {0, presetCount / 2, presetCount - 1};
 
     for (int i : presetIndicesToTest) {
-        if (i >= presetCount) continue;
+        if (i >= presetCount)
+            continue;
 
         EXPECT_NO_THROW({ loadPreset(i); }) << "Loading preset " << i;
 
