@@ -52,13 +52,9 @@ protected:
         mainComp = std::make_unique<MainComponent>(std::make_unique<e2e::MockProvider>());
         mainComp->setSize(1600, 900);
         mainComp->getAudioEngine().getDeviceManager().closeAudioDevice();
-        pumpMessages(100);
     }
 
-    void TearDown() override {
-        mainComp.reset();
-        pumpMessages(50);
-    }
+    void TearDown() override { mainComp.reset(); }
 
     GraphEditor& editor() { return mainComp->getGraphEditor(); }
     AudioEngine& engine() { return mainComp->getAudioEngine(); }
@@ -72,14 +68,11 @@ protected:
         return nullptr; // Will be addressed with new hooks
     }
 
-    void pumpMessages(int ms = 50) { juce::MessageManager::getInstance()->runDispatchLoopUntil(ms); }
-
     void dropModule(const juce::String& type, juce::Point<int> pos = {300, 300}) {
         e2e::DummyDragSource dummySource;
         juce::var description(type);
         juce::DragAndDropTarget::SourceDetails details(description, &dummySource, pos);
         editor().itemDropped(details);
-        pumpMessages();
     }
 
     void connectModules(ModuleComponent* src, int srcPort, ModuleComponent* dst, int dstPort) {
@@ -87,7 +80,6 @@ protected:
         editor().beginConnectionDrag(src, srcPort, false, false, juce::Point<int>(0, 0));
         editor().dragConnection(dstScreenPos);
         editor().endConnectionDrag(dstScreenPos);
-        pumpMessages();
     }
 
     // Match module by base type name (names may have numeric suffixes like "Oscillator 1")
@@ -144,7 +136,6 @@ protected:
         editor().detachAllModuleComponents();
         gsynth::PresetManager::loadPreset(index, graph());
         editor().updateComponents();
-        pumpMessages();
     }
 
     std::unique_ptr<MainComponent> mainComp;
@@ -180,7 +171,7 @@ TEST_F(E2EWorkflowTest, UndoRedoButtons_DisabledOnFreshApp) {
     // Fresh app should have no undo/redo available
     // Note: We don't have direct access to undo manager state yet,
     // so this test validates the state indirectly by ensuring no crash on initial state
-    EXPECT_NO_THROW({ pumpMessages(); }) << "Message pump should not crash on fresh app";
+    EXPECT_GT(nodeCount(), 0) << "Fresh app should have nodes from default patch";
 }
 
 // ============================================================================
@@ -252,7 +243,6 @@ TEST_F(E2EWorkflowTest, DeleteModule_RemovesNode) {
 
     auto nodeBefore = nodeCount();
     editor().deleteModule(lfoComp);
-    pumpMessages();
 
     EXPECT_EQ(nodeCount(), nodeBefore - 1) << "Node count should decrease by 1 after delete";
 }
@@ -275,7 +265,6 @@ TEST_F(E2EWorkflowTest, ReplaceModule_SwapsType) {
 
     auto nodesBefore = nodeCount();
     editor().replaceModule(oscComp, "Filter");
-    pumpMessages();
 
     // Verify the specific node was replaced (old node ID should be gone)
     EXPECT_EQ(graph().getNodeForId(oscNodeId), nullptr) << "Old oscillator node should be removed";
@@ -338,7 +327,6 @@ TEST_F(E2EWorkflowTest, DisconnectPort_RemovesConnection) {
     auto connsBefore = connectionCount();
 
     editor().disconnectPort(filterComp, 0, true, false);
-    pumpMessages();
 
     EXPECT_LT(connectionCount(), connsBefore) << "Connection count should decrease after disconnect";
 }
@@ -348,7 +336,6 @@ TEST_F(E2EWorkflowTest, ConnectMidiPorts_KeyboardToOsc) {
     auto initialNodes = nodeCount();
 
     dropModule("Oscillator", {400, 100});
-    pumpMessages(100);
 
     auto* oscComp = findNewModule("Oscillator", initialIds);
     ASSERT_NE(oscComp, nullptr);
@@ -375,7 +362,6 @@ TEST_F(E2EWorkflowTest, ConnectMidiPorts_KeyboardToOsc) {
     // Add MIDI connection directly
     graph().addConnection({{kbNodeId, juce::AudioProcessorGraph::midiChannelIndex},
                            {oscNodeId, juce::AudioProcessorGraph::midiChannelIndex}});
-    pumpMessages();
 
     // Verify connection exists
     bool midiConnFound = false;
@@ -413,7 +399,6 @@ TEST_F(E2EWorkflowTest, ModRoutingConnection_CreatesAttenuverter) {
     // Add mod routing (LFO output 0 -> Filter cutoff CV input)
     // Channel 1 is typically the CV input for cutoff
     engine().addModRouting(lfoNodeId, 0, filterNodeId, 1);
-    pumpMessages();
 
     auto afterRoutings = engine().getActiveModRoutings().size();
     EXPECT_GT(afterRoutings, initialRoutings) << "Should have created a new mod routing";
@@ -428,7 +413,6 @@ TEST_F(E2EWorkflowTest, AddModulation_CreatesRow) {
 
     // Add empty mod routing
     engine().addEmptyModRouting();
-    pumpMessages();
 
     // Should have created at least an attenuverter node
     EXPECT_GT(nodeCount(), 0) << "Should have nodes in graph after adding mod routing";
@@ -455,7 +439,6 @@ TEST_F(E2EWorkflowTest, ConfigureModRow_SelectSourceDest) {
 
     // Add mod routing via engine API (tests the routing configuration)
     engine().addModRouting(lfoNodeId, 0, filterNodeId, 1);
-    pumpMessages();
 
     // Verify the routing exists
     auto routings = engine().getActiveModRoutings();
@@ -492,7 +475,6 @@ TEST_F(E2EWorkflowTest, AdjustModAmount_SliderChange) {
 
     // Add mod routing
     engine().addModRouting(lfoNodeId, 0, filterNodeId, 1);
-    pumpMessages();
 
     // Find the attenuverter node that was created
     juce::AudioProcessorGraph::NodeID attenuverterId;
@@ -538,7 +520,6 @@ TEST_F(E2EWorkflowTest, DeleteModRow_RemovesRouting) {
 
     // Add mod routing
     engine().addModRouting(lfoNodeId, 0, filterNodeId, 1);
-    pumpMessages();
 
     // Find attenuverter ID
     juce::AudioProcessorGraph::NodeID attenuverterId;
@@ -552,7 +533,6 @@ TEST_F(E2EWorkflowTest, DeleteModRow_RemovesRouting) {
 
     // Remove the mod routing
     engine().removeModRouting(attenuverterId);
-    pumpMessages();
 
     // Verify routing is gone
     bool foundRouting = false;
