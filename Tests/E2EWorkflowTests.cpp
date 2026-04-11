@@ -52,7 +52,27 @@ protected:
         mainComp = std::make_unique<MainComponent>(std::make_unique<e2e::MockProvider>());
         mainComp->setSize(1600, 900);
         mainComp->getAudioEngine().getDeviceManager().closeAudioDevice();
+        stopAllTimers(); // Must stop BEFORE pumpMessages — timers fire during pump on CI
         pumpMessages(100);
+    }
+
+    // Stop all component timers to avoid message queue accumulation during pumpMessages().
+    // UI timers (30-60 Hz) are not needed for test correctness and cause CI runners to hang.
+    void stopAllTimers() {
+        mainComp->stopTimer();
+        editor().stopTimer();
+        auto* content = editor().getChildComponent(0);
+        if (content) {
+            for (auto* child : content->getChildren()) {
+                if (auto* timer = dynamic_cast<juce::Timer*>(child))
+                    timer->stopTimer();
+                // Also stop timers on child components (e.g. FrequencyResponseComponent, ScopeComponent)
+                for (int i = 0; i < child->getNumChildComponents(); ++i) {
+                    if (auto* subTimer = dynamic_cast<juce::Timer*>(child->getChildComponent(i)))
+                        subTimer->stopTimer();
+                }
+            }
+        }
     }
 
     void TearDown() override {
@@ -79,6 +99,7 @@ protected:
         juce::var description(type);
         juce::DragAndDropTarget::SourceDetails details(description, &dummySource, pos);
         editor().itemDropped(details);
+        stopAllTimers();
         pumpMessages();
     }
 
@@ -144,6 +165,7 @@ protected:
         editor().detachAllModuleComponents();
         gsynth::PresetManager::loadPreset(index, graph());
         editor().updateComponents();
+        stopAllTimers();
         pumpMessages();
     }
 
@@ -660,7 +682,19 @@ TEST_F(E2EWorkflowTest, FullWorkflow_PresetModifyUndoRedo) {
     // Full undo/redo sequence would happen here with UndoManager access
 }
 
-// Note: stress test combining preset loading + module drops was removed because
-// timer-heavy UI components (30-60 Hz per module) cause message queue accumulation
-// that hangs CI runners. Coverage is provided by LoadAllPresets_NoCrash (all presets)
-// and DropAllModuleTypes_NoCrash (all 17 module types) independently.
+TEST_F(E2EWorkflowTest, StressTest_AllPresetsWithModifications) {
+    auto presetNames = gsynth::PresetManager::getPresetNames();
+    auto presetCount = static_cast<int>(presetNames.size());
+
+    for (int i = 0; i < presetCount; ++i) {
+        EXPECT_NO_THROW({ loadPreset(i); }) << "Loading preset " << i;
+
+        auto nodeBefore = nodeCount();
+        EXPECT_NO_THROW({ dropModule("Chorus"); }) << "Adding module to preset " << i;
+        EXPECT_EQ(nodeCount(), nodeBefore + 1) << "Node count should increase for preset " << i;
+
+        auto nodeAfterChorus = nodeCount();
+        EXPECT_NO_THROW({ dropModule("Delay"); }) << "Adding delay to preset " << i;
+        EXPECT_EQ(nodeCount(), nodeAfterChorus + 1) << "Node count should increase for delay in preset " << i;
+    }
+}
