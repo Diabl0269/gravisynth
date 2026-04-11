@@ -110,19 +110,7 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 
 ## Testing Strategy
 
-All tests use GoogleTest and run headless (no audio device, no GUI window). ~285 tests across 37 suites.
-
-**Audio rendering tests** (~122 tests): Headless DSP tests that render audio through modules and verify output — RMS levels, silence detection, frequency response, waveform accuracy. Covers Oscillator, Filter, ADSR, VCA, LFO, all 8 FX modules, anti-click, and edge cases (zero-length buffers, extreme parameters, single-sample buffers, rapid parameter changes).
-
-**Integration tests** (~38 tests): Signal chain routing (Osc→Filter→VCA), modulation matrix routing, LFO→Filter modulation, preset loading with graph structure validation, AI state serialization round-trips.
-
-**Component workflow tests** (~32 tests): UI component interactions — MainComponent panel toggles, GraphEditor drag-and-drop/connection/deletion, ModuleComponent parameter attachment, MIDI keyboard note handling, module bypass.
-
-**State management tests** (~44 tests): Preset load/save, undo/redo (add/remove modules, connections, parameter changes, complex sequences), AI state mapper JSON round-trips.
-
-**E2E workflow tests** (24 tests, `Tests/E2EWorkflowTests.cpp`): Full application workflow tests exercising the complete UI interaction code paths — preset loading, module drag-and-drop via `itemDropped()`, connection dragging via synthetic mouse events with `localPointToGlobal()` coordinate conversion, mod matrix operations, and undo/redo sequences. Run with `--gtest_filter="E2EWorkflow*"`.
-
-**Coverage & CI**: Code coverage threshold 80% enforced via `scripts/coverage.sh`. CI runs on Ubuntu + macOS + Windows with linting, building, testing, and coverage.
+~285 tests across 37 suites, all headless (no audio device, no GUI window). Five test layers: audio rendering (DSP verification), integration (signal chains, mod routing), component workflow (UI interactions), state management (presets, undo/redo, serialization), and E2E workflow (full application paths). Code coverage threshold: 80%. See [`docs/testing.md`](docs/testing.md) for the full breakdown, patterns, and how to add tests for new modules.
 
 ## Key Files to Understand
 
