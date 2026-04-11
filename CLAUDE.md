@@ -110,14 +110,19 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 
 ## Testing Strategy
 
-- Unit tests for individual modules using GoogleTest
-- Tests cover audio processing behavior, parameter handling, and MIDI interaction
-- Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
-- Integration tests (signal chains, modulation routing)
-- E2E workflow tests (`Tests/E2EWorkflowTests.cpp`): 24 in-process tests exercising full UI interaction code paths — preset loading, module drag-and-drop, connection dragging via synthetic mouse events, mod matrix operations, and undo/redo sequences. Uses `localPointToGlobal()` for coordinate conversion since components are nested inside MainComponent. Run with `--gtest_filter="E2EWorkflow*"`.
-- Code coverage enforcement (threshold: 80%, CI pipeline enforces via `scripts/coverage.sh`)
-- ~285 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels, E2E workflow)
-- CI runs on Ubuntu + macOS + Windows with linting, building, testing, and coverage
+All tests use GoogleTest and run headless (no audio device, no GUI window). ~285 tests across 37 suites.
+
+**Audio rendering tests** (~122 tests): Headless DSP tests that render audio through modules and verify output — RMS levels, silence detection, frequency response, waveform accuracy. Covers Oscillator, Filter, ADSR, VCA, LFO, all 8 FX modules, anti-click, and edge cases (zero-length buffers, extreme parameters, single-sample buffers, rapid parameter changes).
+
+**Integration tests** (~38 tests): Signal chain routing (Osc→Filter→VCA), modulation matrix routing, LFO→Filter modulation, preset loading with graph structure validation, AI state serialization round-trips.
+
+**Component workflow tests** (~32 tests): UI component interactions — MainComponent panel toggles, GraphEditor drag-and-drop/connection/deletion, ModuleComponent parameter attachment, MIDI keyboard note handling, module bypass.
+
+**State management tests** (~44 tests): Preset load/save, undo/redo (add/remove modules, connections, parameter changes, complex sequences), AI state mapper JSON round-trips.
+
+**E2E workflow tests** (24 tests, `Tests/E2EWorkflowTests.cpp`): Full application workflow tests exercising the complete UI interaction code paths — preset loading, module drag-and-drop via `itemDropped()`, connection dragging via synthetic mouse events with `localPointToGlobal()` coordinate conversion, mod matrix operations, and undo/redo sequences. Run with `--gtest_filter="E2EWorkflow*"`.
+
+**Coverage & CI**: Code coverage threshold 80% enforced via `scripts/coverage.sh`. CI runs on Ubuntu + macOS + Windows with linting, building, testing, and coverage.
 
 ## Key Files to Understand
 
@@ -142,4 +147,4 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 - `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
 - `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
 - `Tests/E2EWorkflowTests.cpp`: 24 E2E workflow tests — preset loading, module drop/delete/replace, connection drag, mod matrix, undo/redo sequences, and stress tests
-- `Tests/`: ~285 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels, E2E workflow)
+- `Tests/`: ~285 tests across 37 suites (audio rendering, integration, component workflow, state management, E2E workflow)
