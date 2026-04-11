@@ -64,7 +64,7 @@ cmake --build build --target GravisynthTests
 ```
 
 ### Build and Test (Release)
-A pre-push git hook automatically runs Release build + tests before every push. Install it with:
+A pre-push git hook automatically runs clang-format lint check + Release build + tests before every push. Install it with:
 ```bash
 bash scripts/install-hooks.sh
 ```
@@ -82,7 +82,7 @@ bash scripts/coverage.sh
 
 ### Git Hooks
 ```bash
-bash scripts/install-hooks.sh    # Install pre-push hook (runs Release build+test before push)
+bash scripts/install-hooks.sh    # Install pre-push hook (runs lint + Release build+test before push)
 ```
 
 ## CI Pipeline
