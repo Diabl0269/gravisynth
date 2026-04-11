@@ -16,6 +16,8 @@ public:
     ~GraphEditor() override;
 
     AudioEngine& getAudioEngine() { return audioEngine; }
+    ModMatrixComponent& getModMatrix() { return modMatrix; }
+    juce::OwnedArray<ModuleComponent>& getModuleComponents() { return content.getModules(); }
     void detachAllModuleComponents();
 
     void paint(juce::Graphics& g) override;

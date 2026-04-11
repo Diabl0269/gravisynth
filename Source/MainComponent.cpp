@@ -37,6 +37,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
     // Buttons
     addAndMakeVisible(saveButton);
     saveButton.setButtonText("Save Preset");
+    saveButton.setComponentID("saveButton");
     saveButton.onClick = [this] {
         fileChooser = std::make_unique<juce::FileChooser>(
             "Save Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
@@ -51,6 +52,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
 
     addAndMakeVisible(loadButton);
     loadButton.setButtonText("Load Presets");
+    loadButton.setComponentID("loadButton");
     loadButton.onClick = [this] {
         juce::PopupMenu menu;
         auto presets = gsynth::PresetManager::getPresetList();
@@ -86,6 +88,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
 
     addAndMakeVisible(undoButton);
     undoButton.setButtonText("Undo");
+    undoButton.setComponentID("undoButton");
     undoButton.setEnabled(false);
     undoButton.onClick = [this] {
         if (undoManager.canUndo())
@@ -96,6 +99,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
 
     addAndMakeVisible(redoButton);
     redoButton.setButtonText("Redo");
+    redoButton.setComponentID("redoButton");
     redoButton.setEnabled(false);
     redoButton.onClick = [this] {
         if (undoManager.canRedo())
@@ -106,6 +110,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
 
     addAndMakeVisible(toggleAiPanelButton);
     toggleAiPanelButton.setButtonText("Hide AI");
+    toggleAiPanelButton.setComponentID("toggleAiPanel");
     toggleAiPanelButton.onClick = [this] {
         isAiPanelVisible = !isAiPanelVisible;
         aiChatComponent.setVisible(isAiPanelVisible);
@@ -115,6 +120,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
 
     addAndMakeVisible(toggleModMatrixButton);
     toggleModMatrixButton.setButtonText("Hide Matrix");
+    toggleModMatrixButton.setComponentID("toggleModMatrix");
     toggleModMatrixButton.onClick = [this] {
         graphEditor.toggleModMatrixVisibility();
         toggleModMatrixButton.setButtonText(graphEditor.isModMatrixVisible() ? "Hide Matrix" : "Show Matrix");
@@ -123,6 +129,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
 
     addAndMakeVisible(settingsButton);
     settingsButton.setButtonText("Settings");
+    settingsButton.setComponentID("settingsButton");
     settingsButton.onClick = [this, savedProviderName, savedOllamaHost]() mutable { // Capture by value
         // Audio Settings Dialog
         auto* audioSelector =

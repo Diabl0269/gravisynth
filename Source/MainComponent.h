@@ -36,6 +36,16 @@ public:
             toggleModMatrixButton.onClick();
     }
     GraphEditor& getGraphEditor() { return graphEditor; }
+    void simulateUndoClick() {
+        if (undoButton.onClick)
+            undoButton.onClick();
+    }
+    void simulateRedoClick() {
+        if (redoButton.onClick)
+            redoButton.onClick();
+    }
+    GravisynthUndoManager& getUndoManager() { return undoManager; }
+    AudioEngine& getAudioEngine() { return audioEngine; }
 
 private:
     // AIIntegrationService::Listener

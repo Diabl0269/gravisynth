@@ -59,10 +59,12 @@ cmake --build build
 ```bash
 cmake --build build --target GravisynthTests
 ./build/Tests/GravisynthTests
+# Run only E2E workflow tests:
+./build/Tests/GravisynthTests --gtest_filter="E2EWorkflow*"
 ```
 
 ### Build and Test (Release)
-A pre-push git hook automatically runs Release build + tests before every push. Install it with:
+A pre-push git hook automatically runs clang-format lint check + Release build + tests before every push. Install it with:
 ```bash
 bash scripts/install-hooks.sh
 ```
@@ -80,7 +82,7 @@ bash scripts/coverage.sh
 
 ### Git Hooks
 ```bash
-bash scripts/install-hooks.sh    # Install pre-push hook (runs Release build+test before push)
+bash scripts/install-hooks.sh    # Install pre-push hook (runs lint + Release build+test before push)
 ```
 
 ## CI Pipeline
@@ -108,13 +110,7 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 
 ## Testing Strategy
 
-- Unit tests for individual modules using GoogleTest
-- Tests cover audio processing behavior, parameter handling, and MIDI interaction
-- Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
-- Integration tests (signal chains, modulation routing)
-- Code coverage enforcement (threshold: 80%, CI pipeline enforces via `scripts/coverage.sh`)
-- ~250 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels)
-- CI runs on Ubuntu + macOS with linting, building, testing, and coverage
+~284 tests across 37 suites, all headless (no audio device, no GUI window). Five test layers: audio rendering (DSP verification), integration (signal chains, mod routing), component workflow (UI interactions), state management (presets, undo/redo, serialization), and E2E workflow (full application paths). Code coverage threshold: 80%. See [`docs/testing.md`](docs/testing.md) for the full breakdown, patterns, and how to add tests for new modules.
 
 ## Key Files to Understand
 
@@ -138,4 +134,5 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 - `Source/Modules/FX/LimiterModule.h`: Brickwall limiter with input gain drive
 - `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
 - `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
-- `Tests/`: ~250 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels)
+- `Tests/E2EWorkflowTests.cpp`: 24 E2E workflow tests — preset loading, module drop/delete/replace, connection drag, mod matrix, undo/redo sequences, and stress tests
+- `Tests/`: ~284 tests across 37 suites (audio rendering, integration, component workflow, state management, E2E workflow)

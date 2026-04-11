@@ -10,6 +10,7 @@ ModMatrixComponent::ModMatrixComponent(AudioEngine& engine, GravisynthUndoManage
     viewport.setViewedComponent(&contentContainer);
 
     addAndMakeVisible(addButton);
+    addButton.setComponentID("addModulation");
     addButton.onClick = [this] { addModulation(); };
 
     addAndMakeVisible(flatToggle);
@@ -207,6 +208,8 @@ ModMatrixComponent::ModRow::ModRow(ModMatrixComponent& o, juce::AudioProcessorGr
     bypassToggle.setColour(juce::TextButton::buttonOnColourId, juce::Colours::orange);
     bypassToggle.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
     bypassToggle.setColour(juce::TextButton::textColourOnId, juce::Colours::black);
+    bypassToggle.setComponentID("modBypass");
+    deleteButton.setComponentID("modDelete");
 
     // Attach to attenuverter params
     if (auto* node = owner.audioEngine.getGraph().getNodeForId(attenuverterId)) {

@@ -215,4 +215,8 @@ All new modules **must** have unit tests in the `Tests/` directory.
     ./build/Tests/GravisynthTests
     ```
 
+### E2E Coverage
+
+New modules are automatically covered by E2E workflow tests in `Tests/E2EWorkflowTests.cpp`. The `DropAllModuleTypes_NoCrash` test drops every registered module type and verifies it creates a graph node without crashing. If you add a new module type, add its name string to the `moduleTypes` array in that test.
+
 By following this guide, you can contribute robust and high-quality audio modules to Gravisynth.
