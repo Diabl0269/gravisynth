@@ -59,6 +59,8 @@ cmake --build build
 ```bash
 cmake --build build --target GravisynthTests
 ./build/Tests/GravisynthTests
+# Run only E2E workflow tests:
+./build/Tests/GravisynthTests --gtest_filter="E2EWorkflow*"
 ```
 
 ### Build and Test (Release)
@@ -112,9 +114,10 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 - Tests cover audio processing behavior, parameter handling, and MIDI interaction
 - Edge case tests (zero-length buffers, extreme parameters, sample rate changes)
 - Integration tests (signal chains, modulation routing)
+- E2E workflow tests (`Tests/E2EWorkflowTests.cpp`): 24 in-process tests exercising full UI interaction code paths — preset loading, module drag-and-drop, connection dragging via synthetic mouse events, mod matrix operations, and undo/redo sequences. Uses `localPointToGlobal()` for coordinate conversion since components are nested inside MainComponent. Run with `--gtest_filter="E2EWorkflow*"`.
 - Code coverage enforcement (threshold: 80%, CI pipeline enforces via `scripts/coverage.sh`)
-- ~250 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels)
-- CI runs on Ubuntu + macOS with linting, building, testing, and coverage
+- ~285 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels, E2E workflow)
+- CI runs on Ubuntu + macOS + Windows with linting, building, testing, and coverage
 
 ## Key Files to Understand
 
@@ -138,4 +141,5 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 - `Source/Modules/FX/LimiterModule.h`: Brickwall limiter with input gain drive
 - `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
 - `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
-- `Tests/`: ~250 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels)
+- `Tests/E2EWorkflowTests.cpp`: 24 E2E workflow tests — preset loading, module drop/delete/replace, connection drag, mod matrix, undo/redo sequences, and stress tests
+- `Tests/`: ~285 tests across 37 suites (unit, edge case, integration, undo/redo, filter modes, port labels, E2E workflow)

@@ -53,6 +53,7 @@ ModuleComponent::ModuleComponent(juce::AudioProcessor* m, juce::AudioProcessorGr
         addAndMakeVisible(*bypassButton);
     }
 
+    setTitle(module->getName());
     createControls();
     startTimerHz(30); // 30 FPS for step visualization
 }
