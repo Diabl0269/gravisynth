@@ -1,6 +1,6 @@
 # Testing Guide
 
-All tests use GoogleTest and run headless (no audio device, no GUI window). ~285 tests across 37 suites.
+All tests use GoogleTest and run headless (no audio device, no GUI window). ~284 tests across 37 suites.
 
 ```bash
 # Run all tests
@@ -67,7 +67,7 @@ Test persistence, serialization, and state restoration.
 | UndoRedoTest | 11 | Add/remove modules, connections, parameter changes, complex sequences, rapid operations |
 | AIStateMapperTest | 24 | Graph JSON round-trip serialization, parameter validation, modulation serialization, merge mode, schema generation |
 
-### E2E Workflow Tests (24 tests)
+### E2E Workflow Tests (23 tests)
 
 Full application workflow tests in `Tests/E2EWorkflowTests.cpp`. Each test constructs a complete `MainComponent` with a mock AI provider and exercises real UI interaction code paths.
 
@@ -79,7 +79,7 @@ Full application workflow tests in `Tests/E2EWorkflowTests.cpp`. Each test const
 | Connections | 4 | Connect ports via `beginConnectionDrag()`/`endConnectionDrag()` with `localPointToGlobal()` coordinate conversion, disconnect, MIDI connections, mod routing creates attenuverter |
 | Mod Matrix | 4 | Add empty routing, configure source/dest, adjust CV amount, delete routing |
 | Undo/Redo | 4 | Undo add-module, complex sequences, preset-load-then-modify, rapid 5-module sequence |
-| Combined Workflows | 2 | Full preset-modify-connect-undo-redo workflow, stress test across all presets |
+| Combined Workflows | 1 | Full preset-modify-connect-undo-redo workflow |
 
 #### Key patterns
 
