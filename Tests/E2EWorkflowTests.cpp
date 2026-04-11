@@ -90,12 +90,17 @@ protected:
         pumpMessages();
     }
 
+    // Match module by base type name (names may have numeric suffixes like "Oscillator 1")
+    bool nameMatches(const juce::String& moduleName, const juce::String& baseName) {
+        return moduleName == baseName || moduleName.startsWith(baseName + " ");
+    }
+
     ModuleComponent* findModule(const juce::String& name) {
         auto* content = editor().getChildComponent(0);
         if (content) {
             for (auto* child : content->getChildren()) {
                 if (auto* mod = dynamic_cast<ModuleComponent*>(child)) {
-                    if (mod->getModule() && mod->getModule()->getName() == name)
+                    if (mod->getModule() && nameMatches(mod->getModule()->getName(), name))
                         return mod;
                 }
             }
@@ -111,7 +116,7 @@ protected:
                 if (auto* mod = dynamic_cast<ModuleComponent*>(child)) {
                     if (!mod->getModule())
                         continue;
-                    if (mod->getModule()->getName() != name)
+                    if (!nameMatches(mod->getModule()->getName(), name))
                         continue;
                     // Check if this module's node is new
                     for (auto* node : graph().getNodes()) {
