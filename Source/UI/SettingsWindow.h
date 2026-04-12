@@ -9,10 +9,8 @@ class ShortcutManager;
 
 class SettingsWindow : public juce::Component {
 public:
-    SettingsWindow(juce::AudioDeviceManager& deviceManager,
-                   juce::ApplicationProperties& appProperties,
-                   gsynth::AIIntegrationService& aiService,
-                   gsynth::AIChatComponent& aiChatComponent,
+    SettingsWindow(juce::AudioDeviceManager& deviceManager, juce::ApplicationProperties& appProperties,
+                   gsynth::AIIntegrationService& aiService, gsynth::AIChatComponent& aiChatComponent,
                    ShortcutManager& shortcutManager);
     ~SettingsWindow() override;
 
@@ -26,7 +24,7 @@ public:
 
 private:
     juce::ApplicationProperties& appProperties;
-    juce::TabbedComponent tabs { juce::TabbedButtonBar::TabsAtTop };
+    juce::TabbedComponent tabs{juce::TabbedButtonBar::TabsAtTop};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsWindow)
 };

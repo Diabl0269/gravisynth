@@ -3,23 +3,22 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace GravisynthCommands {
-    enum CommandIDs {
-        openSettings = 0x100,
-        savePreset,
-        openPreset,
-        undo,
-        redo
-    };
+enum CommandIDs { openSettings = 0x100, savePreset, openPreset, undo, redo };
 
-    inline juce::CommandID getCommandForAction(const juce::String& actionId) {
-        if (actionId == "openSettings") return openSettings;
-        if (actionId == "savePreset") return savePreset;
-        if (actionId == "openPreset") return openPreset;
-        if (actionId == "undo") return undo;
-        if (actionId == "redo") return redo;
-        return 0;
-    }
+inline juce::CommandID getCommandForAction(const juce::String& actionId) {
+    if (actionId == "openSettings")
+        return openSettings;
+    if (actionId == "savePreset")
+        return savePreset;
+    if (actionId == "openPreset")
+        return openPreset;
+    if (actionId == "undo")
+        return undo;
+    if (actionId == "redo")
+        return redo;
+    return 0;
 }
+} // namespace GravisynthCommands
 
 class ShortcutManager {
 public:
@@ -69,21 +68,19 @@ public:
 
     juce::String getActionForKeyPress(const juce::KeyPress& key) const {
         for (auto& [actionId, binding] : bindings) {
-            if (towlower(binding.getKeyCode()) == towlower(key.getKeyCode())
-                && binding.getModifiers() == key.getModifiers())
+            if (towlower(binding.getKeyCode()) == towlower(key.getKeyCode()) &&
+                binding.getModifiers() == key.getModifiers())
                 return actionId;
         }
         return {};
     }
 
-    void setBinding(const juce::String& actionId, const juce::KeyPress& key) {
-        bindings[actionId] = key;
-    }
+    void setBinding(const juce::String& actionId, const juce::KeyPress& key) { bindings[actionId] = key; }
 
     bool hasConflict(const juce::String& actionId, const juce::KeyPress& key) const {
         for (auto& [otherId, binding] : bindings) {
-            if (otherId != actionId && towlower(binding.getKeyCode()) == towlower(key.getKeyCode())
-                && binding.getModifiers() == key.getModifiers())
+            if (otherId != actionId && towlower(binding.getKeyCode()) == towlower(key.getKeyCode()) &&
+                binding.getModifiers() == key.getModifiers())
                 return true;
         }
         return false;
@@ -91,8 +88,8 @@ public:
 
     juce::String getConflictingAction(const juce::String& actionId, const juce::KeyPress& key) const {
         for (auto& [otherId, binding] : bindings) {
-            if (otherId != actionId && towlower(binding.getKeyCode()) == towlower(key.getKeyCode())
-                && binding.getModifiers() == key.getModifiers())
+            if (otherId != actionId && towlower(binding.getKeyCode()) == towlower(key.getKeyCode()) &&
+                binding.getModifiers() == key.getModifiers())
                 return otherId;
         }
         return {};
@@ -104,7 +101,8 @@ public:
         bindings["savePreset"] = juce::KeyPress('s', juce::ModifierKeys::commandModifier, 0);
         bindings["openPreset"] = juce::KeyPress('o', juce::ModifierKeys::commandModifier, 0);
         bindings["undo"] = juce::KeyPress('z', juce::ModifierKeys::commandModifier, 0);
-        bindings["redo"] = juce::KeyPress('z', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0);
+        bindings["redo"] =
+            juce::KeyPress('z', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0);
     }
 
     static juce::String keyPressToDisplayString(const juce::KeyPress& key) {
@@ -112,13 +110,18 @@ public:
         auto mods = key.getModifiers();
 
 #if JUCE_MAC
-        if (mods.isCommandDown()) result += "Cmd + ";
-        if (mods.isCtrlDown()) result += "Ctrl + ";
+        if (mods.isCommandDown())
+            result += "Cmd + ";
+        if (mods.isCtrlDown())
+            result += "Ctrl + ";
 #else
-        if (mods.isCtrlDown()) result += "Ctrl + ";
+        if (mods.isCtrlDown())
+            result += "Ctrl + ";
 #endif
-        if (mods.isAltDown()) result += "Alt + ";
-        if (mods.isShiftDown()) result += "Shift + ";
+        if (mods.isAltDown())
+            result += "Alt + ";
+        if (mods.isShiftDown())
+            result += "Shift + ";
 
         auto keyCode = key.getKeyCode();
         if (keyCode >= 'a' && keyCode <= 'z')
@@ -150,11 +153,16 @@ public:
     }
 
     static juce::String getActionDescription(const juce::String& actionId) {
-        if (actionId == "openSettings") return "Open Settings";
-        if (actionId == "savePreset") return "Save Preset";
-        if (actionId == "openPreset") return "Open Preset";
-        if (actionId == "undo") return "Undo";
-        if (actionId == "redo") return "Redo";
+        if (actionId == "openSettings")
+            return "Open Settings";
+        if (actionId == "savePreset")
+            return "Save Preset";
+        if (actionId == "openPreset")
+            return "Open Preset";
+        if (actionId == "undo")
+            return "Undo";
+        if (actionId == "redo")
+            return "Redo";
         return actionId;
     }
 
@@ -166,7 +174,7 @@ private:
     std::map<juce::String, juce::KeyPress> bindings;
     juce::ApplicationProperties* appProperties = nullptr;
 
-    juce::StringArray actionIds { "openSettings", "savePreset", "openPreset", "undo", "redo" };
+    juce::StringArray actionIds{"openSettings", "savePreset", "openPreset", "undo", "redo"};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ShortcutManager)
 };

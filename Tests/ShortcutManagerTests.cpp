@@ -23,8 +23,7 @@ TEST_F(ShortcutManagerTest, GetActionForKeyPress_Correct) {
     EXPECT_EQ(manager.getActionForKeyPress(cmdZ), "undo");
 
     // Cmd+Shift+Z must match redo
-    juce::KeyPress cmdShiftZ('z',
-        juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0);
+    juce::KeyPress cmdShiftZ('z', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0);
     EXPECT_EQ(manager.getActionForKeyPress(cmdShiftZ), "redo");
 }
 

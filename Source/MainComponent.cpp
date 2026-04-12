@@ -132,8 +132,8 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
     settingsButton.setButtonText("Settings");
     settingsButton.setComponentID("settingsButton");
     settingsButton.onClick = [this]() {
-        auto* settingsComp = new SettingsWindow(audioEngine.getDeviceManager(), appProperties,
-                                                 aiService, aiChatComponent, shortcutManager);
+        auto* settingsComp = new SettingsWindow(audioEngine.getDeviceManager(), appProperties, aiService,
+                                                aiChatComponent, shortcutManager);
         settingsComp->setSize(500, 450);
 
         juce::DialogWindow::LaunchOptions options;
@@ -199,9 +199,8 @@ void MainComponent::paint(juce::Graphics& g) {
 }
 
 void MainComponent::getAllCommands(juce::Array<juce::CommandID>& commands) {
-    commands.addArray({GravisynthCommands::openSettings, GravisynthCommands::savePreset,
-                       GravisynthCommands::openPreset, GravisynthCommands::undo,
-                       GravisynthCommands::redo});
+    commands.addArray({GravisynthCommands::openSettings, GravisynthCommands::savePreset, GravisynthCommands::openPreset,
+                       GravisynthCommands::undo, GravisynthCommands::redo});
 }
 
 void MainComponent::getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& result) {
@@ -231,28 +230,34 @@ void MainComponent::getCommandInfo(juce::CommandID commandID, juce::ApplicationC
         result.addDefaultKeypress(shortcutManager.getBinding("redo").getKeyCode(),
                                   shortcutManager.getBinding("redo").getModifiers());
         break;
-    default: break;
+    default:
+        break;
     }
 }
 
 bool MainComponent::perform(const InvocationInfo& info) {
     switch (info.commandID) {
     case GravisynthCommands::openSettings:
-        if (settingsButton.onClick) settingsButton.onClick();
+        if (settingsButton.onClick)
+            settingsButton.onClick();
         return true;
     case GravisynthCommands::savePreset:
-        if (saveButton.onClick) saveButton.onClick();
+        if (saveButton.onClick)
+            saveButton.onClick();
         return true;
     case GravisynthCommands::openPreset:
         openPresetFromFile();
         return true;
     case GravisynthCommands::undo:
-        if (undoManager.canUndo()) undoManager.undo();
+        if (undoManager.canUndo())
+            undoManager.undo();
         return true;
     case GravisynthCommands::redo:
-        if (undoManager.canRedo()) undoManager.redo();
+        if (undoManager.canRedo())
+            undoManager.redo();
         return true;
-    default: return false;
+    default:
+        return false;
     }
 }
 
@@ -266,11 +271,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key) {
     // (e.g. Cmd+Shift+Z on macOS due to KeyPress text character mismatch)
     auto action = shortcutManager.getActionForKeyPress(key);
     if (action == "openSettings") {
-        if (settingsButton.onClick) settingsButton.onClick();
+        if (settingsButton.onClick)
+            settingsButton.onClick();
         return true;
     }
     if (action == "savePreset") {
-        if (saveButton.onClick) saveButton.onClick();
+        if (saveButton.onClick)
+            saveButton.onClick();
         return true;
     }
     if (action == "openPreset") {
@@ -278,11 +285,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key) {
         return true;
     }
     if (action == "undo") {
-        if (undoManager.canUndo()) undoManager.undo();
+        if (undoManager.canUndo())
+            undoManager.undo();
         return true;
     }
     if (action == "redo") {
-        if (undoManager.canRedo()) undoManager.redo();
+        if (undoManager.canRedo())
+            undoManager.redo();
         return true;
     }
     return false;

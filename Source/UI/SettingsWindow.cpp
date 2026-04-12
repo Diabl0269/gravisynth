@@ -9,30 +9,29 @@ class AISettingsTab : public juce::Component {
 public:
     AISettingsTab(juce::ApplicationProperties& props, gsynth::AIIntegrationService& aiServ,
                   gsynth::AIChatComponent& aiChatComp)
-        : appProperties(props), aiService(aiServ), aiChatComponent(aiChatComp) {
+        : appProperties(props)
+        , aiService(aiServ)
+        , aiChatComponent(aiChatComp) {
         addAndMakeVisible(providerLabel);
         providerLabel.setText("AI Provider:", juce::dontSendNotification);
 
         addAndMakeVisible(providerCombo);
         providerCombo.addItem("Ollama", 1);
-        providerCombo.setSelectedId(
-            appProperties.getUserSettings()->getValue("aiProvider", "Ollama") == "Ollama" ? 1 : 0,
-            juce::dontSendNotification);
+        providerCombo.setSelectedId(appProperties.getUserSettings()->getValue("aiProvider", "Ollama") == "Ollama" ? 1
+                                                                                                                  : 0,
+                                    juce::dontSendNotification);
         providerCombo.onChange = [this] { updateSettings(); };
 
         addAndMakeVisible(hostLabel);
         hostLabel.setText("Ollama Host:", juce::dontSendNotification);
 
         addAndMakeVisible(hostEditor);
-        hostEditor.setText(
-            appProperties.getUserSettings()->getValue("ollamaHost", "http://localhost:11434"));
+        hostEditor.setText(appProperties.getUserSettings()->getValue("ollamaHost", "http://localhost:11434"));
         hostEditor.onReturnKey = [this] { updateSettings(); };
         hostEditor.onFocusLost = [this] { updateSettings(); };
     }
 
-    void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colours::darkgrey.darker());
-    }
+    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::darkgrey.darker()); }
 
     void resized() override {
         auto bounds = getLocalBounds().reduced(10);
@@ -80,7 +79,8 @@ private:
 //==============================================================================
 class GeneralSettingsTab : public juce::Component {
 public:
-    GeneralSettingsTab(ShortcutManager& sm) : shortcutManager(sm) {
+    GeneralSettingsTab(ShortcutManager& sm)
+        : shortcutManager(sm) {
         setWantsKeyboardFocus(true);
 
         addAndMakeVisible(titleLabel);
@@ -114,11 +114,11 @@ public:
         resetButton.setColour(juce::TextButton::textColourOffId, juce::Colours::white);
         resetButton.onClick = [this] {
             auto options = juce::MessageBoxOptions()
-                .withIconType(juce::MessageBoxIconType::WarningIcon)
-                .withTitle("Reset Shortcuts")
-                .withMessage("Are you sure you want to reset all keyboard shortcuts to their defaults?")
-                .withButton("Reset")
-                .withButton("Cancel");
+                               .withIconType(juce::MessageBoxIconType::WarningIcon)
+                               .withTitle("Reset Shortcuts")
+                               .withMessage("Are you sure you want to reset all keyboard shortcuts to their defaults?")
+                               .withButton("Reset")
+                               .withButton("Cancel");
             juce::AlertWindow::showAsync(options, [this](int result) {
                 if (result == 1) {
                     shortcutManager.resetToDefaults();
@@ -142,7 +142,8 @@ public:
                     juce::DynamicObject::Ptr obj = new juce::DynamicObject();
                     for (auto& actionId : shortcutManager.getActionIds()) {
                         auto binding = shortcutManager.getBinding(actionId);
-                        auto value = juce::String(binding.getKeyCode()) + ":" + juce::String(binding.getModifiers().getRawFlags());
+                        auto value = juce::String(binding.getKeyCode()) + ":" +
+                                     juce::String(binding.getModifiers().getRawFlags());
                         obj->setProperty(actionId, value);
                     }
                     auto json = juce::JSON::toString(juce::var(obj.get()));
@@ -171,7 +172,8 @@ public:
                                 if (parts.size() == 2) {
                                     int keyCode = parts[0].getIntValue();
                                     int modifiers = parts[1].getIntValue();
-                                    shortcutManager.setBinding(actionId, juce::KeyPress(keyCode, juce::ModifierKeys(modifiers), 0));
+                                    shortcutManager.setBinding(
+                                        actionId, juce::KeyPress(keyCode, juce::ModifierKeys(modifiers), 0));
                                 }
                             }
                         }
@@ -183,9 +185,7 @@ public:
         };
     }
 
-    void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colours::darkgrey.darker());
-    }
+    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::darkgrey.darker()); }
 
     void resized() override {
         auto bounds = getLocalBounds().reduced(15);
@@ -257,7 +257,8 @@ private:
     void refreshBindingLabels() {
         for (size_t i = 0; i < bindButtons.size(); ++i) {
             auto actionId = actionIds[static_cast<int>(i)];
-            bindButtons[i]->setButtonText(ShortcutManager::keyPressToDisplayString(shortcutManager.getBinding(actionId)));
+            bindButtons[i]->setButtonText(
+                ShortcutManager::keyPressToDisplayString(shortcutManager.getBinding(actionId)));
             bindButtons[i]->setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
         }
     }
@@ -279,18 +280,15 @@ private:
 //==============================================================================
 // SettingsWindow - Consolidated tabbed settings interface
 //==============================================================================
-SettingsWindow::SettingsWindow(juce::AudioDeviceManager& deviceManager,
-                               juce::ApplicationProperties& appProperties,
-                               gsynth::AIIntegrationService& aiService,
-                               gsynth::AIChatComponent& aiChatComponent,
+SettingsWindow::SettingsWindow(juce::AudioDeviceManager& deviceManager, juce::ApplicationProperties& appProperties,
+                               gsynth::AIIntegrationService& aiService, gsynth::AIChatComponent& aiChatComponent,
                                ShortcutManager& shortcutManager)
     : appProperties(appProperties) {
     // Create and add Audio tab
-    auto* audioSelector = new juce::AudioDeviceSelectorComponent(
-        deviceManager, 0, 2,  // min/max inputs
-        0, 2,                 // min/max outputs
-        false, false,         // midis
-        false, false          // bit depths
+    auto* audioSelector = new juce::AudioDeviceSelectorComponent(deviceManager, 0, 2, // min/max inputs
+                                                                 0, 2,                // min/max outputs
+                                                                 false, false,        // midis
+                                                                 false, false         // bit depths
     );
     tabs.addTab("Audio", juce::Colours::darkgrey, audioSelector, true);
 
@@ -313,6 +311,4 @@ SettingsWindow::~SettingsWindow() {
     appProperties.saveIfNeeded();
 }
 
-void SettingsWindow::resized() {
-    tabs.setBounds(getLocalBounds());
-}
+void SettingsWindow::resized() { tabs.setBounds(getLocalBounds()); }

@@ -136,6 +136,7 @@ TEST_F(SettingsWindowTest, GeneralTabShowsShortcuts) {
 
     auto* generalTab = settingsWindow.getTabs().getTabContentComponent(2);
     ASSERT_NE(generalTab, nullptr);
-    // The General tab should have child labels for shortcuts (title label + 5 desc labels + 5 bind buttons + reset button = 12)
+    // The General tab should have child labels for shortcuts (title label + 5 desc labels + 5 bind buttons + reset
+    // button = 12)
     EXPECT_GE(generalTab->getNumChildComponents(), 11);
 }

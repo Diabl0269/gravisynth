@@ -74,8 +74,7 @@ TEST_F(MainComponentTest, RedoShortcutViaKeyPressed) {
     int initialNodeCount = mainComp.getAudioEngine().getGraph().getNumNodes();
 
     // Add a module (creates an undo snapshot)
-    editor.itemDropped(juce::DragAndDropTarget::SourceDetails(
-        juce::String("Oscillator"), &editor, {200, 200}));
+    editor.itemDropped(juce::DragAndDropTarget::SourceDetails(juce::String("Oscillator"), &editor, {200, 200}));
     EXPECT_GT(mainComp.getAudioEngine().getGraph().getNumNodes(), initialNodeCount);
 
     // Undo it
