@@ -1,6 +1,6 @@
 # Testing Guide
 
-All tests use GoogleTest and run headless (no audio device, no GUI window). ~284 tests across 37 suites.
+All tests use GoogleTest and run headless (no audio device, no GUI window). ~304 tests across 39 suites.
 
 ```bash
 # Run all tests
@@ -49,13 +49,15 @@ Test UI component interactions using in-process construction (no window, no disp
 
 | Suite | Tests | What it covers |
 |-------|-------|----------------|
-| MainComponentTest | 4 | AI panel visibility toggle, mod matrix toggle, default configuration |
+| MainComponentTest | 6 | AI panel visibility toggle, mod matrix toggle, default configuration, command manager registration, redo shortcut |
 | GraphEditorTest | 9 | Module drag-and-drop, port connection via beginConnectionDrag/endConnectionDrag, deletion, mod matrix visibility |
 | ModuleComponentTest | 3 | Initialization, resizing, parameter attachment to UI sliders |
 | MidiKeyboardModuleTest | 4 | Note on/off, key press handling, velocity |
 | VisualBufferTest | 3 | Scope visualization buffer management, read/write, ringbuffer behavior |
 | ModuleBaseTest | 4 | Parameter getters, port labels, bypass functionality |
 | ModuleBypassTest | 5 | Default state, toggle, signal passing when bypassed |
+| SettingsWindowTest | 8 | Tab structure, tab persistence, audio device selector, AI settings persistence, resize safety, shortcuts reference |
+| ShortcutManagerTest | 10 | Default bindings, reverse lookup, conflict detection, persistence round-trip, reset to defaults, display strings |
 
 ### State Management Tests (~44 tests)
 

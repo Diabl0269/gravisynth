@@ -1,5 +1,6 @@
 #include "MainComponent.h"
 #include "AI/OllamaProvider.h"
+#include "UI/SettingsWindow.h"
 
 MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
     : graphEditor(audioEngine, &undoManager)
@@ -12,6 +13,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
     propertiesOptions.osxLibrarySubFolder = "Application Support";
     propertiesOptions.storageFormat = juce::PropertiesFile::storeAsXML;
     appProperties.setStorageParameters(propertiesOptions);
+    shortcutManager.loadFromProperties(appProperties);
 
     // Load AI provider preference
     juce::String savedProviderName = appProperties.getUserSettings()->getValue("aiProvider", "Ollama");
@@ -29,6 +31,13 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
     setSize(1600, 900);
     undoManager.setGraphEditor(&graphEditor);
     setWantsKeyboardFocus(true);
+    // Register commands for the macOS native menu bar (Edit→Undo shows Cmd+Z).
+    // Do NOT add commandManager.getKeyMappings() as a KeyListener — it intercepts
+    // keys like Cmd+Shift+Z and silently fails to invoke the command, preventing
+    // our keyPressed() fallback from running. All key dispatch goes through keyPressed().
+    commandManager.registerAllCommandsForTarget(this);
+    commandManager.setFirstCommandTarget(this);
+    shortcutManager.onBindingsChanged = [this] { updateCommandShortcuts(); };
     startTimerHz(10);
     addAndMakeVisible(graphEditor);
     addAndMakeVisible(moduleLibrary);
@@ -69,15 +78,7 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
         menu.addItem(1000, "Load from file...");
         menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&loadButton), [this](int result) {
             if (result == 1000) {
-                fileChooser = std::make_unique<juce::FileChooser>(
-                    "Load Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
-                auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
-                fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
-                    auto file = fc.getResult();
-                    if (file != juce::File{}) {
-                        graphEditor.loadPreset(file);
-                    }
-                });
+                openPresetFromFile();
             } else if (result > 0) {
                 if (gsynth::PresetManager::loadPreset(result - 1, audioEngine.getGraph())) {
                     graphEditor.updateComponents();
@@ -130,94 +131,18 @@ MainComponent::MainComponent(std::unique_ptr<gsynth::AIProvider> provider)
     addAndMakeVisible(settingsButton);
     settingsButton.setButtonText("Settings");
     settingsButton.setComponentID("settingsButton");
-    settingsButton.onClick = [this, savedProviderName, savedOllamaHost]() mutable { // Capture by value
-        // Audio Settings Dialog
-        auto* audioSelector =
-            new juce::AudioDeviceSelectorComponent(audioEngine.getDeviceManager(), 0, 2, // min/max inputs
-                                                   0, 2,                                 // min/max outputs
-                                                   false, false,                         // midis
-                                                   false, false                          // bit depths
-            );
-        audioSelector->setSize(400, 400);
+    settingsButton.onClick = [this]() {
+        auto* settingsComp = new SettingsWindow(audioEngine.getDeviceManager(), appProperties,
+                                                 aiService, aiChatComponent, shortcutManager);
+        settingsComp->setSize(500, 450);
 
-        juce::DialogWindow::LaunchOptions audioOptions;
-        audioOptions.content.setOwned(audioSelector);
-        audioOptions.dialogTitle = "Audio Settings";
-        audioOptions.componentToCentreAround = this;
-        audioOptions.useNativeTitleBar = true;
-        audioOptions.resizable = false;
-        audioOptions.launchAsync();
-
-        // AI Settings Dialog
-        // Create a custom component for AI settings
-        class AISettingsComponent : public juce::Component {
-        public:
-            AISettingsComponent(juce::ApplicationProperties& props, gsynth::AIIntegrationService& aiServ,
-                                gsynth::AIChatComponent& aiChatComp)
-                : appProperties(props)
-                , aiService(aiServ)
-                , aiChatComponent(aiChatComp) {
-                addAndMakeVisible(providerLabel);
-                providerLabel.setText("AI Provider:", juce::dontSendNotification);
-                providerLabel.setBounds(10, 10, 100, 25);
-
-                addAndMakeVisible(providerCombo);
-                providerCombo.addItem("Ollama", 1);
-                providerCombo.setSelectedId(
-                    appProperties.getUserSettings()->getValue("aiProvider", "Ollama") == "Ollama" ? 1 : 0,
-                    juce::dontSendNotification);
-                providerCombo.setBounds(120, 10, 200, 25);
-                providerCombo.onChange = [this] { updateSettings(); };
-
-                addAndMakeVisible(hostLabel);
-                hostLabel.setText("Ollama Host:", juce::dontSendNotification);
-                hostLabel.setBounds(10, 40, 100, 25);
-
-                addAndMakeVisible(hostEditor);
-                hostEditor.setText(appProperties.getUserSettings()->getValue("ollamaHost", "http://localhost:11434"));
-                hostEditor.setBounds(120, 40, 250, 25);
-                hostEditor.onReturnKey = [this] { updateSettings(); };
-                hostEditor.onFocusLost = [this] { updateSettings(); };
-            }
-
-            void updateSettings() {
-                juce::String selectedProvider = providerCombo.getText();
-                juce::String newOllamaHost = hostEditor.getText();
-
-                appProperties.getUserSettings()->setValue("aiProvider", selectedProvider);
-                appProperties.getUserSettings()->setValue("ollamaHost", newOllamaHost);
-                appProperties.saveIfNeeded();
-
-                // Re-initialize AI service with new provider/host
-                if (selectedProvider == "Ollama") {
-                    aiService.setProvider(std::make_unique<gsynth::OllamaProvider>(newOllamaHost));
-                }
-                aiChatComponent.refreshModels();
-            }
-
-        private:
-            juce::ApplicationProperties& appProperties;
-            gsynth::AIIntegrationService& aiService;
-            gsynth::AIChatComponent& aiChatComponent;
-
-            juce::Label providerLabel;
-            juce::ComboBox providerCombo;
-            juce::Label hostLabel;
-            juce::TextEditor hostEditor;
-
-            JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AISettingsComponent)
-        };
-
-        auto* aiSettingsComp = new AISettingsComponent(appProperties, aiService, aiChatComponent);
-        aiSettingsComp->setSize(400, 200);
-
-        juce::DialogWindow::LaunchOptions aiOptions;
-        aiOptions.content.setOwned(aiSettingsComp);
-        aiOptions.dialogTitle = "AI Settings";
-        aiOptions.componentToCentreAround = this;
-        aiOptions.useNativeTitleBar = true;
-        aiOptions.resizable = false;
-        aiOptions.launchAsync();
+        juce::DialogWindow::LaunchOptions options;
+        options.content.setOwned(settingsComp);
+        options.dialogTitle = "Settings";
+        options.componentToCentreAround = this;
+        options.useNativeTitleBar = true;
+        options.resizable = true;
+        options.launchAsync();
     };
 
     if (juce::RuntimePermissions::isRequired(juce::RuntimePermissions::recordAudio) &&
@@ -254,6 +179,18 @@ void MainComponent::aiPatchApplied() {
     });
 }
 
+void MainComponent::openPresetFromFile() {
+    fileChooser = std::make_unique<juce::FileChooser>(
+        "Load Preset", juce::File::getSpecialLocation(juce::File::userDocumentsDirectory), "*.json");
+    auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+    fileChooser->launchAsync(flags, [this](const juce::FileChooser& fc) {
+        auto file = fc.getResult();
+        if (file != juce::File{}) {
+            graphEditor.loadPreset(file);
+        }
+    });
+}
+
 //==============================================================================
 void MainComponent::paint(juce::Graphics& g) {
     // (Our component is opaque, so we must completely fill the background with a
@@ -261,15 +198,91 @@ void MainComponent::paint(juce::Graphics& g) {
     g.fillAll(getLookAndFeel().findColour(juce::ResizableWindow::backgroundColourId));
 }
 
+void MainComponent::getAllCommands(juce::Array<juce::CommandID>& commands) {
+    commands.addArray({GravisynthCommands::openSettings, GravisynthCommands::savePreset,
+                       GravisynthCommands::openPreset, GravisynthCommands::undo,
+                       GravisynthCommands::redo});
+}
+
+void MainComponent::getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& result) {
+    switch (commandID) {
+    case GravisynthCommands::openSettings:
+        result.setInfo("Open Settings", "Open the settings window", "General", 0);
+        result.addDefaultKeypress(shortcutManager.getBinding("openSettings").getKeyCode(),
+                                  shortcutManager.getBinding("openSettings").getModifiers());
+        break;
+    case GravisynthCommands::savePreset:
+        result.setInfo("Save Preset", "Save the current preset", "General", 0);
+        result.addDefaultKeypress(shortcutManager.getBinding("savePreset").getKeyCode(),
+                                  shortcutManager.getBinding("savePreset").getModifiers());
+        break;
+    case GravisynthCommands::openPreset:
+        result.setInfo("Open Preset", "Open a preset file", "General", 0);
+        result.addDefaultKeypress(shortcutManager.getBinding("openPreset").getKeyCode(),
+                                  shortcutManager.getBinding("openPreset").getModifiers());
+        break;
+    case GravisynthCommands::undo:
+        result.setInfo("Undo", "Undo the last action", "Edit", 0);
+        result.addDefaultKeypress(shortcutManager.getBinding("undo").getKeyCode(),
+                                  shortcutManager.getBinding("undo").getModifiers());
+        break;
+    case GravisynthCommands::redo:
+        result.setInfo("Redo", "Redo the last undone action", "Edit", 0);
+        result.addDefaultKeypress(shortcutManager.getBinding("redo").getKeyCode(),
+                                  shortcutManager.getBinding("redo").getModifiers());
+        break;
+    default: break;
+    }
+}
+
+bool MainComponent::perform(const InvocationInfo& info) {
+    switch (info.commandID) {
+    case GravisynthCommands::openSettings:
+        if (settingsButton.onClick) settingsButton.onClick();
+        return true;
+    case GravisynthCommands::savePreset:
+        if (saveButton.onClick) saveButton.onClick();
+        return true;
+    case GravisynthCommands::openPreset:
+        openPresetFromFile();
+        return true;
+    case GravisynthCommands::undo:
+        if (undoManager.canUndo()) undoManager.undo();
+        return true;
+    case GravisynthCommands::redo:
+        if (undoManager.canRedo()) undoManager.redo();
+        return true;
+    default: return false;
+    }
+}
+
+void MainComponent::updateCommandShortcuts() {
+    // Re-register commands so the menu bar picks up new shortcut keys
+    commandManager.registerAllCommandsForTarget(this);
+}
+
 bool MainComponent::keyPressed(const juce::KeyPress& key) {
-    if (key == juce::KeyPress('z', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0)) {
-        if (undoManager.canRedo())
-            undoManager.redo();
+    // Fallback handler for shortcuts the ApplicationCommandManager doesn't catch
+    // (e.g. Cmd+Shift+Z on macOS due to KeyPress text character mismatch)
+    auto action = shortcutManager.getActionForKeyPress(key);
+    if (action == "openSettings") {
+        if (settingsButton.onClick) settingsButton.onClick();
         return true;
     }
-    if (key == juce::KeyPress('z', juce::ModifierKeys::commandModifier, 0)) {
-        if (undoManager.canUndo())
-            undoManager.undo();
+    if (action == "savePreset") {
+        if (saveButton.onClick) saveButton.onClick();
+        return true;
+    }
+    if (action == "openPreset") {
+        openPresetFromFile();
+        return true;
+    }
+    if (action == "undo") {
+        if (undoManager.canUndo()) undoManager.undo();
+        return true;
+    }
+    if (action == "redo") {
+        if (undoManager.canRedo()) undoManager.redo();
         return true;
     }
     return false;

@@ -47,6 +47,12 @@ The project uses CMake with:
 - Code coverage support (enabled via `ENABLE_COVERAGE` option)
 - `JUCE_WEB_BROWSER=0` — WebBrowserComponent is unused; disabling removes WebKit/libsoup deps on Linux
 
+## Planning Rules
+
+Every implementation plan **must** include:
+1. A **Tests** section — list new test cases, test file, and what each test verifies
+2. A **Docs Updates** section — list which docs files need updating (testing.md, CLAUDE.md, etc.)
+
 ## Development Commands
 
 ### Build
@@ -110,7 +116,19 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 
 ## Testing Strategy
 
-~284 tests across 37 suites, all headless (no audio device, no GUI window). Five test layers: audio rendering (DSP verification), integration (signal chains, mod routing), component workflow (UI interactions), state management (presets, undo/redo, serialization), and E2E workflow (full application paths). Code coverage threshold: 80%. See [`docs/testing.md`](docs/testing.md) for the full breakdown, patterns, and how to add tests for new modules.
+~304 tests across 39 suites, all headless (no audio device, no GUI window). Five test layers: audio rendering (DSP verification), integration (signal chains, mod routing), component workflow (UI interactions), state management (presets, undo/redo, serialization), and E2E workflow (full application paths). Code coverage threshold: 80%. See [`docs/testing.md`](docs/testing.md) for the full breakdown, patterns, and how to add tests for new modules.
+
+## Keyboard Shortcuts
+
+Shortcuts are configurable in Settings → General tab (click a binding to rebind, with conflict detection and swap). Export/import shortcuts as JSON. A native macOS menu bar (File + Edit) provides Undo/Redo via `ApplicationCommandManager`, while `keyPressed()` handles all shortcuts with case-insensitive key matching. Defaults:
+
+| Shortcut | Action |
+|----------|--------|
+| Cmd+, | Open Settings |
+| Cmd+S | Save Preset |
+| Cmd+O | Open Preset (file picker) |
+| Cmd+Z | Undo |
+| Cmd+Shift+Z | Redo |
 
 ## Key Files to Understand
 
@@ -125,6 +143,8 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 - `Source/UI/ModuleComponent.cpp`: Auto-UI with type-safe `ModuleType` switching, parameter listener for undo, safe detach lifecycle, FrequencyResponseComponent integration and spectrum toggle
 - `Source/UI/FrequencyResponseComponent.h`: Serum-style frequency response curve with FFT spectrum overlay
 - `Source/UI/GraphEditor.cpp`: Graph editor with attenuverter knob rendering, modulation routing, and undo integration
+- `Source/UI/SettingsWindow.h/cpp`: Consolidated tabbed settings window (Audio, AI, General tabs) with tab persistence
+- `Source/ShortcutManager.h`: Configurable keyboard shortcut manager with action→KeyPress mapping, persistence, case-insensitive key matching, and conflict detection
 - `Source/UI/ModuleLibraryComponent.h`: Categorized sidebar with section headers for module drag-and-drop
 - `Source/UI/ModMatrixComponent.cpp`: Modulation matrix with undo tracking for routing and parameter changes
 - `Source/Modules/FX/ChorusModule.h`: Chorus effect using `juce::dsp::Chorus`, CV modulation on Rate/Depth
@@ -135,4 +155,4 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 - `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
 - `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
 - `Tests/E2EWorkflowTests.cpp`: 24 E2E workflow tests — preset loading, module drop/delete/replace, connection drag, mod matrix, undo/redo sequences, and stress tests
-- `Tests/`: ~284 tests across 37 suites (audio rendering, integration, component workflow, state management, E2E workflow)
+- `Tests/`: ~304 tests across 39 suites (audio rendering, integration, component workflow, state management, E2E workflow)
