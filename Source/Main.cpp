@@ -1,4 +1,5 @@
 #include "MainComponent.h"
+#include "ShortcutManager.h"
 #include <JuceHeader.h>
 
 class GravisynthApplication : public juce::JUCEApplication {
@@ -20,7 +21,9 @@ public:
 
     void anotherInstanceStarted(const juce::String& commandLine) override { juce::ignoreUnused(commandLine); }
 
-    class MainWindow : public juce::DocumentWindow {
+    class MainWindow
+        : public juce::DocumentWindow
+        , public juce::MenuBarModel {
     public:
         MainWindow(juce::String name)
             : DocumentWindow(name,
@@ -37,10 +40,44 @@ public:
             centreWithSize(1600, 900);
 #endif
 
+#if JUCE_MAC
+            setMacMainMenu(this);
+#else
+            setMenuBar(this);
+#endif
             setVisible(true);
         }
 
+        ~MainWindow() override {
+#if JUCE_MAC
+            setMacMainMenu(nullptr);
+#else
+            setMenuBar(nullptr);
+#endif
+        }
+
         void closeButtonPressed() override { JUCEApplication::getInstance()->systemRequestedQuit(); }
+
+        juce::StringArray getMenuBarNames() override { return {"File", "Edit"}; }
+
+        juce::PopupMenu getMenuForIndex(int menuIndex, const juce::String&) override {
+            juce::PopupMenu menu;
+            if (auto* mc = dynamic_cast<MainComponent*>(getContentComponent())) {
+                auto& cm = mc->getCommandManager();
+                if (menuIndex == 0) {
+                    menu.addCommandItem(&cm, GravisynthCommands::savePreset);
+                    menu.addCommandItem(&cm, GravisynthCommands::openPreset);
+                    menu.addSeparator();
+                    menu.addCommandItem(&cm, GravisynthCommands::openSettings);
+                } else if (menuIndex == 1) {
+                    menu.addCommandItem(&cm, GravisynthCommands::undo);
+                    menu.addCommandItem(&cm, GravisynthCommands::redo);
+                }
+            }
+            return menu;
+        }
+
+        void menuItemSelected(int, int) override {}
 
     private:
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)

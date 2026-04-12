@@ -4,6 +4,7 @@
 #include "AudioEngine.h"
 #include "GravisynthUndoManager.h"
 #include "PresetManager.h"
+#include "ShortcutManager.h"
 #include "UI/AIChatComponent.h"
 #include "UI/GraphEditor.h"
 #include "UI/ModuleLibraryComponent.h"
@@ -14,6 +15,7 @@ class MainComponent
     : public juce::Component
     , public juce::DragAndDropContainer
     , public juce::Timer
+    , public juce::ApplicationCommandTarget
     , private gsynth::AIIntegrationService::Listener {
 public:
     MainComponent(std::unique_ptr<gsynth::AIProvider> provider = nullptr);
@@ -23,7 +25,17 @@ public:
 
     void paint(juce::Graphics&) override;
     void resized() override;
+
+    // ApplicationCommandTarget
+    ApplicationCommandTarget* getNextCommandTarget() override { return nullptr; }
+    void getAllCommands(juce::Array<juce::CommandID>& commands) override;
+    void getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& result) override;
+    bool perform(const InvocationInfo& info) override;
+
     bool keyPressed(const juce::KeyPress& key) override;
+
+    juce::ApplicationCommandManager& getCommandManager() { return commandManager; }
+    void updateCommandShortcuts();
 
     // Testing Hooks
     bool isAiPanelConfiguredVisible() const { return isAiPanelVisible; }
@@ -46,6 +58,7 @@ public:
     }
     GravisynthUndoManager& getUndoManager() { return undoManager; }
     AudioEngine& getAudioEngine() { return audioEngine; }
+    void openPresetFromFile();
 
 private:
     // AIIntegrationService::Listener
@@ -72,6 +85,9 @@ private:
 
     juce::ApplicationProperties appProperties;
     juce::PropertiesFile::Options propertiesOptions;
+
+    ShortcutManager shortcutManager;
+    juce::ApplicationCommandManager commandManager;
 
     float aiPaneWidth = 300.0f;
 
