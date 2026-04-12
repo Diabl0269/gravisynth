@@ -142,8 +142,7 @@ public:
                     juce::DynamicObject::Ptr obj = new juce::DynamicObject();
                     for (auto& actionId : shortcutManager.getActionIds()) {
                         auto binding = shortcutManager.getBinding(actionId);
-                        auto value = juce::String(binding.getKeyCode()) + ":" +
-                                     juce::String(binding.getModifiers().getRawFlags());
+                        auto value = ShortcutManager::encodeKeyPress(binding);
                         obj->setProperty(actionId, value);
                     }
                     auto json = juce::JSON::toString(juce::var(obj.get()));
@@ -168,13 +167,9 @@ public:
                         for (auto& actionId : shortcutManager.getActionIds()) {
                             if (obj->hasProperty(actionId)) {
                                 auto value = obj->getProperty(actionId).toString();
-                                auto parts = juce::StringArray::fromTokens(value, ":", "");
-                                if (parts.size() == 2) {
-                                    int keyCode = parts[0].getIntValue();
-                                    int modifiers = parts[1].getIntValue();
-                                    shortcutManager.setBinding(
-                                        actionId, juce::KeyPress(keyCode, juce::ModifierKeys(modifiers), 0));
-                                }
+                                auto kp = ShortcutManager::parseKeyPress(value);
+                                if (kp.isValid())
+                                    shortcutManager.setBinding(actionId, kp);
                             }
                         }
                         shortcutManager.saveToProperties();
@@ -284,7 +279,6 @@ SettingsWindow::SettingsWindow(juce::AudioDeviceManager& deviceManager, juce::Ap
                                gsynth::AIIntegrationService& aiService, gsynth::AIChatComponent& aiChatComponent,
                                ShortcutManager& shortcutManager)
     : appProperties(appProperties) {
-    // Create and add Audio tab
     auto* audioSelector = new juce::AudioDeviceSelectorComponent(deviceManager, 0, 2, // min/max inputs
                                                                  0, 2,                // min/max outputs
                                                                  false, false,        // midis
@@ -292,11 +286,9 @@ SettingsWindow::SettingsWindow(juce::AudioDeviceManager& deviceManager, juce::Ap
     );
     tabs.addTab("Audio", juce::Colours::darkgrey, audioSelector, true);
 
-    // Create and add AI tab
     auto* aiSettingsTab = new AISettingsTab(appProperties, aiService, aiChatComponent);
     tabs.addTab("AI", juce::Colours::darkgrey, aiSettingsTab, true);
 
-    // Create and add General tab
     auto* generalSettingsTab = new GeneralSettingsTab(shortcutManager);
     tabs.addTab("General", juce::Colours::darkgrey, generalSettingsTab, true);
 

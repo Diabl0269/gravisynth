@@ -32,15 +32,8 @@ public:
 
         for (auto& actionId : actionIds) {
             auto key = "shortcut_" + actionId;
-            if (settings->containsKey(key)) {
-                auto value = settings->getValue(key);
-                auto parts = juce::StringArray::fromTokens(value, ":", "");
-                if (parts.size() == 2) {
-                    int keyCode = parts[0].getIntValue();
-                    int modifiers = parts[1].getIntValue();
-                    bindings[actionId] = juce::KeyPress(keyCode, juce::ModifierKeys(modifiers), 0);
-                }
-            }
+            if (settings->containsKey(key))
+                bindings[actionId] = parseKeyPress(settings->getValue(key));
         }
     }
 
@@ -52,9 +45,7 @@ public:
             return;
 
         for (auto& actionId : actionIds) {
-            auto& kp = bindings[actionId];
-            auto value = juce::String(kp.getKeyCode()) + ":" + juce::String(kp.getModifiers().getRawFlags());
-            settings->setValue("shortcut_" + actionId, value);
+            settings->setValue("shortcut_" + actionId, encodeKeyPress(bindings.at(actionId)));
         }
         appProperties->saveIfNeeded();
         if (onBindingsChanged)
@@ -76,15 +67,6 @@ public:
     }
 
     void setBinding(const juce::String& actionId, const juce::KeyPress& key) { bindings[actionId] = key; }
-
-    bool hasConflict(const juce::String& actionId, const juce::KeyPress& key) const {
-        for (auto& [otherId, binding] : bindings) {
-            if (otherId != actionId && towlower(binding.getKeyCode()) == towlower(key.getKeyCode()) &&
-                binding.getModifiers() == key.getModifiers())
-                return true;
-        }
-        return false;
-    }
 
     juce::String getConflictingAction(const juce::String& actionId, const juce::KeyPress& key) const {
         for (auto& [otherId, binding] : bindings) {
@@ -164,6 +146,17 @@ public:
         if (actionId == "redo")
             return "Redo";
         return actionId;
+    }
+
+    static juce::KeyPress parseKeyPress(const juce::String& encoded) {
+        auto parts = juce::StringArray::fromTokens(encoded, ":", "");
+        if (parts.size() == 2)
+            return juce::KeyPress(parts[0].getIntValue(), juce::ModifierKeys(parts[1].getIntValue()), 0);
+        return {};
+    }
+
+    static juce::String encodeKeyPress(const juce::KeyPress& key) {
+        return juce::String(key.getKeyCode()) + ":" + juce::String(key.getModifiers().getRawFlags());
     }
 
     const juce::StringArray& getActionIds() const { return actionIds; }

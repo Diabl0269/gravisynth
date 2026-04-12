@@ -39,16 +39,6 @@ TEST_F(ShortcutManagerTest, SetBinding_Updates) {
     EXPECT_EQ(manager.getActionForKeyPress(cmdK), "openSettings");
 }
 
-TEST_F(ShortcutManagerTest, HasConflict_Detects) {
-    juce::KeyPress cmdS('s', juce::ModifierKeys::commandModifier, 0);
-    EXPECT_TRUE(manager.hasConflict("openSettings", cmdS));
-}
-
-TEST_F(ShortcutManagerTest, HasConflict_SameActionNoConflict) {
-    juce::KeyPress cmdS('s', juce::ModifierKeys::commandModifier, 0);
-    EXPECT_FALSE(manager.hasConflict("savePreset", cmdS));
-}
-
 TEST_F(ShortcutManagerTest, SaveAndLoad_RoundTrips) {
     juce::ApplicationProperties props;
     juce::PropertiesFile::Options opts;

@@ -205,31 +205,36 @@ void MainComponent::getAllCommands(juce::Array<juce::CommandID>& commands) {
 
 void MainComponent::getCommandInfo(juce::CommandID commandID, juce::ApplicationCommandInfo& result) {
     switch (commandID) {
-    case GravisynthCommands::openSettings:
+    case GravisynthCommands::openSettings: {
         result.setInfo("Open Settings", "Open the settings window", "General", 0);
-        result.addDefaultKeypress(shortcutManager.getBinding("openSettings").getKeyCode(),
-                                  shortcutManager.getBinding("openSettings").getModifiers());
+        auto kp = shortcutManager.getBinding("openSettings");
+        result.addDefaultKeypress(kp.getKeyCode(), kp.getModifiers());
         break;
-    case GravisynthCommands::savePreset:
+    }
+    case GravisynthCommands::savePreset: {
         result.setInfo("Save Preset", "Save the current preset", "General", 0);
-        result.addDefaultKeypress(shortcutManager.getBinding("savePreset").getKeyCode(),
-                                  shortcutManager.getBinding("savePreset").getModifiers());
+        auto kp = shortcutManager.getBinding("savePreset");
+        result.addDefaultKeypress(kp.getKeyCode(), kp.getModifiers());
         break;
-    case GravisynthCommands::openPreset:
+    }
+    case GravisynthCommands::openPreset: {
         result.setInfo("Open Preset", "Open a preset file", "General", 0);
-        result.addDefaultKeypress(shortcutManager.getBinding("openPreset").getKeyCode(),
-                                  shortcutManager.getBinding("openPreset").getModifiers());
+        auto kp = shortcutManager.getBinding("openPreset");
+        result.addDefaultKeypress(kp.getKeyCode(), kp.getModifiers());
         break;
-    case GravisynthCommands::undo:
+    }
+    case GravisynthCommands::undo: {
         result.setInfo("Undo", "Undo the last action", "Edit", 0);
-        result.addDefaultKeypress(shortcutManager.getBinding("undo").getKeyCode(),
-                                  shortcutManager.getBinding("undo").getModifiers());
+        auto kp = shortcutManager.getBinding("undo");
+        result.addDefaultKeypress(kp.getKeyCode(), kp.getModifiers());
         break;
-    case GravisynthCommands::redo:
+    }
+    case GravisynthCommands::redo: {
         result.setInfo("Redo", "Redo the last undone action", "Edit", 0);
-        result.addDefaultKeypress(shortcutManager.getBinding("redo").getKeyCode(),
-                                  shortcutManager.getBinding("redo").getModifiers());
+        auto kp = shortcutManager.getBinding("redo");
+        result.addDefaultKeypress(kp.getKeyCode(), kp.getModifiers());
         break;
+    }
     default:
         break;
     }
@@ -261,40 +266,16 @@ bool MainComponent::perform(const InvocationInfo& info) {
     }
 }
 
-void MainComponent::updateCommandShortcuts() {
-    // Re-register commands so the menu bar picks up new shortcut keys
-    commandManager.registerAllCommandsForTarget(this);
-}
+void MainComponent::updateCommandShortcuts() { commandManager.commandStatusChanged(); }
 
 bool MainComponent::keyPressed(const juce::KeyPress& key) {
-    // Fallback handler for shortcuts the ApplicationCommandManager doesn't catch
-    // (e.g. Cmd+Shift+Z on macOS due to KeyPress text character mismatch)
     auto action = shortcutManager.getActionForKeyPress(key);
-    if (action == "openSettings") {
-        if (settingsButton.onClick)
-            settingsButton.onClick();
-        return true;
-    }
-    if (action == "savePreset") {
-        if (saveButton.onClick)
-            saveButton.onClick();
-        return true;
-    }
-    if (action == "openPreset") {
-        openPresetFromFile();
-        return true;
-    }
-    if (action == "undo") {
-        if (undoManager.canUndo())
-            undoManager.undo();
-        return true;
-    }
-    if (action == "redo") {
-        if (undoManager.canRedo())
-            undoManager.redo();
-        return true;
-    }
-    return false;
+    if (action.isEmpty())
+        return false;
+    auto cmdId = GravisynthCommands::getCommandForAction(action);
+    if (cmdId == 0)
+        return false;
+    return commandManager.invokeDirectly(cmdId, true);
 }
 
 void MainComponent::resized() {

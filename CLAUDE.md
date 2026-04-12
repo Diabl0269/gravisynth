@@ -116,7 +116,7 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 
 ## Testing Strategy
 
-~304 tests across 39 suites, all headless (no audio device, no GUI window). Five test layers: audio rendering (DSP verification), integration (signal chains, mod routing), component workflow (UI interactions), state management (presets, undo/redo, serialization), and E2E workflow (full application paths). Code coverage threshold: 80%. See [`docs/testing.md`](docs/testing.md) for the full breakdown, patterns, and how to add tests for new modules.
+~302 tests across 39 suites, all headless (no audio device, no GUI window). Five test layers: audio rendering (DSP verification), integration (signal chains, mod routing), component workflow (UI interactions), state management (presets, undo/redo, serialization), and E2E workflow (full application paths). Code coverage threshold: 80%. See [`docs/testing.md`](docs/testing.md) for the full breakdown, patterns, and how to add tests for new modules.
 
 ## Keyboard Shortcuts
 
@@ -155,4 +155,4 @@ Shortcuts are configurable in Settings → General tab (click a binding to rebin
 - `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
 - `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
 - `Tests/E2EWorkflowTests.cpp`: 24 E2E workflow tests — preset loading, module drop/delete/replace, connection drag, mod matrix, undo/redo sequences, and stress tests
-- `Tests/`: ~304 tests across 39 suites (audio rendering, integration, component workflow, state management, E2E workflow)
+- `Tests/`: ~302 tests across 39 suites (audio rendering, integration, component workflow, state management, E2E workflow)
