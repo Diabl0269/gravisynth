@@ -127,6 +127,9 @@ target_sources(Gravisynth PRIVATE
     Source/UI/FrequencyResponseComponent.h
     Source/UI/ModMatrixComponent.cpp
     Source/UI/ModMatrixComponent.h
+    Source/UI/SettingsWindow.cpp
+    Source/UI/SettingsWindow.h
+    Source/ShortcutManager.h
 )
 
 # Link against JUCE modules
