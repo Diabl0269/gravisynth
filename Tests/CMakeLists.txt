@@ -39,6 +39,8 @@ add_executable(GravisynthTests
     E2EWorkflowTests.cpp
     PresetManagerTests.cpp
     ModuleBypassTests.cpp
+    VisualSignalFlowTests.cpp
+    OscillatorCVModulationTests.cpp
     SettingsWindowTests.cpp
     ShortcutManagerTests.cpp
     ../Source/MainComponent.cpp

@@ -56,6 +56,7 @@ Test UI component interactions using in-process construction (no window, no disp
 | VisualBufferTest | 3 | Scope visualization buffer management, read/write, ringbuffer behavior |
 | ModuleBaseTest | 4 | Parameter getters, port labels, bypass functionality |
 | ModuleBypassTest | 5 | Default state, toggle, signal passing when bypassed |
+| VisualSignalFlowTests | 8 | AttenuverterModule peak/mod value tracking, VisualBuffer RMS computation, AudioEngine::getModulationDisplayInfo() population |
 | SettingsWindowTest | 8 | Tab structure, tab persistence, audio device selector, AI settings persistence, resize safety, shortcuts reference |
 | ShortcutManagerTest | 8 | Default bindings, reverse lookup, conflict detection, persistence round-trip, reset to defaults, display strings |
 

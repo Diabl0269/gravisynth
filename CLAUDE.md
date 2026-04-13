@@ -20,7 +20,7 @@ The project follows a modular architecture with:
 - **AudioEngine**: Manages audio device I/O, the audio processor graph, and modulation matrix routing
 - **GraphEditor**: Visual editor for connecting modules with zoom/pan and drag-to-connect
 - **ModuleComponent**: Auto-UI generation from module parameters with type-safe layout switching via `ModuleType` enum
-- **AttenuverterModule**: Intermediary module for modulation routing with bypass and CV amount control
+- **AttenuverterModule**: Intermediary module for modulation routing with bypass and CV amount control; exposes `lastOutputPeak`/`lastModValue` atomics for UI visualization
 - **Port Labels**: Virtual `getInputPortLabel()`/`getOutputPortLabel()` on ModuleBase, overridden per-module for descriptive port names in the UI
 - **GravisynthUndoManager**: Snapshot-based undo/redo system wrapping `juce::UndoManager`, captures full graph state on every change
 - **AI Integration** (`Source/AI/`): AIIntegrationService orchestrates LLM-powered features via OllamaProvider; AIStateMapper translates graph state for AI context
@@ -116,7 +116,7 @@ Post-merge, `.github/workflows/build-artifacts.yml` runs on push to main (4 jobs
 
 ## Testing Strategy
 
-~302 tests across 39 suites, all headless (no audio device, no GUI window). Five test layers: audio rendering (DSP verification), integration (signal chains, mod routing), component workflow (UI interactions), state management (presets, undo/redo, serialization), and E2E workflow (full application paths). Code coverage threshold: 80%. See [`docs/testing.md`](docs/testing.md) for the full breakdown, patterns, and how to add tests for new modules.
+~314 tests across 41 suites, all headless (no audio device, no GUI window). Five test layers: audio rendering (DSP verification), integration (signal chains, mod routing), component workflow (UI interactions), state management (presets, undo/redo, serialization), and E2E workflow (full application paths). Code coverage threshold: 85%. See [`docs/testing.md`](docs/testing.md) for the full breakdown, patterns, and how to add tests for new modules.
 
 ## Keyboard Shortcuts
 
@@ -147,6 +147,7 @@ Shortcuts are configurable in Settings → General tab (click a binding to rebin
 - `Source/ShortcutManager.h`: Configurable keyboard shortcut manager with action→KeyPress mapping, persistence, case-insensitive key matching, and conflict detection
 - `Source/UI/ModuleLibraryComponent.h`: Categorized sidebar with section headers for module drag-and-drop
 - `Source/UI/ModMatrixComponent.cpp`: Modulation matrix with undo tracking for routing and parameter changes
+- **Visual Signal Flow**: GraphEditor draws animated dots on connections (white for audio, cyan for modulation), pulsing modulation lines, and activity glow on modules. ModuleComponent renders Serum-style modulation rings on knobs. Driven by `AudioEngine::getModulationDisplayInfo()` cached at 30fps.
 - `Source/Modules/FX/ChorusModule.h`: Chorus effect using `juce::dsp::Chorus`, CV modulation on Rate/Depth
 - `Source/Modules/FX/PhaserModule.h`: Phaser effect using `juce::dsp::Phaser`, CV modulation on Rate/Depth
 - `Source/Modules/FX/CompressorModule.h`: Compressor with manual makeup gain
@@ -155,4 +156,4 @@ Shortcuts are configurable in Settings → General tab (click a binding to rebin
 - `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
 - `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
 - `Tests/E2EWorkflowTests.cpp`: 24 E2E workflow tests — preset loading, module drop/delete/replace, connection drag, mod matrix, undo/redo sequences, and stress tests
-- `Tests/`: ~302 tests across 39 suites (audio rendering, integration, component workflow, state management, E2E workflow)
+- `Tests/`: ~314 tests across 41 suites (audio rendering, integration, component workflow, state management, E2E workflow)

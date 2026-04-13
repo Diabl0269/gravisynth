@@ -114,11 +114,28 @@ private:
 
         int numSamples = buffer.getNumSamples();
 
-        // Clear input-only CV channels (1+) to prevent JUCE buffer pool garbage
-        // being misread as CV modulation. Connected sources refill before processBlock.
-        for (int ch = 1; ch < buffer.getNumChannels(); ++ch) {
-            buffer.clear(ch, 0, numSamples);
-        }
+        // Save CV channel data before clearing the buffer.
+        // Channel 0 is shared between CV pitch input and audio output;
+        // in mono mode we ignore pitch CV (it may contain Hz from PolyMidi).
+        int numCh = buffer.getNumChannels();
+        juce::HeapBlock<float> cvWaveformSaved(numSamples);
+        juce::HeapBlock<float> cvOctaveSaved(numSamples);
+        juce::HeapBlock<float> cvCoarseSaved(numSamples);
+        juce::HeapBlock<float> cvFineSaved(numSamples);
+        juce::HeapBlock<float> cvLevelSaved(numSamples);
+
+        if (numCh > 1)
+            juce::FloatVectorOperations::copy(cvWaveformSaved, buffer.getReadPointer(1), numSamples);
+        if (numCh > 2)
+            juce::FloatVectorOperations::copy(cvOctaveSaved, buffer.getReadPointer(2), numSamples);
+        if (numCh > 3)
+            juce::FloatVectorOperations::copy(cvCoarseSaved, buffer.getReadPointer(3), numSamples);
+        if (numCh > 4)
+            juce::FloatVectorOperations::copy(cvFineSaved, buffer.getReadPointer(4), numSamples);
+        if (numCh > 5)
+            juce::FloatVectorOperations::copy(cvLevelSaved, buffer.getReadPointer(5), numSamples);
+
+        buffer.clear();
 
         float totalPitch = voices[0].lastMidiNote + (octaveParam->get() * 12.0f) + (float)coarseParam->get() +
                            (fineParam->get() / 100.0f);
@@ -127,26 +144,12 @@ private:
 
         int baseWaveform = waveformParam->getIndex();
 
-        // Channel 0 is shared between CV pitch input and audio output.
-        // In mono mode, ignore ch0 pitch CV (it may contain Hz values from PolyMidi
-        // which would be misinterpreted as octave-shift CV).
-        juce::HeapBlock<float> cvPitchSaved(numSamples);
-        juce::HeapBlock<float> cvWaveformSaved(numSamples);
-        juce::FloatVectorOperations::clear(cvPitchSaved, numSamples);
-        // Mono mode: read CV from original channels 1-5 (backward compatible)
-        if (buffer.getNumChannels() > 1)
-            juce::FloatVectorOperations::copy(cvWaveformSaved, buffer.getReadPointer(1), numSamples);
-        else
-            juce::FloatVectorOperations::clear(cvWaveformSaved, numSamples);
-
-        const float* cvPitchCh = cvPitchSaved;
-        const float* cvWaveformCh = (buffer.getNumChannels() > 1) ? cvWaveformSaved.get() : nullptr;
-        const float* cvOctaveCh = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
-        const float* cvCoarseCh = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
-        const float* cvFineCh = (buffer.getNumChannels() > 4) ? buffer.getReadPointer(4) : nullptr;
-        const float* cvLevelCh = (buffer.getNumChannels() > 5) ? buffer.getReadPointer(5) : nullptr;
-
-        buffer.clear();
+        const float* cvPitchCh = nullptr; // Mono mode ignores pitch CV
+        const float* cvWaveformCh = (numCh > 1) ? cvWaveformSaved.get() : nullptr;
+        const float* cvOctaveCh = (numCh > 2) ? cvOctaveSaved.get() : nullptr;
+        const float* cvCoarseCh = (numCh > 3) ? cvCoarseSaved.get() : nullptr;
+        const float* cvFineCh = (numCh > 4) ? cvFineSaved.get() : nullptr;
+        const float* cvLevelCh = (numCh > 5) ? cvLevelSaved.get() : nullptr;
         auto* ch0 = buffer.getWritePointer(0);
 
         int unisonCount = unisonParam->get();

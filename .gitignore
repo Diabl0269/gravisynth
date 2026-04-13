@@ -37,5 +37,6 @@ coverage/
 .claude/settings.local.json
 worktrees/
 build-asan/
+build-app/
 build-release/
 build-test/

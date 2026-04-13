@@ -112,8 +112,22 @@ void ModuleComponent::detachFromProcessor() {
     module = nullptr;
 }
 void ModuleComponent::timerCallback() {
-    if (module != nullptr)
-        repaint();
+    if (module == nullptr)
+        return;
+
+    if (auto* modBase = dynamic_cast<ModuleBase*>(module)) {
+        if (auto* vb = modBase->getVisualBuffer()) {
+            if (rmsReadBuffer.empty())
+                rmsReadBuffer.resize(vb->getSize(), 0.0f);
+            vb->copyTo(rmsReadBuffer);
+            float sum = 0.0f;
+            for (float s : rmsReadBuffer)
+                sum += s * s;
+            cachedRMS = std::sqrt(sum / (float)rmsReadBuffer.size());
+        }
+    }
+
+    repaint();
 }
 
 void ModuleComponent::createControls() {
@@ -273,6 +287,13 @@ void ModuleComponent::paint(juce::Graphics& g) {
 
     g.fillAll(isBypassed ? juce::Colours::lightgrey.withAlpha(0.4f) : juce::Colours::lightgrey);
 
+    // Activity glow indicator
+    if (cachedRMS > 0.01f && !isBypassed) {
+        float glowAlpha = juce::jlimit(0.0f, 0.3f, cachedRMS * 0.5f);
+        g.setColour(juce::Colours::limegreen.withAlpha(glowAlpha));
+        g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1.0f), 4.0f, 3.0f);
+    }
+
     // Highlight Active Step (Sequencer only)
     if (getType(module) == ModuleType::Sequencer) {
         if (auto* seq = dynamic_cast<SequencerModule*>(module)) {
@@ -295,6 +316,13 @@ void ModuleComponent::paint(juce::Graphics& g) {
     g.fillRect(0, 0, getWidth(), 24);
     g.setColour(juce::Colours::white);
     g.drawText(module->getName(), 0, 0, getWidth(), 24, juce::Justification::centred, true);
+
+    // Activity LED in header
+    if (cachedRMS > 0.01f && !isBypassed) {
+        float ledAlpha = juce::jlimit(0.3f, 1.0f, cachedRMS * 2.0f);
+        g.setColour(juce::Colours::limegreen.withAlpha(ledAlpha));
+        g.fillEllipse(6.0f, 8.0f, 8.0f, 8.0f);
+    }
 
     // --- PORTS ---
     int numIns = module->getTotalNumInputChannels();
@@ -350,6 +378,65 @@ void ModuleComponent::paint(juce::Graphics& g) {
         else if (dynamic_cast<juce::AudioProcessorGraph::AudioGraphIOProcessor*>(module))
             label = (i == 0) ? "Left" : (i == 1) ? "Right" : "Out " + juce::String(i);
         g.drawText(label, p.x - 70, p.y - 10, 60, 20, juce::Justification::right, false);
+    }
+
+    // Serum-style modulation rings on knobs
+    if (mod != nullptr) {
+        auto targets = mod->getModulationTargets();
+        const auto& modInfo = owner.getCachedModDisplayInfo();
+
+        for (const auto& info : modInfo) {
+            if (info.destNodeID != nodeId || info.isBypassed)
+                continue;
+
+            juce::String targetParamName;
+            for (const auto& t : targets) {
+                if (t.channelIndex == info.destChannelIndex) {
+                    targetParamName = t.name;
+                    break;
+                }
+            }
+            if (targetParamName.isEmpty())
+                continue;
+
+            for (int si = 0; si < sliders.size(); ++si) {
+                if (sliders[si]->getComponentID() != targetParamName)
+                    continue;
+                if (sliders[si]->getSliderStyle() != juce::Slider::RotaryHorizontalVerticalDrag)
+                    continue;
+
+                auto sliderBounds = sliders[si]->getBounds().toFloat();
+                float cx = sliderBounds.getCentreX();
+                float cy = sliderBounds.getCentreY() - 10.0f;
+                float radius = std::min(sliderBounds.getWidth(), sliderBounds.getHeight()) / 2.0f - 11.0f;
+
+                float baseNorm = 0.5f;
+                for (auto* param : module->getParameters()) {
+                    if (param->getName(100) == targetParamName) {
+                        baseNorm = param->getValue();
+                        break;
+                    }
+                }
+
+                float modNorm = juce::jlimit(0.0f, 1.0f, baseNorm + info.modSignalValue);
+
+                constexpr float startAngle = -juce::MathConstants<float>::pi * 0.75f;
+                constexpr float endAngle = juce::MathConstants<float>::pi * 0.75f;
+                float baseAngle = juce::jmap(baseNorm, 0.0f, 1.0f, startAngle, endAngle);
+                float modAngle = juce::jmap(modNorm, 0.0f, 1.0f, startAngle, endAngle);
+
+                if (std::abs(modAngle - baseAngle) > 0.01f) {
+                    juce::Path arc;
+                    arc.addCentredArc(cx, cy, radius, radius, 0.0f, std::min(baseAngle, modAngle),
+                                      std::max(baseAngle, modAngle), true);
+                    bool isPositive = info.modSignalValue >= 0.0f;
+                    auto ringColour = isPositive ? juce::Colour(0xff00e5ff) : juce::Colour(0xffff6e00);
+                    g.setColour(ringColour);
+                    g.strokePath(arc, juce::PathStrokeType(3.5f));
+                }
+                break;
+            }
+        }
     }
 }
 

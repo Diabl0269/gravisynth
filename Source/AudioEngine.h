@@ -33,7 +33,17 @@ public:
         bool isBypassed;
     };
 
+    struct ModulationDisplayInfo {
+        juce::AudioProcessorGraph::NodeID attenuverterNodeID;
+        juce::AudioProcessorGraph::NodeID destNodeID;
+        int destChannelIndex;
+        float modSignalValue;
+        float modSignalPeak;
+        bool isBypassed;
+    };
+
     std::vector<ModRoutingInfo> getActiveModRoutings() const;
+    std::vector<ModulationDisplayInfo> getModulationDisplayInfo() const;
     void addModRouting(juce::AudioProcessorGraph::NodeID sourceNodeID, int sourceChannelIndex,
                        juce::AudioProcessorGraph::NodeID destNodeID, int destChannelIndex);
     void addEmptyModRouting();
