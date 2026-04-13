@@ -95,8 +95,18 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
                 }
 
                 if (found1 && found2) {
-                    g.setColour(juce::Colours::yellow);
-                    g.drawLine(p1.toFloat().x, p1.toFloat().y, p2.toFloat().x, p2.toFloat().y, 2.0f);
+                    // Pulse modulation line based on signal activity
+                    float modPeak = 0.0f;
+                    for (auto& info : editor.cachedModDisplayInfo) {
+                        if (info.attenuverterNodeID == node2->nodeID) {
+                            modPeak = info.modSignalPeak;
+                            break;
+                        }
+                    }
+                    float lineWidth = 2.0f + modPeak * 2.0f;
+                    float brightness = juce::jlimit(0.5f, 1.0f, 0.5f + modPeak * 0.5f);
+                    g.setColour(juce::Colours::yellow.withMultipliedBrightness(brightness));
+                    g.drawLine(p1.toFloat().x, p1.toFloat().y, p2.toFloat().x, p2.toFloat().y, lineWidth);
 
                     float amt = 0.0f;
                     if (auto* p = node2->getProcessor()->getParameters()[1]) {
@@ -116,6 +126,15 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
                     float dx = std::sin(angle) * 8.0f;
                     float dy = -std::cos(angle) * 8.0f;
                     g.drawLine(mid.toFloat().x, mid.toFloat().y, mid.toFloat().x + dx, mid.toFloat().y + dy, 2.0f);
+
+                    // Animated dots along modulation connection
+                    for (int d = 0; d < 3; ++d) {
+                        float t = std::fmod(connectionAnimPhase + (float)d / 3.0f, 1.0f);
+                        float dotX = p1.toFloat().x + (p2.toFloat().x - p1.toFloat().x) * t;
+                        float dotY = p1.toFloat().y + (p2.toFloat().y - p1.toFloat().y) * t;
+                        g.setColour(juce::Colours::cyan.withAlpha(0.7f));
+                        g.fillEllipse(dotX - 2.5f, dotY - 2.5f, 5.0f, 5.0f);
+                    }
                 }
             }
             continue;
@@ -150,8 +169,18 @@ void GraphEditor::GraphContentComponent::paint(juce::Graphics& g) {
             }
         }
 
-        if (found1 && found2)
+        if (found1 && found2) {
             g.drawLine(p1.toFloat().x, p1.toFloat().y, p2.toFloat().x, p2.toFloat().y, 2.0f);
+
+            // Animated dots along audio connection
+            for (int d = 0; d < 3; ++d) {
+                float t = std::fmod(connectionAnimPhase + (float)d / 3.0f, 1.0f);
+                float dotX = p1.toFloat().x + (p2.toFloat().x - p1.toFloat().x) * t;
+                float dotY = p1.toFloat().y + (p2.toFloat().y - p1.toFloat().y) * t;
+                g.setColour(juce::Colours::white.withAlpha(0.7f));
+                g.fillEllipse(dotX - 2.5f, dotY - 2.5f, 5.0f, 5.0f);
+            }
+        }
     }
 
     // Draw Line being dragged
@@ -792,7 +821,10 @@ void GraphEditor::disconnectPort(ModuleComponent* module, int portIndex, bool is
 }
 
 void GraphEditor::timerCallback() {
-    // No longer aggressive GCing attenuverters to allow empty slots in ModMatrix
+    cachedModDisplayInfo = audioEngine.getModulationDisplayInfo();
+    content.connectionAnimPhase += 0.02f;
+    if (content.connectionAnimPhase >= 1.0f)
+        content.connectionAnimPhase -= 1.0f;
     content.repaint();
 }
 

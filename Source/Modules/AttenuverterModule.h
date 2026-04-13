@@ -25,6 +25,8 @@ public:
 
         if (bypassParam->get()) {
             buffer.clear();
+            lastOutputPeak.store(0.0f, std::memory_order_relaxed);
+            lastModValue.store(0.0f, std::memory_order_relaxed);
             return;
         }
 
@@ -40,6 +42,13 @@ public:
             audioData[sample] *= amount;
         }
 
+        // Track output for UI visualization
+        float peak = 0.0f;
+        for (int s = 0; s < numSamples; ++s)
+            peak = std::max(peak, std::abs(audioData[s]));
+        lastOutputPeak.store(peak, std::memory_order_relaxed);
+        lastModValue.store(numSamples > 0 ? audioData[numSamples / 2] : 0.0f, std::memory_order_relaxed);
+
         // Clear CV channel and copy audio to remaining channels
         for (int ch = 1; ch < buffer.getNumChannels(); ++ch) {
             buffer.copyFrom(ch, 0, buffer, 0, 0, numSamples);
@@ -52,8 +61,13 @@ public:
 
     ModuleType getModuleType() const override { return ModuleType::Attenuverter; }
 
+    float getLastOutputPeak() const { return lastOutputPeak.load(std::memory_order_relaxed); }
+    float getLastModValue() const { return lastModValue.load(std::memory_order_relaxed); }
+
 private:
     juce::AudioParameterFloat* amountParam;
     juce::AudioParameterBool* bypassParam;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedAmount;
+    std::atomic<float> lastOutputPeak{0.0f};
+    std::atomic<float> lastModValue{0.0f};
 };
