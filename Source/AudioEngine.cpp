@@ -64,6 +64,34 @@ std::vector<AudioEngine::ModRoutingInfo> AudioEngine::getActiveModRoutings() con
     return routings;
 }
 
+std::vector<AudioEngine::ModulationDisplayInfo> AudioEngine::getModulationDisplayInfo() const {
+    std::vector<ModulationDisplayInfo> result;
+    for (auto* node : mainProcessorGraph.getNodes()) {
+        if (auto* atten = dynamic_cast<AttenuverterModule*>(node->getProcessor())) {
+            ModulationDisplayInfo info;
+            info.attenuverterNodeID = node->nodeID;
+            info.modSignalValue = atten->getLastModValue();
+            info.modSignalPeak = atten->getLastOutputPeak();
+            info.isBypassed = false;
+            if (auto* bp = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[2]))
+                info.isBypassed = bp->get();
+
+            bool foundDest = false;
+            for (auto& conn : mainProcessorGraph.getConnections()) {
+                if (conn.source.nodeID == node->nodeID && conn.source.channelIndex == 0) {
+                    info.destNodeID = conn.destination.nodeID;
+                    info.destChannelIndex = conn.destination.channelIndex;
+                    foundDest = true;
+                    break;
+                }
+            }
+            if (foundDest)
+                result.push_back(info);
+        }
+    }
+    return result;
+}
+
 void AudioEngine::addModRouting(juce::AudioProcessorGraph::NodeID sourceNodeID, int sourceChannelIndex,
                                 juce::AudioProcessorGraph::NodeID destNodeID, int destChannelIndex) {
     auto attenuverterNode = mainProcessorGraph.addNode(std::make_unique<AttenuverterModule>());

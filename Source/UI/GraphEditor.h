@@ -64,6 +64,8 @@ private:
 
         juce::OwnedArray<ModuleComponent>& getModules() { return moduleComponents; }
 
+        float connectionAnimPhase = 0.0f;
+
     private:
         GraphEditor& editor;
         juce::OwnedArray<ModuleComponent> moduleComponents;
@@ -91,8 +93,13 @@ private:
     float attenDragStartValue = 0.0f;
 
     GravisynthUndoManager* undoManager = nullptr;
+    std::vector<AudioEngine::ModulationDisplayInfo> cachedModDisplayInfo;
 
     void updateTransform();
 
+public:
+    const std::vector<AudioEngine::ModulationDisplayInfo>& getCachedModDisplayInfo() const { return cachedModDisplayInfo; }
+
+private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(GraphEditor)
 };

@@ -11,6 +11,7 @@ public:
     {
         addParameter(gainParam = new juce::AudioParameterFloat("gain", "Gain", 0.0f, 1.0f, 0.5f));
         addParameter(polyParam = new juce::AudioParameterBool("poly", "Poly", false));
+        enableVisualBuffer(true);
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
@@ -54,6 +55,9 @@ public:
             if (numChannels > 1) {
                 buffer.copyFrom(1, 0, buffer, 0, 0, numSamples);
             }
+            if (auto* vb = getVisualBuffer())
+                for (int s = 0; s < numSamples; ++s)
+                    vb->pushSample(buffer.getSample(0, s));
         } else {
             // --- Poly mode: 8 voices summed to stereo (ch0/ch1) ---
             // Each voice is multiplied by its envelope CV and the master gain,
@@ -83,6 +87,9 @@ public:
                 for (int v = 2; v < MAX_VOICES && v < numChannels; ++v)
                     buffer.clear(v, 0, numSamples);
             }
+            if (auto* vb = getVisualBuffer())
+                for (int s = 0; s < numSamples; ++s)
+                    vb->pushSample(buffer.getSample(0, s));
         }
     }
 

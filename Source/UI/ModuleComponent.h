@@ -35,6 +35,7 @@ public:
     void moved() override;
 
     juce::AudioProcessor* getModule() const { return module; }
+    juce::AudioProcessorGraph::NodeID getNodeId() const { return nodeId; }
 
     // Safely detach from the processor before graph rebuild.
     // Removes listeners, destroys attachments, stops timer, nulls module pointer.
@@ -82,6 +83,9 @@ private:
     GravisynthUndoManager* undoManager = nullptr;
     std::map<int, float> gestureStartValues;
     juce::Point<int> dragStartPosition;
+
+    float cachedRMS = 0.0f;
+    std::vector<float> rmsReadBuffer;
 
     void createControls();
     void updateLayout();

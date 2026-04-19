@@ -13,6 +13,7 @@ public:
         addParameter(sustainParam = new juce::AudioParameterFloat("sustain", "Sustain", 0.0f, 1.0f, 0.0f));
         addParameter(releaseParam = new juce::AudioParameterFloat("release", "Release", 0.01f, 5.0f, 0.1f));
         addParameter(polyParam = new juce::AudioParameterBool("poly", "Poly", false));
+        enableVisualBuffer(true);
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
@@ -61,6 +62,9 @@ public:
             }
 
             adsrs[0].applyEnvelopeToBuffer(buffer, 0, buffer.getNumSamples());
+            if (auto* vb = getVisualBuffer())
+                for (int s = 0; s < buffer.getNumSamples(); ++s)
+                    vb->pushSample(buffer.getSample(0, s));
         } else {
             // Poly mode: gate CV per voice
             for (int v = 0; v < MAX_VOICES; ++v)
@@ -87,6 +91,9 @@ public:
                 for (int smp = 0; smp < numSamples; ++smp)
                     out[smp] = adsrs[v].getNextSample();
             }
+            if (auto* vb = getVisualBuffer())
+                for (int s = 0; s < numSamples; ++s)
+                    vb->pushSample(buffer.getSample(0, s));
         }
     }
 
