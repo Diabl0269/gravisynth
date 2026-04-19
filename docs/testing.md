@@ -1,6 +1,6 @@
 # Testing Guide
 
-All tests use GoogleTest and run headless (no audio device, no GUI window). ~302 tests across 39 suites.
+All tests use GoogleTest and run headless (no audio device, no GUI window). ~310 tests across 39 suites.
 
 ```bash
 # Run all tests

@@ -31,4 +31,4 @@ Modules communicate via two main signal types:
 All modules follow specific DSP requirements:
 - **Smoothing**: All gain/cutoff parameters use linear smoothing to avoid clicks.
 - **Antialiasing**: Oscillators use PolyBLEP for sharp waveforms.
-- **Oversampling**: Nonlinear effects use 2x oversampling.
+- **Oversampling**: Nonlinear effects support configurable oversampling (e.g., Distortion offers Off/2x/4x modes).

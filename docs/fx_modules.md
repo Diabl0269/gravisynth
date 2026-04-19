@@ -4,8 +4,8 @@ Technical documentation for the Gravisynth effects suite.
 
 ## Distortion Module
 - **Algorithm**: Nonlinear soft-clipping using a `tanh`-based curve: `f(x) = x / (1 + |x|)`.
-- **Oversampling**: 2x oversampling using polyphase IIR half-band filters to reduce aliasing in the high-frequency spectrum.
-- **Parameters**: Drive (Intensity), Mix (Wet/Dry).
+- **Oversampling**: Configurable oversampling mode (Off, 2x, 4x) using polyphase IIR half-band filters to reduce aliasing in the high-frequency spectrum. Controls trade-off between audio quality and CPU usage.
+- **Parameters**: Drive (Intensity), Mix (Wet/Dry), Oversampling (Off/2x/4x).
 
 ## Delay Module
 - **Type**: Stereo feedback delay.

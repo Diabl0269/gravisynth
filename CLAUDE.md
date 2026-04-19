@@ -155,5 +155,6 @@ Shortcuts are configurable in Settings → General tab (click a binding to rebin
 - `Source/Modules/FX/LimiterModule.h`: Brickwall limiter with input gain drive
 - `Source/UI/AIChatComponent.cpp/.h`: Chat interface for AI-assisted patching
 - `Source/UI/ScopeComponent.h`: Oscilloscope/waveform display component
+- `Source/Modules/FX/DistortionModule.h`: Distortion effect with configurable oversampling (Off/2x/4x), soft-clipping using `tanh`-based curve, Drive and Mix parameters
 - `Tests/E2EWorkflowTests.cpp`: 24 E2E workflow tests — preset loading, module drop/delete/replace, connection drag, mod matrix, undo/redo sequences, and stress tests
 - `Tests/`: ~314 tests across 41 suites (audio rendering, integration, component workflow, state management, E2E workflow)
