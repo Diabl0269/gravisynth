@@ -12,6 +12,7 @@ FetchContent_MakeAvailable(googletest)
 add_executable(GravisynthTests
     TestMain.cpp
     OscillatorTests.cpp
+    OscillatorCVModulationTests.cpp
     FilterTests.cpp
     ADSRTests.cpp
     ModuleBaseTests.cpp
@@ -39,14 +40,11 @@ add_executable(GravisynthTests
     E2EWorkflowTests.cpp
     PresetManagerTests.cpp
     ModuleBypassTests.cpp
-    SettingsWindowTests.cpp
-    ShortcutManagerTests.cpp
     ../Source/MainComponent.cpp
     ../Source/UI/GraphEditor.cpp
     ../Source/UI/ModMatrixComponent.cpp
     ../Source/UI/AIChatComponent.cpp
     ../Source/UI/ModuleComponent.cpp
-    ../Source/UI/SettingsWindow.cpp
 )
 
 target_link_libraries(GravisynthTests PRIVATE
