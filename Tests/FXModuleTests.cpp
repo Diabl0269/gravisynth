@@ -258,11 +258,11 @@ TEST_F(DistortionModuleTest, MinDriveIsTransparent) {
     auto* driveP = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1]);
     auto* mixP = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[2]);
     auto* osP = dynamic_cast<juce::AudioParameterChoice*>(module->getParameters()[3]);
-    driveP->setValueNotifyingHost(0.0f);  // normalized 0 = drive 1.0
-    mixP->setValueNotifyingHost(1.0f);    // fully wet
-    *osP = 0;                             // Off — isolate waveshaper from oversampling filters
+    driveP->setValueNotifyingHost(0.0f); // normalized 0 = drive 1.0
+    mixP->setValueNotifyingHost(1.0f);   // fully wet
+    *osP = 0;                            // Off — isolate waveshaper from oversampling filters
 
-    module->prepareToPlay(44100.0, 512);  // re-init smoothers with new param values
+    module->prepareToPlay(44100.0, 512); // re-init smoothers with new param values
 
     juce::AudioBuffer<float> buffer(4, 512);
     buffer.clear();
@@ -282,7 +282,7 @@ TEST_F(DistortionModuleTest, OversamplingOffProducesOutput) {
     // Set oversampling to Off (index 0)
     auto* param = dynamic_cast<juce::AudioParameterChoice*>(module->getParameters()[3]);
     ASSERT_NE(param, nullptr);
-    *param = 0;  // Off
+    *param = 0; // Off
 
     juce::AudioBuffer<float> buffer(4, 512);
     buffer.clear();
@@ -295,7 +295,10 @@ TEST_F(DistortionModuleTest, OversamplingOffProducesOutput) {
 
     bool anyNonZero = false;
     for (int i = 0; i < 512; ++i)
-        if (buffer.getSample(0, i) != 0.0f) { anyNonZero = true; break; }
+        if (buffer.getSample(0, i) != 0.0f) {
+            anyNonZero = true;
+            break;
+        }
     EXPECT_TRUE(anyNonZero);
 
     // CV channels must be cleared
@@ -307,7 +310,7 @@ TEST_F(DistortionModuleTest, OversamplingOffProducesOutput) {
 TEST_F(DistortionModuleTest, Oversampling4xProducesOutput) {
     auto* param = dynamic_cast<juce::AudioParameterChoice*>(module->getParameters()[3]);
     ASSERT_NE(param, nullptr);
-    *param = 2;  // 4x
+    *param = 2; // 4x
 
     juce::AudioBuffer<float> buffer(4, 512);
     buffer.clear();
@@ -320,7 +323,10 @@ TEST_F(DistortionModuleTest, Oversampling4xProducesOutput) {
 
     bool anyNonZero = false;
     for (int i = 0; i < 512; ++i)
-        if (buffer.getSample(0, i) != 0.0f) { anyNonZero = true; break; }
+        if (buffer.getSample(0, i) != 0.0f) {
+            anyNonZero = true;
+            break;
+        }
     EXPECT_TRUE(anyNonZero);
 }
 
@@ -331,7 +337,7 @@ TEST_F(DistortionModuleTest, OversamplingParameterProperties) {
     EXPECT_EQ(param->choices[0], juce::String("Off"));
     EXPECT_EQ(param->choices[1], juce::String("2x"));
     EXPECT_EQ(param->choices[2], juce::String("4x"));
-    EXPECT_EQ(param->getIndex(), 1);  // default is 2x
+    EXPECT_EQ(param->getIndex(), 1); // default is 2x
 }
 
 TEST_F(DistortionModuleTest, OversamplingNotInModulationTargets) {
@@ -343,16 +349,16 @@ TEST_F(DistortionModuleTest, OversamplingNotInModulationTargets) {
 TEST_F(DistortionModuleTest, LatencyZeroWhenOff) {
     auto* param = dynamic_cast<juce::AudioParameterChoice*>(module->getParameters()[3]);
     ASSERT_NE(param, nullptr);
-    *param = 0;  // Off
+    *param = 0; // Off
     EXPECT_DOUBLE_EQ(module->getLatencyInSamples(), 0.0);
 }
 
 TEST_F(DistortionModuleTest, LatencyNonZeroWhenEnabled) {
     auto* param = dynamic_cast<juce::AudioParameterChoice*>(module->getParameters()[3]);
     ASSERT_NE(param, nullptr);
-    *param = 1;  // 2x
+    *param = 1; // 2x
     EXPECT_GT(module->getLatencyInSamples(), 0.0);
-    *param = 2;  // 4x
+    *param = 2; // 4x
     EXPECT_GT(module->getLatencyInSamples(), 0.0);
 }
 

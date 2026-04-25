@@ -3,24 +3,34 @@
 #include "../ModuleBase.h"
 #include <juce_dsp/juce_dsp.h>
 
-class DistortionModule : public ModuleBase {
+class DistortionModule
+    : public ModuleBase
+    , public juce::AudioProcessorParameter::Listener {
 public:
     DistortionModule()
         : ModuleBase("Distortion", 4, 2) // 2 Audio + 2 CV (Drive, Mix)
     {
         addParameter(driveParam = new juce::AudioParameterFloat("drive", "Drive", 1.0f, 20.0f, 1.0f));
         addParameter(mixParam = new juce::AudioParameterFloat("mix", "Mix", 0.0f, 1.0f, 0.5f));
-        addParameter(oversamplingParam = new juce::AudioParameterChoice(
-            "oversampling", "Oversampling",
-            juce::StringArray{"Off", "2x", "4x"}, 1));  // default 2x preserves backward compat
+        addParameter(oversamplingParam = new juce::AudioParameterChoice("oversampling", "Oversampling",
+                                                                        juce::StringArray{"Off", "2x", "4x"},
+                                                                        1)); // default 2x preserves backward compat
+
+        oversamplingParam->addListener(this);
+        enableVisualBuffer(true);
+    }
+
+    ~DistortionModule() override {
+        if (oversamplingParam != nullptr)
+            oversamplingParam->removeListener(this);
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
         // Pre-allocate 2x and 4x oversamplers for real-time safe switching
         oversamplers[0] = std::make_unique<juce::dsp::Oversampling<float>>(
-            2, 1, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);  // 2x
+            2, 1, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple, true); // 2x
         oversamplers[1] = std::make_unique<juce::dsp::Oversampling<float>>(
-            2, 2, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);  // 4x
+            2, 2, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple, true); // 4x
 
         for (auto& os : oversamplers)
             os->initProcessing(static_cast<size_t>(samplesPerBlock));
@@ -31,6 +41,24 @@ public:
         smoothedMix.reset(sampleRate, 0.005);
         smoothedDrive.setCurrentAndTargetValue(*driveParam);
         smoothedMix.setCurrentAndTargetValue(*mixParam);
+
+        smoothedMakeupGain.reset(sampleRate, 0.05); // 50ms smoothing
+        smoothedMakeupGain.setCurrentAndTargetValue(1.0f);
+
+        juce::dsp::ProcessSpec spec;
+        spec.sampleRate = sampleRate;
+        spec.maximumBlockSize = samplesPerBlock;
+        spec.numChannels = 2;
+        latencyDelay.prepare(spec);
+        latencyDelay.setDelay(static_cast<float>(getLatencyInSamples()));
+        latencyDelay.reset();
+
+        if (oversamplers[0])
+            oversamplers[0]->reset();
+        if (oversamplers[1])
+            oversamplers[1]->reset();
+
+        setLatencySamples(juce::roundToInt(getLatencyInSamples()));
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
@@ -38,42 +66,58 @@ public:
             return;
 
         juce::ignoreUnused(midiMessages);
-
         int numSamples = buffer.getNumSamples();
+
+        // Clear CV channels immediately to prevent reading garbage from the graph's shared buffers
+        for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
+            buffer.clear(ch, 0, numSamples);
+
         const float* cvDrive = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
         const float* cvMix = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
 
+        bool cvDriveActive = false;
+        bool cvMixActive = false;
+        if (cvDrive) {
+            float rms = 0.0f;
+            for (int i = 0; i < numSamples; ++i)
+                rms += cvDrive[i] * cvDrive[i];
+            cvDriveActive = (rms / numSamples) > 1e-3f; // Increased to -30dB
+        }
+        if (cvMix) {
+            float rms = 0.0f;
+            for (int i = 0; i < numSamples; ++i)
+                rms += cvMix[i] * cvMix[i];
+            cvMixActive = (rms / numSamples) > 1e-3f; // Increased to -30dB
+        }
+
         smoothedDrive.setTargetValue(*driveParam);
         smoothedMix.setTargetValue(*mixParam);
-
-        // Mix=0: skip all processing (true bypass)
-        if (*mixParam <= 0.0f) {
-            smoothedDrive.skip(numSamples);
-            smoothedMix.skip(numSamples);
-            for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
-                buffer.clear(ch, 0, numSamples);
-            return;
-        }
 
         // Save dry signal (dryBuffer pre-allocated in prepareToPlay)
         for (int ch = 0; ch < 2; ++ch)
             dryBuffer.copyFrom(ch, 0, buffer.getReadPointer(ch), numSamples);
 
-        int oversamplingIndex = oversamplingParam->getIndex();  // 0=Off, 1=2x, 2=4x
+        // Delay the dry signal to align perfectly with the oversampled wet signal
+        juce::dsp::AudioBlock<float> fullDryBlock(dryBuffer);
+        juce::dsp::AudioBlock<float> dryBlock = fullDryBlock.getSubBlock(0, (size_t)numSamples);
+        juce::dsp::ProcessContextReplacing<float> dryContext(dryBlock);
+        latencyDelay.process(dryContext);
+
+        int oversamplingIndex = oversamplingParam->getIndex(); // 0=Off, 1=2x, 2=4x
 
         if (oversamplingIndex == 0) {
             // Off: process at 1x rate
             for (int ch = 0; ch < 2; ++ch) {
                 auto* data = buffer.getWritePointer(ch);
                 for (int i = 0; i < numSamples; ++i) {
-                    float driveMod = cvDrive ? cvDrive[i] : 0.0f;
+                    float driveMod = cvDriveActive ? cvDrive[i] : 0.0f;
                     float drive = juce::jlimit(1.0f, 20.0f, smoothedDrive.getNextValue() + (driveMod * 10.0f));
                     data[i] = applyWaveshaper(data[i], drive);
                 }
             }
         } else {
             // 2x or 4x: upsample, distort, downsample
-            auto& os = *oversamplers[oversamplingIndex - 1];  // index 0=2x, 1=4x
+            auto& os = *oversamplers[oversamplingIndex - 1]; // index 0=2x, 1=4x
             int factor = static_cast<int>(os.getOversamplingFactor());
 
             juce::dsp::AudioBlock<float> fullBlock(buffer);
@@ -87,7 +131,7 @@ public:
                     int sampleIdx = static_cast<int>(i) / factor;
                     // Advance smoother once per original-rate sample, hold for sub-samples
                     if (i % static_cast<size_t>(factor) == 0) {
-                        float driveMod = cvDrive ? cvDrive[std::min(sampleIdx, numSamples - 1)] : 0.0f;
+                        float driveMod = cvDriveActive ? cvDrive[std::min(sampleIdx, numSamples - 1)] : 0.0f;
                         currentDrive = juce::jlimit(1.0f, 20.0f, smoothedDrive.getNextValue() + (driveMod * 10.0f));
                     }
                     data[i] = applyWaveshaper(data[i], currentDrive);
@@ -97,20 +141,61 @@ public:
             os.processSamplesDown(audioBlock);
         }
 
-        // Wet/dry blend at 1x rate
+        // Compute RMS for dynamic makeup gain
+        float sumWetSq = 0.0f;
+        float sumDrySq = 0.0f;
         for (int ch = 0; ch < 2; ++ch) {
-            auto* wetData = buffer.getWritePointer(ch);
-            const auto* dryData = dryBuffer.getReadPointer(ch);
+            auto* w = buffer.getReadPointer(ch);
+            auto* d = dryBuffer.getReadPointer(ch);
             for (int i = 0; i < numSamples; ++i) {
-                float mixMod = cvMix ? cvMix[i] : 0.0f;
-                float mix = juce::jlimit(0.0f, 1.0f, smoothedMix.getNextValue() + mixMod);
-                wetData[i] = (wetData[i] * mix) + (dryData[i] * (1.0f - mix));
+                sumWetSq += w[i] * w[i];
+                sumDrySq += d[i] * d[i];
             }
         }
 
-        // Clear CV channels
-        for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
-            buffer.clear(ch, 0, numSamples);
+        float rmsWet = std::sqrt(sumWetSq / (numSamples * 2.0f));
+        float rmsDry = std::sqrt(sumDrySq / (numSamples * 2.0f));
+        float targetMakeup = (rmsWet > 1e-4f) ? (rmsDry / rmsWet) : 1.0f;
+        if (std::isnan(targetMakeup) || std::isinf(targetMakeup))
+            targetMakeup = 1.0f;
+        targetMakeup = juce::jlimit(0.01f, 1.0f, targetMakeup);
+        smoothedMakeupGain.setTargetValue(targetMakeup);
+
+        // Wet/dry blend at 1x rate
+        float* wetPtrs[2] = {buffer.getWritePointer(0), buffer.getWritePointer(1)};
+        const float* dryPtrs[2] = {dryBuffer.getReadPointer(0), dryBuffer.getReadPointer(1)};
+
+        for (int i = 0; i < numSamples; ++i) {
+            float makeup = smoothedMakeupGain.getNextValue();
+            float mixMod = cvMixActive ? cvMix[i] : 0.0f;
+            float rawMix = juce::jlimit(0.0f, 1.0f, smoothedMix.getNextValue() + mixMod);
+
+            // Linear mix for more predictable control, but still with deadzone for transparency
+            float mix = rawMix;
+
+            // Strict deadzone to ensure bit-perfect dry signal at low mix levels
+            if (mix < 0.005f) {
+                for (int ch = 0; ch < 2; ++ch) {
+                    wetPtrs[ch][i] = dryPtrs[ch][i];
+                }
+                continue;
+            }
+
+            float wetGain = std::sin(mix * juce::MathConstants<float>::halfPi) * makeup;
+            float dryGain = std::cos(mix * juce::MathConstants<float>::halfPi);
+
+            for (int ch = 0; ch < 2; ++ch) {
+                wetPtrs[ch][i] = (wetPtrs[ch][i] * wetGain) + (dryPtrs[ch][i] * dryGain);
+            }
+        }
+
+        // Push to scope
+        if (auto* vb = getVisualBuffer()) {
+            const float* ch0 = buffer.getReadPointer(0);
+            for (int i = 0; i < numSamples; ++i) {
+                vb->pushSample(ch0[i]);
+            }
+        }
     }
 
     juce::String getInputPortLabel(int i) const override {
@@ -125,10 +210,25 @@ public:
     ModuleType getModuleType() const override { return ModuleType::Distortion; }
 
     double getLatencyInSamples() const {
-        if (!oversamplingParam) return 0.0;
+        if (!oversamplingParam)
+            return 0.0;
         int idx = oversamplingParam->getIndex();
-        if (idx == 0) return 0.0;
+        if (idx == 0)
+            return 0.0;
         return oversamplers[idx - 1] ? oversamplers[idx - 1]->getLatencyInSamples() : 0.0;
+    }
+
+    void parameterValueChanged(int parameterIndex, float newValue) override {
+        juce::ignoreUnused(newValue);
+        if (oversamplingParam && parameterIndex == oversamplingParam->getParameterIndex()) {
+            float lat = static_cast<float>(getLatencyInSamples());
+            setLatencySamples(juce::roundToInt(lat));
+            latencyDelay.setDelay(lat);
+        }
+    }
+
+    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override {
+        juce::ignoreUnused(parameterIndex, gestureIsStarting);
     }
 
 private:
@@ -138,14 +238,17 @@ private:
     // Smooth transition — no crossfade needed, mix knob has full control.
     static float applyWaveshaper(float input, float drive) {
         float k = drive - 1.0f;
-        if (k <= 0.0f) return input;
+        if (k <= 0.0f)
+            return input;
         return input * (1.0f + k) / (1.0f + k * std::abs(input));
     }
 
-    std::unique_ptr<juce::dsp::Oversampling<float>> oversamplers[2];  // [0]=2x, [1]=4x
+    std::unique_ptr<juce::dsp::Oversampling<float>> oversamplers[2]; // [0]=2x, [1]=4x
     juce::AudioBuffer<float> dryBuffer;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedDrive;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedMix;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedMakeupGain;
+    juce::dsp::DelayLine<float> latencyDelay{4096};
 
     juce::AudioParameterFloat* driveParam = nullptr;
     juce::AudioParameterFloat* mixParam = nullptr;
