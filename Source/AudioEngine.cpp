@@ -25,6 +25,7 @@ void AudioEngine::initialise() {
     midiMessageCollector.reset(deviceManager.getAudioDeviceSetup().sampleRate);
 
     // Enable all available MIDI inputs by default
+#if JUCE_LINUX || JUCE_BSD || JUCE_MAC || JUCE_IOS
     for (auto& info : juce::MidiInput::getAvailableDevices()) {
         auto input = juce::MidiInput::createNewDevice(info.name, this);
         if (input != nullptr) {
@@ -32,6 +33,7 @@ void AudioEngine::initialise() {
             midiInputs.push_back(std::move(input));
         }
     }
+#endif
 
     if (!gsynth::PresetManager::loadDefaultPreset(mainProcessorGraph)) {
         createDefaultPatch(); // Fallback
@@ -40,10 +42,12 @@ void AudioEngine::initialise() {
 
 void AudioEngine::shutdown() {
     deviceManager.removeAudioCallback(this);
+#if JUCE_LINUX || JUCE_BSD || JUCE_MAC || JUCE_IOS
     for (auto& input : midiInputs) {
         input->stop();
     }
     midiInputs.clear();
+#endif
     mainProcessorGraph.clear();
 }
 
