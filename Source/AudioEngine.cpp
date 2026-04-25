@@ -20,6 +20,19 @@ AudioEngine::~AudioEngine() { shutdown(); }
 void AudioEngine::initialise() {
     deviceManager.initialiseWithDefaultDevices(0, 2);
     deviceManager.addAudioCallback(this);
+
+    // Initialise MIDI input collector
+    midiMessageCollector.reset(deviceManager.getAudioDeviceSetup().sampleRate);
+
+    // Enable all available MIDI inputs by default
+    for (auto& info : juce::MidiInput::getAvailableDevices()) {
+        auto input = juce::MidiInput::createNewDevice(info.name, this);
+        if (input != nullptr) {
+            input->start();
+            midiInputs.push_back(std::move(input));
+        }
+    }
+
     if (!gsynth::PresetManager::loadDefaultPreset(mainProcessorGraph)) {
         createDefaultPatch(); // Fallback
     }
@@ -27,6 +40,10 @@ void AudioEngine::initialise() {
 
 void AudioEngine::shutdown() {
     deviceManager.removeAudioCallback(this);
+    for (auto& input : midiInputs) {
+        input->stop();
+    }
+    midiInputs.clear();
     mainProcessorGraph.clear();
 }
 
@@ -211,6 +228,10 @@ void AudioEngine::createDefaultPatch() {
     mainProcessorGraph.addConnection({{reverbNode->nodeID, 1}, {outputNode->nodeID, 1}});
 }
 
+void AudioEngine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::MidiMessage& message) {
+    midiMessageCollector.addMessageToQueue(message);
+}
+
 void AudioEngine::audioDeviceIOCallbackWithContext(const float* const* inputChannelData, int numInputChannels,
                                                    float* const* outputChannelData, int numOutputChannels,
                                                    int numSamples, const juce::AudioIODeviceCallbackContext& context) {
@@ -221,6 +242,7 @@ void AudioEngine::audioDeviceIOCallbackWithContext(const float* const* inputChan
     }
     juce::AudioBuffer<float> buffer(const_cast<float**>(outputChannelData), numOutputChannels, numSamples);
     juce::MidiBuffer midiMessages;
+    midiMessageCollector.removeNextBlockOfMessages(midiMessages, numSamples);
     mainProcessorGraph.processBlock(buffer, midiMessages);
 }
 
