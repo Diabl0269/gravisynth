@@ -72,6 +72,7 @@ TEST_F(AttenuverterVisualTests, BypassedReturnsZeroPeakAndMod) {
 TEST_F(AttenuverterVisualTests, ZeroAmountProducesZeroPeak) {
     // Default amount is 0.0
     juce::AudioBuffer<float> buffer(2, 128);
+    buffer.clear();
     for (int i = 0; i < 128; ++i)
         buffer.setSample(0, i, 1.0f);
     juce::MidiBuffer midi;

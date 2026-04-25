@@ -20,24 +20,29 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
         juce::ignoreUnused(midiMessages);
 
-        if (buffer.getNumChannels() == 0)
+        int numSamples = buffer.getNumSamples();
+        if (numSamples == 0)
             return;
 
-        if (bypassParam->get()) {
-            buffer.clear();
-            lastOutputPeak.store(0.0f, std::memory_order_relaxed);
-            lastModValue.store(0.0f, std::memory_order_relaxed);
-            return;
-        }
+        // Clear CV channels immediately to prevent reading garbage from shared buffers
+        for (int ch = 1; ch < buffer.getNumChannels(); ++ch)
+            buffer.clear(ch, 0, numSamples);
 
         auto* audioData = buffer.getWritePointer(0);
         auto* cvAmountData = buffer.getNumChannels() > 1 ? buffer.getReadPointer(1) : nullptr;
+
+        bool cvAmountActive = false;
+        if (cvAmountData) {
+            float rms = 0.0f;
+            for (int i = 0; i < std::min(numSamples, 64); ++i)
+                rms += cvAmountData[i] * cvAmountData[i];
+            cvAmountActive = (rms / std::min(numSamples, 64)) > 1e-6f;
+        }
         smoothedAmount.setTargetValue(*amountParam);
-        int numSamples = buffer.getNumSamples();
 
         for (int sample = 0; sample < numSamples; ++sample) {
             float amount = smoothedAmount.getNextValue();
-            if (cvAmountData)
+            if (cvAmountActive)
                 amount = juce::jlimit(-1.0f, 1.0f, amount + cvAmountData[sample]);
             audioData[sample] *= amount;
         }

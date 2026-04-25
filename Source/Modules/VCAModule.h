@@ -31,6 +31,12 @@ public:
         if (numChannels == 0 || numSamples == 0)
             return;
 
+        // Clear CV channels immediately to prevent reading garbage from shared buffers
+        // In mono mode, ch1 is CV. In poly mode, ch8-15 are CVs.
+        int cvStart = polyParam->get() ? 8 : 1;
+        for (int ch = cvStart; ch < numChannels; ++ch)
+            buffer.clear(ch, 0, numSamples);
+
         smoothedGain.setTargetValue(*gainParam);
 
         if (!polyParam->get()) {
