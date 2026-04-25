@@ -8,7 +8,6 @@ public:
         : ModuleBase("Attenuverter", 2, 1) // 1 Audio In + 1 CV In (Amount), 1 Out
     {
         addParameter(amountParam = new juce::AudioParameterFloat("amount", "Amount", -1.0f, 1.0f, 0.0f));
-        addParameter(bypassParam = new juce::AudioParameterBool("bypass", "Bypass", false));
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
@@ -29,7 +28,7 @@ public:
         if (isBypassed()) {
             lastOutputPeak.store(0.0f, std::memory_order_relaxed);
             lastModValue.store(0.0f, std::memory_order_relaxed);
-            for (int ch = 1; ch < numChannels; ++ch)
+            for (int ch = 0; ch < numChannels; ++ch)
                 buffer.clear(ch, 0, numSamples);
             return;
         }
@@ -77,7 +76,6 @@ public:
 
 private:
     juce::AudioParameterFloat* amountParam;
-    juce::AudioParameterBool* bypassParam;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedAmount;
     std::atomic<float> lastOutputPeak{0.0f};
     std::atomic<float> lastModValue{0.0f};

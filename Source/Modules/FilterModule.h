@@ -29,6 +29,7 @@ public:
         }
         applyFilterType(filterTypeParam->getIndex());
         smoothedCutoff.reset(sampleRate, 0.005);
+        smoothedCutoff.setCurrentAndTargetValue(*cutoffParam);
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/) override {

@@ -61,8 +61,8 @@ TEST_F(AttenuverterModuleTest, ProcessBlockBypassClearsSilent) {
     for (int i = 0; i < 512; ++i)
         buffer.setSample(0, i, 1.0f);
 
-    // Enable bypass (second parameter)
-    auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(module->getParameters()[2]);
+    // Enable bypass (parameter index 0 in ModuleBase)
+    auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(module->getParameters()[0]);
     ASSERT_NE(bypassParam, nullptr);
     bypassParam->setValueNotifyingHost(1.0f); // true
 

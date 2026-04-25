@@ -431,7 +431,7 @@ TEST_F(ModMatrixTest, AmountParameterRoundTrip) {
     }
 }
 
-TEST_F(ModMatrixTest, BypassParameterIsAtIndex2) {
+TEST_F(ModMatrixTest, BypassParameterIsAtIndex0) {
     auto& graph = engine.getGraph();
     graph.clear();
 
@@ -454,10 +454,10 @@ TEST_F(ModMatrixTest, BypassParameterIsAtIndex2) {
     ASSERT_NE(attProcessor, nullptr);
 
     auto params = attProcessor->getParameters();
-    ASSERT_GE(params.size(), 3);
+    ASSERT_GE(params.size(), 1);
 
-    // Verify params[2] is AudioParameterBool
-    auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(params[2]);
+    // Verify params[0] is AudioParameterBool (inherited from ModuleBase)
+    auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(params[0]);
     ASSERT_NE(bypassParam, nullptr);
 
     // Verify initial value is false

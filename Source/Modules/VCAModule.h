@@ -30,7 +30,7 @@ public:
 
         if (isBypassed()) {
             // Clear CV channels (CV starts at 1 in mono, 8 in poly)
-            int cvStart = polyParam->get() ? 8 : 2;
+            int cvStart = polyParam->get() ? 8 : 1;
             for (int ch = cvStart; ch < numChannels; ++ch)
                 buffer.clear(ch, 0, numSamples);
             return;

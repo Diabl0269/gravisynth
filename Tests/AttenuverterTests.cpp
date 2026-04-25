@@ -19,8 +19,9 @@ TEST_F(AttenuverterTests, InitializationIsCorrect) {
     EXPECT_EQ(module->getTotalNumOutputChannels(), 1);
 
     auto& params = module->getParameters();
-    ASSERT_EQ(params.size(), 1);
-    EXPECT_EQ(params[0]->getName(100), "Amount");
+    ASSERT_EQ(params.size(), 2); // Bypassed (base), Amount (local)
+    EXPECT_EQ(params[0]->getName(100), "Bypassed");
+    EXPECT_EQ(params[1]->getName(100), "Amount");
 }
 
 TEST_F(AttenuverterTests, ProcessingWithPositiveGain) {
@@ -32,7 +33,7 @@ TEST_F(AttenuverterTests, ProcessingWithPositiveGain) {
     juce::MidiBuffer midi;
 
     // Set gain parameter to 0.5 manually
-    // Wait, Attenuverter "Amount" is between -1.0 and 1.0. Its default might be 0.
+    // Index 1 is "Amount"
     if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1])) {
         amt->setValueNotifyingHost(amt->convertTo0to1(0.5f));
     }
@@ -51,6 +52,7 @@ TEST_F(AttenuverterTests, ProcessingWithNegativeGain) {
     }
     juce::MidiBuffer midi;
 
+    // Index 1 is "Amount"
     if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1])) {
         amt->setValueNotifyingHost(amt->convertTo0to1(-0.5f));
     }
@@ -61,6 +63,7 @@ TEST_F(AttenuverterTests, ProcessingWithNegativeGain) {
 }
 
 TEST_F(AttenuverterTests, StateSerialization) {
+    // Index 1 is "Amount"
     if (auto* amt = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1])) {
         amt->setValueNotifyingHost(amt->convertTo0to1(0.75f));
     }
