@@ -50,8 +50,14 @@ public:
         }
 
         if (polyParam->get()) {
+            // Clear unused channels (if any) before poly processing
+            for (int ch = 14; ch < buffer.getNumChannels(); ++ch)
+                buffer.clear(ch, 0, buffer.getNumSamples());
             processPolyMode(buffer, buffer.getNumSamples());
         } else {
+            // Clear all channels except 0 at the start to prevent reading garbage
+            // but we need to save CV data first if we want to use it.
+            // Wait! In mono mode, channels 1-5 are CV inputs.
             processMonoMode(buffer, midiMessages);
         }
     }
@@ -124,15 +130,33 @@ private:
         juce::HeapBlock<float> cvFineSaved(numSamples);
         juce::HeapBlock<float> cvLevelSaved(numSamples);
 
-        if (numCh > 1)
+        // Zero them initially
+        juce::FloatVectorOperations::clear(cvWaveformSaved, numSamples);
+        juce::FloatVectorOperations::clear(cvOctaveSaved, numSamples);
+        juce::FloatVectorOperations::clear(cvCoarseSaved, numSamples);
+        juce::FloatVectorOperations::clear(cvFineSaved, numSamples);
+        juce::FloatVectorOperations::clear(cvLevelSaved, numSamples);
+
+        // Helper to check if a channel is active
+        auto isChannelActive = [&](int ch) {
+            if (ch >= numCh)
+                return false;
+            auto* data = buffer.getReadPointer(ch);
+            float rms = 0.0f;
+            for (int i = 0; i < std::min(numSamples, 64); ++i)
+                rms += data[i] * data[i];
+            return (rms / std::min(numSamples, 64)) > 1e-6f;
+        };
+
+        if (isChannelActive(1))
             juce::FloatVectorOperations::copy(cvWaveformSaved, buffer.getReadPointer(1), numSamples);
-        if (numCh > 2)
+        if (isChannelActive(2))
             juce::FloatVectorOperations::copy(cvOctaveSaved, buffer.getReadPointer(2), numSamples);
-        if (numCh > 3)
+        if (isChannelActive(3))
             juce::FloatVectorOperations::copy(cvCoarseSaved, buffer.getReadPointer(3), numSamples);
-        if (numCh > 4)
+        if (isChannelActive(4))
             juce::FloatVectorOperations::copy(cvFineSaved, buffer.getReadPointer(4), numSamples);
-        if (numCh > 5)
+        if (isChannelActive(5))
             juce::FloatVectorOperations::copy(cvLevelSaved, buffer.getReadPointer(5), numSamples);
 
         buffer.clear();

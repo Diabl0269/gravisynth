@@ -21,15 +21,20 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
-        if (isBypassed())
-            return;
-
         juce::ignoreUnused(midiMessages);
 
         int numSamples = buffer.getNumSamples();
         int numChannels = buffer.getNumChannels();
         if (numChannels == 0 || numSamples == 0)
             return;
+
+        if (isBypassed()) {
+            // Clear CV channels (CV starts at 1 in mono, 8 in poly)
+            int cvStart = polyParam->get() ? 8 : 1;
+            for (int ch = cvStart; ch < numChannels; ++ch)
+                buffer.clear(ch, 0, numSamples);
+            return;
+        }
 
         smoothedGain.setTargetValue(*gainParam);
 
@@ -91,6 +96,15 @@ public:
                 for (int s = 0; s < numSamples; ++s)
                     vb->pushSample(buffer.getSample(0, s));
         }
+
+        // Clear CV channels to prevent leaking to downstream modules
+        int cvStart = polyParam->get() ? 8 : 1;
+        // Exception: in mono mode we copy audio to ch1 for visual feedback,
+        // so we only clear from ch2 onwards if it exists.
+        // If we want absolute cleanliness, we should clear ch1 too, but that breaks VCA viz.
+        // We'll stick to the existing behavior for VCA ch1 but clear others.
+        for (int ch = (polyParam->get() ? 8 : 2); ch < numChannels; ++ch)
+            buffer.clear(ch, 0, numSamples);
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"CV", 1}}; }

@@ -40,6 +40,7 @@ add_executable(GravisynthTests
     PresetManagerTests.cpp
     ModuleBypassTests.cpp
     VisualSignalFlowTests.cpp
+    DistortionSweepTests.cpp
     OscillatorCVModulationTests.cpp
     SettingsWindowTests.cpp
     ShortcutManagerTests.cpp

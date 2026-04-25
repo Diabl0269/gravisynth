@@ -54,8 +54,8 @@ std::vector<AudioEngine::ModRoutingInfo> AudioEngine::getActiveModRoutings() con
 
             // Get bypass state
             info.isBypassed = false;
-            if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[2])) {
-                info.isBypassed = bypassParam->get();
+            if (auto* module = dynamic_cast<ModuleBase*>(node->getProcessor())) {
+                info.isBypassed = module->isBypassed();
             }
 
             routings.push_back(info);
@@ -111,16 +111,16 @@ void AudioEngine::removeModRouting(juce::AudioProcessorGraph::NodeID attenuverte
 
 void AudioEngine::toggleModBypass(juce::AudioProcessorGraph::NodeID attenuverterNodeID) {
     if (auto* node = mainProcessorGraph.getNodeForId(attenuverterNodeID)) {
-        if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[2])) {
-            bypassParam->setValueNotifyingHost(!bypassParam->get());
+        if (auto* module = dynamic_cast<ModuleBase*>(node->getProcessor())) {
+            module->setBypassed(!module->isBypassed());
         }
     }
 }
 
 bool AudioEngine::isModBypassed(juce::AudioProcessorGraph::NodeID attenuverterNodeID) const {
     if (auto* node = mainProcessorGraph.getNodeForId(attenuverterNodeID)) {
-        if (auto* bypassParam = dynamic_cast<juce::AudioParameterBool*>(node->getProcessor()->getParameters()[2])) {
-            return bypassParam->get();
+        if (auto* module = dynamic_cast<ModuleBase*>(node->getProcessor())) {
+            return module->isBypassed();
         }
     }
     return false;

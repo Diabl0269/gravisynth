@@ -54,8 +54,8 @@ TEST_F(AttenuverterVisualTests, ModValueTrackingReturnsMidBlockSample) {
 }
 
 TEST_F(AttenuverterVisualTests, BypassedReturnsZeroPeakAndMod) {
-    // Set bypass (parameter index 2)
-    if (auto* bp = dynamic_cast<juce::AudioParameterBool*>(module->getParameters()[2]))
+    // Set bypass (parameter index 0 in ModuleBase)
+    if (auto* bp = dynamic_cast<juce::AudioParameterBool*>(module->getParameters()[0]))
         bp->setValueNotifyingHost(1.0f);
 
     juce::AudioBuffer<float> buffer(2, 128);
@@ -72,6 +72,7 @@ TEST_F(AttenuverterVisualTests, BypassedReturnsZeroPeakAndMod) {
 TEST_F(AttenuverterVisualTests, ZeroAmountProducesZeroPeak) {
     // Default amount is 0.0
     juce::AudioBuffer<float> buffer(2, 128);
+    buffer.clear();
     for (int i = 0; i < 128; ++i)
         buffer.setSample(0, i, 1.0f);
     juce::MidiBuffer midi;

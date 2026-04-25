@@ -29,6 +29,7 @@ public:
         }
         applyFilterType(filterTypeParam->getIndex());
         smoothedCutoff.reset(sampleRate, 0.005);
+        smoothedCutoff.setCurrentAndTargetValue(*cutoffParam);
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& /*midiMessages*/) override {
@@ -60,6 +61,11 @@ public:
             for (int i = 0; i < numSamples; ++i)
                 vb->pushSample(ch[i]);
         }
+
+        // Clear CV channels to prevent leaking to downstream modules
+        int cvStartChannel = polyParam->get() ? 8 : 1;
+        for (int ch = cvStartChannel; ch < buffer.getNumChannels(); ++ch)
+            buffer.clear(ch, 0, numSamples);
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override {

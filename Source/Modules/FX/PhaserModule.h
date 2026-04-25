@@ -42,8 +42,23 @@ public:
         const float* cvRate = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
         const float* cvDepth = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
 
-        float cvRateVal = cvRate ? cvRate[0] : 0.0f;
-        float cvDepthVal = cvDepth ? cvDepth[0] : 0.0f;
+        float cvRateVal = 0.0f;
+        float cvDepthVal = 0.0f;
+
+        if (cvRate) {
+            float rms = 0.0f;
+            for (int i = 0; i < numSamples; ++i)
+                rms += cvRate[i] * cvRate[i];
+            if ((rms / numSamples) > 1e-4f)
+                cvRateVal = cvRate[0];
+        }
+        if (cvDepth) {
+            float rms = 0.0f;
+            for (int i = 0; i < numSamples; ++i)
+                rms += cvDepth[i] * cvDepth[i];
+            if ((rms / numSamples) > 1e-4f)
+                cvDepthVal = cvDepth[0];
+        }
 
         smoothedRate.setTargetValue(*rateParam);
         smoothedDepth.setTargetValue(*depthParam);
@@ -62,11 +77,12 @@ public:
         juce::dsp::ProcessContextReplacing<float> context(audioBlock);
         phaser.process(context);
 
-        smoothedRate.skip(numSamples);
-        smoothedDepth.skip(numSamples);
-
+        // Clear CV channels to prevent leaking to downstream modules
         for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
             buffer.clear(ch, 0, numSamples);
+
+        smoothedRate.skip(numSamples);
+        smoothedDepth.skip(numSamples);
     }
 
     juce::String getInputPortLabel(int i) const override {

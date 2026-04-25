@@ -8,7 +8,6 @@ public:
         : ModuleBase("Attenuverter", 2, 1) // 1 Audio In + 1 CV In (Amount), 1 Out
     {
         addParameter(amountParam = new juce::AudioParameterFloat("amount", "Amount", -1.0f, 1.0f, 0.0f));
-        addParameter(bypassParam = new juce::AudioParameterBool("bypass", "Bypass", false));
     }
 
     void prepareToPlay(double sampleRate, int samplesPerBlock) override {
@@ -20,24 +19,35 @@ public:
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
         juce::ignoreUnused(midiMessages);
 
-        if (buffer.getNumChannels() == 0)
+        int numSamples = buffer.getNumSamples();
+        int numChannels = buffer.getNumChannels();
+
+        if (numSamples == 0 || numChannels == 0)
             return;
 
-        if (bypassParam->get()) {
-            buffer.clear();
+        if (isBypassed()) {
             lastOutputPeak.store(0.0f, std::memory_order_relaxed);
             lastModValue.store(0.0f, std::memory_order_relaxed);
+            for (int ch = 0; ch < numChannels; ++ch)
+                buffer.clear(ch, 0, numSamples);
             return;
         }
 
         auto* audioData = buffer.getWritePointer(0);
-        auto* cvAmountData = buffer.getNumChannels() > 1 ? buffer.getReadPointer(1) : nullptr;
+        const float* cvAmountData = numChannels > 1 ? buffer.getReadPointer(1) : nullptr;
+
+        bool cvAmountActive = false;
+        if (cvAmountData) {
+            float rms = 0.0f;
+            for (int i = 0; i < std::min(numSamples, 64); ++i)
+                rms += cvAmountData[i] * cvAmountData[i];
+            cvAmountActive = (rms / std::min(numSamples, 64)) > 1e-6f;
+        }
         smoothedAmount.setTargetValue(*amountParam);
-        int numSamples = buffer.getNumSamples();
 
         for (int sample = 0; sample < numSamples; ++sample) {
             float amount = smoothedAmount.getNextValue();
-            if (cvAmountData)
+            if (cvAmountActive)
                 amount = juce::jlimit(-1.0f, 1.0f, amount + cvAmountData[sample]);
             audioData[sample] *= amount;
         }
@@ -49,9 +59,9 @@ public:
         lastOutputPeak.store(peak, std::memory_order_relaxed);
         lastModValue.store(numSamples > 0 ? audioData[numSamples / 2] : 0.0f, std::memory_order_relaxed);
 
-        // Clear CV channel and copy audio to remaining channels
-        for (int ch = 1; ch < buffer.getNumChannels(); ++ch) {
-            buffer.copyFrom(ch, 0, buffer, 0, 0, numSamples);
+        // Clear CV channels to prevent leaking to downstream modules
+        for (int ch = 1; ch < numChannels; ++ch) {
+            buffer.clear(ch, 0, numSamples);
         }
     }
 
@@ -66,7 +76,6 @@ public:
 
 private:
     juce::AudioParameterFloat* amountParam;
-    juce::AudioParameterBool* bypassParam;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> smoothedAmount;
     std::atomic<float> lastOutputPeak{0.0f};
     std::atomic<float> lastModValue{0.0f};
