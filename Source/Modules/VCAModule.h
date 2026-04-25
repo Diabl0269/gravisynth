@@ -21,15 +21,20 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
-        if (isBypassed())
-            return;
-
         juce::ignoreUnused(midiMessages);
 
         int numSamples = buffer.getNumSamples();
         int numChannels = buffer.getNumChannels();
         if (numChannels == 0 || numSamples == 0)
             return;
+
+        if (isBypassed()) {
+            // Clear CV channels (CV starts at 1 in mono, 8 in poly)
+            int cvStart = polyParam->get() ? 8 : 2;
+            for (int ch = cvStart; ch < numChannels; ++ch)
+                buffer.clear(ch, 0, numSamples);
+            return;
+        }
 
         smoothedGain.setTargetValue(*gainParam);
 

@@ -21,11 +21,21 @@ public:
         juce::ignoreUnused(midiMessages);
 
         int numSamples = buffer.getNumSamples();
-        if (numSamples == 0)
+        int numChannels = buffer.getNumChannels();
+
+        if (numSamples == 0 || numChannels == 0)
             return;
 
+        if (isBypassed()) {
+            lastOutputPeak.store(0.0f, std::memory_order_relaxed);
+            lastModValue.store(0.0f, std::memory_order_relaxed);
+            for (int ch = 1; ch < numChannels; ++ch)
+                buffer.clear(ch, 0, numSamples);
+            return;
+        }
+
         auto* audioData = buffer.getWritePointer(0);
-        auto* cvAmountData = buffer.getNumChannels() > 1 ? buffer.getReadPointer(1) : nullptr;
+        const float* cvAmountData = numChannels > 1 ? buffer.getReadPointer(1) : nullptr;
 
         bool cvAmountActive = false;
         if (cvAmountData) {
@@ -51,7 +61,7 @@ public:
         lastModValue.store(numSamples > 0 ? audioData[numSamples / 2] : 0.0f, std::memory_order_relaxed);
 
         // Clear CV channels to prevent leaking to downstream modules
-        for (int ch = 1; ch < buffer.getNumChannels(); ++ch) {
+        for (int ch = 1; ch < numChannels; ++ch) {
             buffer.clear(ch, 0, numSamples);
         }
     }

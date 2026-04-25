@@ -23,7 +23,7 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
-        if (isBypassed()) {
+        if (isBypassed() || buffer.getNumSamples() == 0 || buffer.getNumChannels() == 0) {
             buffer.clear();
             return;
         }

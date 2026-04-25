@@ -62,12 +62,18 @@ public:
     }
 
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
-        if (isBypassed())
-            return;
-
         juce::ignoreUnused(midiMessages);
         int numSamples = buffer.getNumSamples();
         int numChannels = buffer.getNumChannels();
+
+        if (numSamples == 0 || numChannels == 0)
+            return;
+
+        if (isBypassed()) {
+            for (int ch = 2; ch < numChannels; ++ch)
+                buffer.clear(ch, 0, numSamples);
+            return;
+        }
 
         // Safety: ensure we have at least stereo and buffers are prepared
         if (numSamples == 0 || numChannels < 2 || dryBuffer.getNumSamples() < numSamples) {
