@@ -39,6 +39,8 @@ Gravisynth uses a hidden **Attenuverter** node architecture for modulation routi
 - **Panel Toggles**: Top-bar **Hide AI** and **Hide Matrix** buttons collapse panels to give the graph more space.
 
 ### AI Integration
+> **Note**: The AI integration is currently in an experimental state and may not function as expected. There are plans to migrate the AI harness into a separate, closed-source project in the future. The core Gravisynth engine and modular synth will remain open-source forever.
+
 - **AI Sound Designer**: Describe a sound in natural language and the AI generates the complete patch (modules, parameters, and connections).
 - **One-Click Apply**: Instantly apply AI-generated patches to the graph editor.
 
@@ -139,6 +141,8 @@ This script will build the project with coverage flags, run the tests, and gener
 - **Polyphonic Modulation**: Route LFOs/envelopes per voice.
 
 ### Vision: AI-Powered Sound Design
+*Note: This roadmap for AI features will be fulfilled by a separate closed-source project in the future. Gravisynth itself remains the open-source foundation.*
+
 - [x] **Local AI Integration**: Support for Ollama and local models.
 - [x] **Natural Language Patching**: Text-to-patch generation.
 - [ ] **Conversational Refinement**: Iterate on patches via chat.
