@@ -427,9 +427,8 @@ void GraphEditor::toggleModMatrixVisibility() {
 
 void GraphEditor::updateTransform() {
     juce::AffineTransform t;
+    t = t.scaled(zoomLevel, zoomLevel);
     t = t.translated(panOffset);
-    float xOffset = isMatrixVisible ? (getWidth() - 600) / 2.0f : getWidth() / 2.0f;
-    t = t.scaled(zoomLevel, zoomLevel, xOffset, getHeight() / 2.0f);
 
     content.setBounds(0, 0, 10000, 10000);
     content.setTransform(t);
@@ -441,8 +440,23 @@ void GraphEditor::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWhe
     zoomLevel += wheel.deltaY * 0.1f * zoomLevel;
     zoomLevel = juce::jlimit(0.1f, 2.0f, zoomLevel);
 
-    // Adjust pan to zoom around mouse position?
-    // For simplicity just zoom around center for now.
+    if (oldZoom != zoomLevel) {
+        auto mousePos = e.position;
+        // Transform the mouse position to get the graph point before scaling
+        auto invT =
+            juce::AffineTransform::translation(-panOffset.x, -panOffset.y).scaled(1.0f / oldZoom, 1.0f / oldZoom);
+        float gx = mousePos.x;
+        float gy = mousePos.y;
+        invT.transformPoint(gx, gy);
+
+        // Transform the mouse position to get the graph point after scaling
+        // We want to keep the graph point under the mouse constant
+        // mousePos = (graphPointBefore * zoomLevel) + newPanOffset
+        // newPanOffset = mousePos - (graphPointBefore * zoomLevel)
+        panOffset.x = mousePos.x - (gx * zoomLevel);
+        panOffset.y = mousePos.y - (gy * zoomLevel);
+    }
+
     updateTransform();
 }
 
