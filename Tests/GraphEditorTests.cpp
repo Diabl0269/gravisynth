@@ -23,7 +23,6 @@ TEST_F(GraphEditorTest, InitializationAndResizing) {
     EXPECT_TRUE(editor.isModMatrixVisible());
     EXPECT_NO_THROW(editor.resized());
 }
-
 TEST_F(GraphEditorTest, ToggleModMatrixVisibility) {
     AudioEngine engine;
     GraphEditor editor(engine);
