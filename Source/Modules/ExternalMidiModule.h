@@ -23,6 +23,8 @@ public:
             return;
         }
 
+        const juce::ScopedLock sl(lock);
+
         // Filter messages by channel
         int targetChannel = channelParam->get();
         if (targetChannel > 0) {
@@ -40,7 +42,10 @@ public:
         incomingMessages.clear();
     }
 
-    void pushMidiMessage(const juce::MidiMessage& msg) { incomingMessages.addEvent(msg, 0); }
+    void pushMidiMessage(const juce::MidiMessage& msg) {
+        const juce::ScopedLock sl(lock);
+        incomingMessages.addEvent(msg, 0);
+    }
 
     ModuleType getModuleType() const override { return ModuleType::ExternalMidi; }
 
@@ -48,6 +53,7 @@ private:
     juce::AudioParameterInt* deviceIndexParam;
     juce::AudioParameterInt* channelParam;
     juce::MidiBuffer incomingMessages;
+    juce::CriticalSection lock;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ExternalMidiModule)
 };
