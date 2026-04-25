@@ -47,6 +47,9 @@ public:
         incomingMessages.addEvent(msg, 0);
     }
 
+    bool acceptsMidi() const override { return false; }
+    bool producesMidi() const override { return true; }
+
     ModuleType getModuleType() const override { return ModuleType::ExternalMidi; }
 
 private:
