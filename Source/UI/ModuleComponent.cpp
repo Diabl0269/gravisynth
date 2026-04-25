@@ -1,4 +1,5 @@
 #include "ModuleComponent.h"
+#include "../Modules/ExternalMidiModule.h"
 #include "../Modules/ModuleBase.h"
 #include "../Modules/SequencerModule.h"
 #include "GraphEditor.h"
@@ -137,6 +138,27 @@ void ModuleComponent::createControls() {
             midiKeyboard->getKeyboardState(), juce::MidiKeyboardComponent::horizontalKeyboard);
         keyboardComponent->setWantsKeyboardFocus(true);
         addAndMakeVisible(keyboardComponent.get());
+    } else if (auto* extMidi = dynamic_cast<ExternalMidiModule*>(module)) {
+        auto* deviceCombo = comboBoxes.add(new juce::ComboBox("Device"));
+        deviceCombo->addItem("None", 1);
+        int i = 2;
+        for (auto& info : juce::MidiInput::getAvailableDevices()) {
+            deviceCombo->addItem(info.name, i++);
+        }
+        deviceCombo->setSelectedId(1, juce::dontSendNotification);
+        addAndMakeVisible(deviceCombo);
+        comboLabels.add(new juce::Label("Device", "Device"));
+        addAndMakeVisible(comboLabels.getLast());
+
+        auto* channelCombo = comboBoxes.add(new juce::ComboBox("Channel"));
+        channelCombo->addItem("All", 1);
+        for (int c = 1; c <= 16; ++c) {
+            channelCombo->addItem("Channel " + juce::String(c), c + 1);
+        }
+        channelCombo->setSelectedId(1, juce::dontSendNotification);
+        addAndMakeVisible(channelCombo);
+        comboLabels.add(new juce::Label("Channel", "Channel"));
+        addAndMakeVisible(comboLabels.getLast());
     } else {
         const auto& params = module->getParameters();
 
@@ -757,7 +779,8 @@ void ModuleComponent::mouseDown(const juce::MouseEvent& e) {
                      {{"Sequencer", ModuleType::Sequencer},
                       {"Poly Sequencer", ModuleType::PolySequencer},
                       {"MIDI Keyboard", ModuleType::MidiKeyboard},
-                      {"Poly MIDI", ModuleType::PolyMidi}}},
+                      {"Poly MIDI", ModuleType::PolyMidi},
+                      {"External MIDI", ModuleType::ExternalMidi}}},
                     {"Envelopes & Control", {{"ADSR", ModuleType::ADSR}, {"VCA", ModuleType::VCA}}},
                     {"Filters", {{"Filter", ModuleType::Filter}}},
                     {"Modulation FX",
