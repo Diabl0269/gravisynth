@@ -67,9 +67,17 @@ public:
 
         juce::ignoreUnused(midiMessages);
         int numSamples = buffer.getNumSamples();
+        int numChannels = buffer.getNumChannels();
 
-        const float* cvDrive = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
-        const float* cvMix = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
+        // Safety: ensure we have at least stereo and buffers are prepared
+        if (numSamples == 0 || numChannels < 2 || dryBuffer.getNumSamples() < numSamples) {
+            for (int ch = 2; ch < numChannels; ++ch)
+                buffer.clear(ch, 0, numSamples);
+            return;
+        }
+
+        const float* cvDrive = (numChannels > 2) ? buffer.getReadPointer(2) : nullptr;
+        const float* cvMix = (numChannels > 3) ? buffer.getReadPointer(3) : nullptr;
 
         bool cvDriveActive = false;
         bool cvMixActive = false;
@@ -77,13 +85,13 @@ public:
             float rms = 0.0f;
             for (int i = 0; i < numSamples; ++i)
                 rms += cvDrive[i] * cvDrive[i];
-            cvDriveActive = (rms / numSamples) > 1e-3f; // Increased to -30dB
+            cvDriveActive = (rms / numSamples) > 1e-3f;
         }
         if (cvMix) {
             float rms = 0.0f;
             for (int i = 0; i < numSamples; ++i)
                 rms += cvMix[i] * cvMix[i];
-            cvMixActive = (rms / numSamples) > 1e-3f; // Increased to -30dB
+            cvMixActive = (rms / numSamples) > 1e-3f;
         }
 
         smoothedDrive.setTargetValue(*driveParam);
@@ -99,12 +107,11 @@ public:
         juce::dsp::ProcessContextReplacing<float> dryContext(dryBlock);
         latencyDelay.process(dryContext);
 
-        int oversamplingIndex = oversamplingParam->getIndex(); // 0=Off, 1=2x, 2=4x
-
+        int oversamplingIndex = oversamplingParam->getIndex();
         if (oversamplingIndex == 0) {
-            // Off: process at 1x rate
+            // 1x rate (oversampling Off)
             for (int ch = 0; ch < 2; ++ch) {
-                auto* data = buffer.getWritePointer(ch);
+                float* data = buffer.getWritePointer(ch);
                 for (int i = 0; i < numSamples; ++i) {
                     float driveMod = cvDriveActive ? cvDrive[i] : 0.0f;
                     float drive = juce::jlimit(1.0f, 20.0f, smoothedDrive.getNextValue() + (driveMod * 10.0f));
@@ -113,28 +120,30 @@ public:
             }
         } else {
             // 2x or 4x: upsample, distort, downsample
-            auto& os = *oversamplers[oversamplingIndex - 1]; // index 0=2x, 1=4x
-            int factor = static_cast<int>(os.getOversamplingFactor());
+            auto* os = oversamplers[oversamplingIndex - 1].get();
+            if (os) {
+                int factor = static_cast<int>(os->getOversamplingFactor());
 
-            juce::dsp::AudioBlock<float> fullBlock(buffer);
-            juce::dsp::AudioBlock<float> audioBlock = fullBlock.getSubsetChannelBlock(0, 2);
-            auto oversampledBlock = os.processSamplesUp(audioBlock);
+                juce::dsp::AudioBlock<float> fullBlock(buffer);
+                juce::dsp::AudioBlock<float> audioBlock = fullBlock.getSubsetChannelBlock(0, 2);
+                auto oversampledBlock = os->processSamplesUp(audioBlock);
 
-            for (size_t ch = 0; ch < oversampledBlock.getNumChannels(); ++ch) {
-                auto* data = oversampledBlock.getChannelPointer(ch);
-                float currentDrive = 1.0f;
-                for (size_t i = 0; i < oversampledBlock.getNumSamples(); ++i) {
-                    int sampleIdx = static_cast<int>(i) / factor;
-                    // Advance smoother once per original-rate sample, hold for sub-samples
-                    if (i % static_cast<size_t>(factor) == 0) {
-                        float driveMod = cvDriveActive ? cvDrive[std::min(sampleIdx, numSamples - 1)] : 0.0f;
-                        currentDrive = juce::jlimit(1.0f, 20.0f, smoothedDrive.getNextValue() + (driveMod * 10.0f));
+                for (size_t ch = 0; ch < oversampledBlock.getNumChannels(); ++ch) {
+                    auto* data = oversampledBlock.getChannelPointer(ch);
+                    float currentDrive = 1.0f;
+                    for (size_t i = 0; i < oversampledBlock.getNumSamples(); ++i) {
+                        int sampleIdx = static_cast<int>(i) / factor;
+                        // Advance smoother once per original-rate sample, hold for sub-samples
+                        if (i % static_cast<size_t>(factor) == 0) {
+                            float driveMod = cvDriveActive ? cvDrive[std::min(sampleIdx, numSamples - 1)] : 0.0f;
+                            currentDrive = juce::jlimit(1.0f, 20.0f, smoothedDrive.getNextValue() + (driveMod * 10.0f));
+                        }
+                        data[i] = applyWaveshaper(data[i], currentDrive);
                     }
-                    data[i] = applyWaveshaper(data[i], currentDrive);
                 }
-            }
 
-            os.processSamplesDown(audioBlock);
+                os->processSamplesDown(audioBlock);
+            }
         }
 
         // Compute RMS for dynamic makeup gain
@@ -168,20 +177,13 @@ public:
 
             // Linear mix for more predictable control, but still with deadzone for transparency
             float mix = rawMix;
-
-            // Strict deadzone to ensure bit-perfect dry signal at low mix levels
-            if (mix < 0.005f) {
-                for (int ch = 0; ch < 2; ++ch) {
-                    wetPtrs[ch][i] = dryPtrs[ch][i];
-                }
-                continue;
-            }
-
-            float wetGain = std::sin(mix * juce::MathConstants<float>::halfPi) * makeup;
-            float dryGain = std::cos(mix * juce::MathConstants<float>::halfPi);
+            if (mix < 0.001f)
+                mix = 0.0f;
 
             for (int ch = 0; ch < 2; ++ch) {
-                wetPtrs[ch][i] = (wetPtrs[ch][i] * wetGain) + (dryPtrs[ch][i] * dryGain);
+                float wet = wetPtrs[ch][i] * makeup;
+                float dry = dryPtrs[ch][i];
+                wetPtrs[ch][i] = dry + (wet - dry) * mix;
             }
         }
 
@@ -194,7 +196,7 @@ public:
         }
 
         // Clear CV channels to prevent leaking to downstream modules
-        for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
+        for (int ch = 2; ch < numChannels; ++ch)
             buffer.clear(ch, 0, numSamples);
     }
 
