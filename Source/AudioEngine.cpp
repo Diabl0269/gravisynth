@@ -1,6 +1,7 @@
 #include "AudioEngine.h"
 #include "Modules/ADSRModule.h"
 #include "Modules/AttenuverterModule.h"
+#include "Modules/ExternalMidiModule.h"
 #include "Modules/FX/DelayModule.h"
 #include "Modules/FX/DistortionModule.h"
 #include "Modules/FX/ReverbModule.h"
@@ -233,6 +234,14 @@ void AudioEngine::createDefaultPatch() {
 }
 
 void AudioEngine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::MidiMessage& message) {
+    for (auto* node : mainProcessorGraph.getNodes()) {
+        if (auto* extMidi = dynamic_cast<ExternalMidiModule*>(node->getProcessor())) {
+            // Check if device matches (using name match for now)
+            if (source->getName() == extMidi->getName()) {
+                extMidi->pushMidiMessage(message);
+            }
+        }
+    }
     midiMessageCollector.addMessageToQueue(message);
 }
 

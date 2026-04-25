@@ -1,0 +1,53 @@
+#pragma once
+
+#include "ModuleBase.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+
+class ExternalMidiModule : public ModuleBase {
+public:
+    ExternalMidiModule()
+        : ModuleBase("External MIDI", 0, 0) {
+        addParameter(deviceIndexParam = new juce::AudioParameterInt("deviceIndex", "Device", 0, 100, 0));
+        addParameter(channelParam = new juce::AudioParameterInt("channel", "Channel", 0, 16, 0)); // 0 = All
+    }
+
+    ~ExternalMidiModule() override = default;
+
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override {
+        juce::ignoreUnused(sampleRate, samplesPerBlock);
+    }
+
+    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override {
+        if (isBypassed()) {
+            buffer.clear();
+            return;
+        }
+
+        // Filter messages by channel
+        int targetChannel = channelParam->get();
+        if (targetChannel > 0) {
+            juce::MidiBuffer filtered;
+            for (const auto metadata : incomingMessages) {
+                auto msg = metadata.getMessage();
+                if (msg.getChannel() == targetChannel) {
+                    filtered.addEvent(msg, metadata.samplePosition);
+                }
+            }
+            midiMessages.swapWith(filtered);
+        } else {
+            midiMessages.swapWith(incomingMessages);
+        }
+        incomingMessages.clear();
+    }
+
+    void pushMidiMessage(const juce::MidiMessage& msg) { incomingMessages.addEvent(msg, 0); }
+
+    ModuleType getModuleType() const override { return ModuleType::ExternalMidi; }
+
+private:
+    juce::AudioParameterInt* deviceIndexParam;
+    juce::AudioParameterInt* channelParam;
+    juce::MidiBuffer incomingMessages;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ExternalMidiModule)
+};
