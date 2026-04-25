@@ -24,10 +24,6 @@ public:
         if (numSamples == 0)
             return;
 
-        // Clear CV channels immediately to prevent reading garbage from shared buffers
-        for (int ch = 1; ch < buffer.getNumChannels(); ++ch)
-            buffer.clear(ch, 0, numSamples);
-
         auto* audioData = buffer.getWritePointer(0);
         auto* cvAmountData = buffer.getNumChannels() > 1 ? buffer.getReadPointer(1) : nullptr;
 
@@ -54,9 +50,9 @@ public:
         lastOutputPeak.store(peak, std::memory_order_relaxed);
         lastModValue.store(numSamples > 0 ? audioData[numSamples / 2] : 0.0f, std::memory_order_relaxed);
 
-        // Clear CV channel and copy audio to remaining channels
+        // Clear CV channels to prevent leaking to downstream modules
         for (int ch = 1; ch < buffer.getNumChannels(); ++ch) {
-            buffer.copyFrom(ch, 0, buffer, 0, 0, numSamples);
+            buffer.clear(ch, 0, numSamples);
         }
     }
 

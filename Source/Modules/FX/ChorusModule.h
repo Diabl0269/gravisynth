@@ -39,10 +39,6 @@ public:
         if (numSamples == 0 || buffer.getNumChannels() < 2)
             return;
 
-        // Clear CV channels immediately
-        for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
-            buffer.clear(ch, 0, numSamples);
-
         const float* cvRate = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
         const float* cvDepth = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
 
@@ -80,6 +76,10 @@ public:
         juce::dsp::AudioBlock<float> audioBlock = fullBlock.getSubsetChannelBlock(0, 2);
         juce::dsp::ProcessContextReplacing<float> context(audioBlock);
         chorus.process(context);
+
+        // Clear CV channels to prevent leaking to downstream modules
+        for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
+            buffer.clear(ch, 0, numSamples);
 
         smoothedRate.skip(numSamples);
         smoothedDepth.skip(numSamples);

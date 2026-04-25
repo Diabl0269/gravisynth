@@ -68,10 +68,6 @@ public:
         juce::ignoreUnused(midiMessages);
         int numSamples = buffer.getNumSamples();
 
-        // Clear CV channels immediately to prevent reading garbage from the graph's shared buffers
-        for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
-            buffer.clear(ch, 0, numSamples);
-
         const float* cvDrive = (buffer.getNumChannels() > 2) ? buffer.getReadPointer(2) : nullptr;
         const float* cvMix = (buffer.getNumChannels() > 3) ? buffer.getReadPointer(3) : nullptr;
 
@@ -196,6 +192,10 @@ public:
                 vb->pushSample(ch0[i]);
             }
         }
+
+        // Clear CV channels to prevent leaking to downstream modules
+        for (int ch = 2; ch < buffer.getNumChannels(); ++ch)
+            buffer.clear(ch, 0, numSamples);
     }
 
     juce::String getInputPortLabel(int i) const override {

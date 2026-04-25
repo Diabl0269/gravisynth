@@ -48,13 +48,6 @@ public:
         if (numChannels == 0 || numSamples == 0)
             return;
 
-        // Clear CV channels immediately to prevent reading garbage from the graph's shared buffers
-        // For mono mode, ports are: 0: Audio, 1: Cutoff, 2: Resonance, 3: Drive
-        // For poly mode, ports are: 0-7: Audio, 8: Cutoff, 9: Resonance, 10: Drive
-        int cvStartChannel = polyParam->get() ? 8 : 1;
-        for (int ch = cvStartChannel; ch < buffer.getNumChannels(); ++ch)
-            buffer.clear(ch, 0, numSamples);
-
         if (!polyParam->get()) {
             processMonoMode(buffer, numSamples, numChannels, baseRes, baseDrive);
         } else {
@@ -67,6 +60,11 @@ public:
             for (int i = 0; i < numSamples; ++i)
                 vb->pushSample(ch[i]);
         }
+
+        // Clear CV channels to prevent leaking to downstream modules
+        int cvStartChannel = polyParam->get() ? 8 : 1;
+        for (int ch = cvStartChannel; ch < buffer.getNumChannels(); ++ch)
+            buffer.clear(ch, 0, numSamples);
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override {

@@ -31,12 +31,6 @@ public:
         if (numChannels == 0 || numSamples == 0)
             return;
 
-        // Clear CV channels immediately to prevent reading garbage from shared buffers
-        // In mono mode, ch1 is CV. In poly mode, ch8-15 are CVs.
-        int cvStart = polyParam->get() ? 8 : 1;
-        for (int ch = cvStart; ch < numChannels; ++ch)
-            buffer.clear(ch, 0, numSamples);
-
         smoothedGain.setTargetValue(*gainParam);
 
         if (!polyParam->get()) {
@@ -97,6 +91,15 @@ public:
                 for (int s = 0; s < numSamples; ++s)
                     vb->pushSample(buffer.getSample(0, s));
         }
+
+        // Clear CV channels to prevent leaking to downstream modules
+        int cvStart = polyParam->get() ? 8 : 1;
+        // Exception: in mono mode we copy audio to ch1 for visual feedback,
+        // so we only clear from ch2 onwards if it exists.
+        // If we want absolute cleanliness, we should clear ch1 too, but that breaks VCA viz.
+        // We'll stick to the existing behavior for VCA ch1 but clear others.
+        for (int ch = (polyParam->get() ? 8 : 2); ch < numChannels; ++ch)
+            buffer.clear(ch, 0, numSamples);
     }
 
     std::vector<ModulationTarget> getModulationTargets() const override { return {{"CV", 1}}; }
