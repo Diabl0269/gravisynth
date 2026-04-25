@@ -13,24 +13,27 @@ protected:
 };
 
 TEST_F(DistortionSweep, MixZeroSineVerification) {
-    // With mix = 0, output should be identical to input
-    auto* driveP = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[1]);
-    auto* mixP = dynamic_cast<juce::AudioParameterFloat*>(module->getParameters()[2]);
-    auto* osP = dynamic_cast<juce::AudioParameterChoice*>(module->getParameters()[3]);
+    auto params = module->getParameters();
+    ASSERT_GE(params.size(), 5) << "Module has only " << params.size() << " parameters, expected at least 5";
 
-    // Set oversampling to Off for 0 latency transparency
-    *osP = 0;
-    // Set drive to max to ensure we WOULD see distortion if mix was non-zero
-    driveP->setValueNotifyingHost(1.0f);
-    mixP->setValueNotifyingHost(0.0f); // fully dry
+    // Parameters: 0: Bypassed, 1: Drive, 2: Mix, 3: Type, 4: Oversampling
+    auto* driveP = dynamic_cast<juce::AudioParameterFloat*>(params[1]);
+    auto* mixP = dynamic_cast<juce::AudioParameterFloat*>(params[2]);
+    auto* typeP = dynamic_cast<juce::AudioParameterChoice*>(params[3]);
+    auto* osP = dynamic_cast<juce::AudioParameterChoice*>(params[4]);
+
+    ASSERT_NE(driveP, nullptr) << "Drive param is null";
+    ASSERT_NE(mixP, nullptr) << "Mix param is null";
+    ASSERT_NE(typeP, nullptr) << "Type param is null";
+    ASSERT_NE(osP, nullptr) << "Oversampling param is null";
 
     module->prepareToPlay(44100.0, 512); // reset smoothers to target values
 
-    juce::AudioBuffer<float> buffer(4, 512);
+    juce::AudioBuffer<float> buffer(4, 8192); // Buffer size larger than delay (4096)
     buffer.clear();
 
     // Fill with a sine wave
-    for (int i = 0; i < 512; ++i) {
+    for (int i = 0; i < 8192; ++i) {
         float val = std::sin(2.0f * juce::MathConstants<float>::pi * 440.0f * i / 44100.0f);
         buffer.setSample(0, i, val);
         buffer.setSample(1, i, val);
@@ -41,7 +44,43 @@ TEST_F(DistortionSweep, MixZeroSineVerification) {
 
     module->processBlock(buffer, midi);
 
-    for (int i = 0; i < 512; ++i) {
+    // After delay, the dry signal should be aligned.
+    // The delay is 4096. So we check from sample 4096 to 8192.
+    for (int i = 4096; i < 8192; ++i) {
         EXPECT_NEAR(buffer.getSample(0, i), original.getSample(0, i), 1e-5f) << "Sample " << i << " mismatch at mix=0";
+    }
+}
+
+TEST_F(DistortionSweep, DistortionTypeDistorts) {
+    auto params = module->getParameters();
+    auto* typeP = dynamic_cast<juce::AudioParameterChoice*>(params[3]);
+    auto* mixP = dynamic_cast<juce::AudioParameterFloat*>(params[2]);
+    auto* driveP = dynamic_cast<juce::AudioParameterFloat*>(params[1]);
+
+    mixP->setValueNotifyingHost(1.0f); // fully wet
+    driveP->setValueNotifyingHost(10.0f);
+
+    juce::AudioBuffer<float> buffer(2, 512);
+    for (int i = 0; i < 512; ++i)
+        buffer.setSample(0, i, 0.5f * std::sin(2.0f * juce::MathConstants<float>::pi * 440.0f * i / 44100.0f));
+
+    juce::AudioBuffer<float> before = buffer;
+    juce::MidiBuffer midi;
+
+    // Test each type
+    for (int t = 0; t < 3; ++t) {
+        typeP->setValueNotifyingHost(t / 2.0f); // 0.0=Soft, 0.5=Hard, 1.0=Foldback
+
+        juce::AudioBuffer<float> workBuffer = before;
+        module->processBlock(workBuffer, midi);
+
+        bool changed = false;
+        for (int i = 0; i < 512; ++i) {
+            if (std::abs(workBuffer.getSample(0, i) - before.getSample(0, i)) > 1e-3f) {
+                changed = true;
+                break;
+            }
+        }
+        EXPECT_TRUE(changed) << "Distortion type " << t << " did not change signal";
     }
 }

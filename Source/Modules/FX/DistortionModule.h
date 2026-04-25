@@ -12,6 +12,8 @@ public:
     {
         addParameter(driveParam = new juce::AudioParameterFloat("drive", "Drive", 1.0f, 20.0f, 1.0f));
         addParameter(mixParam = new juce::AudioParameterFloat("mix", "Mix", 0.0f, 1.0f, 0.5f));
+        addParameter(typeParam = new juce::AudioParameterChoice("type", "Type",
+                                                                juce::StringArray{"Soft", "Hard", "Foldback"}, 0));
         addParameter(oversamplingParam = new juce::AudioParameterChoice("oversampling", "Oversampling",
                                                                         juce::StringArray{"Off", "2x", "4x"},
                                                                         1)); // default 2x preserves backward compat
@@ -113,7 +115,9 @@ public:
         juce::dsp::ProcessContextReplacing<float> dryContext(dryBlock);
         latencyDelay.process(dryContext);
 
-        int oversamplingIndex = oversamplingParam->getIndex();
+        int oversamplingIndex = oversamplingParam ? oversamplingParam->getIndex() : 0;
+        int type = typeParam ? typeParam->getIndex() : 0;
+
         if (oversamplingIndex == 0) {
             // 1x rate (oversampling Off)
             for (int ch = 0; ch < 2; ++ch) {
@@ -121,7 +125,7 @@ public:
                 for (int i = 0; i < numSamples; ++i) {
                     float driveMod = cvDriveActive ? cvDrive[i] : 0.0f;
                     float drive = juce::jlimit(1.0f, 20.0f, smoothedDrive.getNextValue() + (driveMod * 10.0f));
-                    data[i] = applyWaveshaper(data[i], drive);
+                    data[i] = applyWaveshaper(data[i], drive, type);
                 }
             }
         } else {
@@ -144,14 +148,13 @@ public:
                             float driveMod = cvDriveActive ? cvDrive[std::min(sampleIdx, numSamples - 1)] : 0.0f;
                             currentDrive = juce::jlimit(1.0f, 20.0f, smoothedDrive.getNextValue() + (driveMod * 10.0f));
                         }
-                        data[i] = applyWaveshaper(data[i], currentDrive);
+                        data[i] = applyWaveshaper(data[i], currentDrive, type);
                     }
                 }
 
                 os->processSamplesDown(audioBlock);
             }
         }
-
         // Compute RMS for dynamic makeup gain
         float sumWetSq = 0.0f;
         float sumDrySq = 0.0f;
@@ -240,15 +243,30 @@ public:
     }
 
 private:
-    // Soft clipper: x*(1+k) / (1+k*|x|), where k = drive-1.
-    // At drive=1 (k=0): output = input (transparent, no distortion).
-    // At drive=20 (k=19): heavy saturation, peak output stays at 1.0.
-    // Smooth transition — no crossfade needed, mix knob has full control.
-    static float applyWaveshaper(float input, float drive) {
-        float k = drive - 1.0f;
-        if (k <= 0.0f)
-            return input;
-        return input * (1.0f + k) / (1.0f + k * std::abs(input));
+    static float applyWaveshaper(float input, float drive, int type) {
+        // Soft clipper
+        if (type == 0) {
+            float k = drive - 1.0f;
+            if (k <= 0.0f)
+                return input;
+            return input * (1.0f + k) / (1.0f + k * std::abs(input));
+        }
+        // Hard clipper
+        if (type == 1) {
+            float threshold = 1.0f / (1.0f + (drive - 1.0f) * 0.1f);
+            return juce::jlimit(-threshold, threshold, input * drive) / threshold;
+        }
+        // Foldback
+        if (type == 2) {
+            float x = input * drive;
+            float threshold = 0.8f;
+            if (x > threshold)
+                return 2.0f * threshold - x;
+            if (x < -threshold)
+                return -2.0f * threshold - x;
+            return x;
+        }
+        return input;
     }
 
     std::unique_ptr<juce::dsp::Oversampling<float>> oversamplers[2]; // [0]=2x, [1]=4x
@@ -260,5 +278,6 @@ private:
 
     juce::AudioParameterFloat* driveParam = nullptr;
     juce::AudioParameterFloat* mixParam = nullptr;
+    juce::AudioParameterChoice* typeParam = nullptr;
     juce::AudioParameterChoice* oversamplingParam = nullptr;
 };
