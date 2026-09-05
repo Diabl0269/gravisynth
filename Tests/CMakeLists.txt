@@ -80,6 +80,7 @@ add_executable(Tests
     GeneralFeedbackStoreTests.cpp
     LocalHistoryStoreTests.cpp
     MainComponentTests.cpp
+    WelcomeScreenTests.cpp
     GraphEditorTests.cpp
     ZoomFrozenCachedImageTests.cpp
     ModuleComponentTests.cpp
@@ -211,6 +212,7 @@ add_executable(Tests
     ../Source/UI/PreferencesSettingsTab.cpp
     ../Source/UI/ShortcutsSettingsTab.cpp
     ../Source/UI/FeedbackSettingsTab.cpp
+    ../Source/UI/WelcomeScreenComponent.cpp
 )
 
 # MainComponent.cpp above pulls in synth::update::UpdateManager (Source/Update/UpdateManager.h) on
@@ -261,6 +263,10 @@ target_link_libraries(Tests PRIVATE
 
 target_include_directories(Tests PRIVATE
     ${CMAKE_SOURCE_DIR}/Source
+    # WhatsNewData.h (generated at configure time by the root CMakeLists.txt's "What's New"
+    # block) — Tests compiles MainComponent.cpp directly (see the comment above), so it needs the
+    # same generated-header include path AppUI gets.
+    ${SYNTH_WHATSNEW_GENERATED_DIR}
 )
 
 target_compile_definitions(Tests PRIVATE

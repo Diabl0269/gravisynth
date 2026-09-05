@@ -30,6 +30,7 @@
 #include "UI/TimelineTrackHeaderComponent.h"
 #include "UI/ToolbarComponent.h"
 #include "UI/UIAnimation.h"
+#include "UI/WelcomeScreenComponent.h"
 #include "Update/UpdateManager.h"
 #include "UserSettings.h"
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -312,6 +313,9 @@ public:
      *  docs/architecture.md's asset-management subsection for why. */
     int cleanUnusedAssetsForTest() { return cleanUnusedAssets(); }
     GraphEditor& getGraphEditor() { return graphEditor; }
+    // T114/P8-10: null in Hosted mode (the plugin path never constructs one — see
+    // ownedAudioEngine's gate in initialiseCommon()).
+    synth::ui::WelcomeScreenComponent* getWelcomeScreenForTest() const { return welcomeScreen_.get(); }
     ToolbarComponent& getToolbar() { return toolbar; }
     StatusBarComponent& getStatusBar() { return statusBar; }
     // The docked AI chat panel — same plain-accessor role getGraphEditor()/getTimelinePanel() play
@@ -668,6 +672,17 @@ private:
     // One choke point for "load factory preset N + keep the timeline in step", shared by the Load
     // menu and simulateLoadFactoryPresetForTest.
     void loadFactoryPresetAtIndex(int index);
+    // T114/P8-10: guarded factory-preset load, shared by the Load menu's own preset branch and the
+    // welcome screen's "Open our default project" button (index 0). hideWelcomeScreen() runs as the
+    // LAST line inside the guard's `proceed` continuation — never before or after
+    // guardUnsavedChanges() itself — so a Cancel answer leaves the welcome screen exactly as it was
+    // (see DirtyDocumentIsGuardedBeforeWelcomeScreenReplacesIt in WelcomeScreenTests.cpp).
+    void loadPresetGuarded(int index);
+    // T114/P8-10: guarded recent-project open, shared by the Load menu's "Recent Projects" submenu
+    // and the welcome screen's recent-project rows. Goes through openFromFile like every other
+    // recent-project open, so autosave recovery and the bundle/plain-preset split both apply
+    // unchanged.
+    void openRecentProjectGuarded(const juce::File& file);
     // New Patch empties the timeline as well as the canvas, as its own undoable step.
     void clearTimelineForNewPatch();
     // The post-guard half of AppCommands::newPatch — everything the command used to do inline,
@@ -707,6 +722,19 @@ private:
 
     // Collapse/expand the library sidebar. Slides to the target layout (beginPanelSlide()).
     void setLibraryVisible(bool v);
+
+    // ---- Welcome screen (T114/P8-10) ----
+
+    // A no-op when welcomeScreen_ is null (Hosted mode) or already hidden — every guarded action's
+    // `proceed` continuation calls this unconditionally as its LAST step, so it must tolerate both.
+    void hideWelcomeScreen();
+    // Reopens the overlay (AppCommands::showWelcomeScreen, wired to the macOS Help menu in
+    // Main.cpp) with a freshly re-pruned recent-projects list — the list may have changed since it
+    // was last shown.
+    void showWelcomeScreen();
+    // Build-time "What's New" dialog (Feature 2) — a synchronous, no-network juce::AlertWindow
+    // listing synth::whatsnew::kHighlights. Never invoked from a test (it would open a real modal).
+    void showWhatsNewDialog();
 
     // ---- Timeline panel height (user-resizable, persisted) ----
 
@@ -807,6 +835,13 @@ private:
     AudioEngine& audioEngine;
 
     GraphEditor graphEditor;
+
+    // T114/P8-10: the startup overlay offering New/Open Default/Open Existing/Recent instead of
+    // silently auto-loading the factory preset. Null in Hosted mode — see ownedAudioEngine's gate
+    // in initialiseCommon(); a hosted plugin's document is host-owned, so it must never construct
+    // or show this. Added to the component tree LAST (after every other addAndMakeVisible() call in
+    // initialiseCommon()), so it paints on top of the toolbar/canvas while visible.
+    std::unique_ptr<synth::ui::WelcomeScreenComponent> welcomeScreen_;
 
     // Every open hosted-plugin editor window. Declared AFTER ownedAudioEngine/audioEngine
     // (and graphEditor) so it is destroyed BEFORE them — members are torn down in REVERSE

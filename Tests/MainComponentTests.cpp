@@ -395,10 +395,15 @@ TEST_F(MainComponentTest, CommandManagerHasCommands) {
 #if JUCE_MAC
     expectedCommandCount += 1;
 #endif
+    // T114/P8-10: showWelcomeScreen and whatsNew are two more menu-only commands with no
+    // shortcut-table entry (same "no chord" treatment as checkForUpdates above), but registered
+    // UNCONDITIONALLY rather than mac-only — neither needs OS integration, only
+    // ownedAudioEngine != nullptr, which is true for every MainComponent this test constructs.
+    expectedCommandCount += 2;
     // exportPatchOnly (Cmd+Shift+P, P8-20) joined exportAudio (Cmd+Shift+E, P8-5) as a rebindable
     // action with a default binding, so both are now counted through expectedActions above; the old
-    // manual `+= 1` for exportPatchOnly no longer applies -- only checkForUpdates (mac, above) is
-    // still a menu-only command with no shortcut-table entry.
+    // manual `+= 1` for exportPatchOnly no longer applies -- only checkForUpdates (mac) and
+    // showWelcomeScreen/whatsNew (above) are still menu-only commands with no shortcut-table entry.
     EXPECT_EQ(commands.size(), expectedCommandCount);
     for (const auto& actionId : expectedActions)
         EXPECT_TRUE(commands.contains(AppCommands::getCommandForAction(actionId)))

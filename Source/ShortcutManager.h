@@ -86,7 +86,17 @@ enum CommandIDs {
     // Not user-rebindable (no ShortcutManager actionId/binding) — Sparkle's own convention is a
     // plain "Check for Updates…" menu item with no keyboard shortcut. macOS only; see
     // Source/Update/UpdateManager.h.
-    checkForUpdates
+    checkForUpdates,
+    // T114/P8-10: reopens the welcome screen overlay. Unlike checkForUpdates, registered
+    // unconditionally in every build (see MainComponent::getAllCommands) — it needs no OS
+    // integration, only ownedAudioEngine != nullptr (never registered at all on the plugin path).
+    // Same "menu-only item with no chord" treatment as checkForUpdates: no ShortcutManager
+    // actionId/binding.
+    showWelcomeScreen,
+    // Build-time, no-network "What's New" dialog (Feature 2 of T114/P8-10) — see the root
+    // CMakeLists.txt's WhatsNewData.h generation and MainComponent::showWhatsNewDialog. Same
+    // unconditional-registration, no-chord treatment as showWelcomeScreen above.
+    whatsNew
 };
 
 /** What getCommandForAction() answers for a SURFACE action — an id that is rebindable and appears
