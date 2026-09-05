@@ -13,6 +13,9 @@
 #include "UI/PreferencesSettingsTab.h"
 #include "UI/SettingsWindow.h"
 #include "UI/TrackColour.h"
+// Generated at CMake CONFIGURE time from local git history — see the root CMakeLists.txt's
+// "What's New" block. ${CMAKE_BINARY_DIR}/generated is on AppUI's private include path.
+#include "WhatsNewData.h"
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -634,10 +637,10 @@ void MainComponent::initialiseCommon(std::unique_ptr<synth::AIProvider> provider
             menu.addSubMenu("Recent Projects", recentMenu);
         }
 
-        // Capture `presets`/`recents` by value — the outer locals are gone by the time the async
-        // callback runs.
-        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&loadButton), [this, presets,
-                                                                                         recents](int result) {
+        // Capture `recents` by value — the outer local is gone by the time the async callback
+        // runs. `presets` no longer needs capturing here — loadPresetGuarded() below fetches its
+        // own copy (same reasoning as launchOpenPresetChooser not needing the menu's own list).
+        menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&loadButton), [this, recents](int result) {
             if (result == 1000) {
                 openPresetFromFile();
             } else if (result >= 2000) {
@@ -645,20 +648,14 @@ void MainComponent::initialiseCommon(std::unique_ptr<synth::AIProvider> provider
                 if (index >= recents.size())
                     return;
                 // Same guard as "Load from file...": the recent project itself is opened through
-                // openFromFile, which re-adds it (moving it back to the front) on success.
-                guardUnsavedChanges("Opening a recent project", [this, file = recents[index]] { openFromFile(file); });
+                // openFromFile, which re-adds it (moving it back to the front) on success. Shared
+                // with the welcome screen's recent-project rows (T114/P8-10) — see
+                // openRecentProjectGuarded.
+                openRecentProjectGuarded(recents[index]);
             } else if (result > 0) {
-                // Capture `presets` by value again (the outer local is gone by the time this runs)
-                // and `index` so the guard's continuation still knows which preset was picked.
-                guardUnsavedChanges("Loading a preset", [this, presets, index = result - 1] {
-                    statusBar.showMessage("Loading preset...");
-                    // loadFactoryPresetAtIndex detaches existing components (stopping scope timers) before the
-                    // graph is cleared — avoids a use-after-free where a ScopeComponent reads a freed
-                    // VisualBuffer — and reconciles the timeline's bindings against the new graph.
-                    loadFactoryPresetAtIndex(index);
-                    setCurrentPatchName(presets[index].name);
-                    statusBar.showMessage("Loaded: " + presets[index].name);
-                });
+                // Shared with the welcome screen's "Open our default project" button (T114/P8-10)
+                // — see loadPresetGuarded.
+                loadPresetGuarded(result - 1);
             }
         });
     };
@@ -1106,6 +1103,53 @@ void MainComponent::initialiseCommon(std::unique_ptr<synth::AIProvider> provider
         graphEditor.updateComponents();
         graphEditor.refreshOutputDeviceInfo();
     }
+
+    // ---- Welcome screen (T114/P8-10) ---------------------------------------------------------
+    // APP-ONLY: this whole block is unreachable on the plugin path anyway (it already returned at
+    // the `ownedAudioEngine == nullptr` branch above), but the explicit guard is kept as the same
+    // belt-and-suspenders idiom the rest of this function uses (see the audio-device-state block
+    // above) — a hosted plugin's document is host-owned via getStateInformation, so this overlay
+    // must never be constructed there.
+    if (ownedAudioEngine != nullptr) {
+        welcomeScreen_ = std::make_unique<synth::ui::WelcomeScreenComponent>();
+
+        welcomeScreen_->onNewProject = [this] {
+            // AppCommands::newPatch's own guard ("New Patch") runs first; newPatch() itself calls
+            // hideWelcomeScreen() as the LAST step of its body, so a Cancel answer never touches it.
+            commandManager.invokeDirectly(AppCommands::newPatch, true);
+        };
+        welcomeScreen_->onOpenDefaultProject = [this] { loadPresetGuarded(0); };
+        welcomeScreen_->onOpenExistingProject = [this] { openPresetFromFile(); };
+        welcomeScreen_->onOpenRecentProject = [this](const juce::File& file) { openRecentProjectGuarded(file); };
+        welcomeScreen_->onWhatsNewRequested = [this] {
+            // Deliberately does NOT hide the welcome screen — the user should be able to read
+            // What's New and still see/use the overlay's other options afterward.
+            showWhatsNewDialog();
+        };
+        welcomeScreen_->onShowAtLaunchChanged = [this](bool shouldShow) {
+            appProperties.getUserSettings()->setValue("showWelcomeScreenAtLaunch", shouldShow);
+            appProperties.saveIfNeeded();
+        };
+
+        if (recentProjects.pruneMissing() > 0)
+            saveRecentProjects();
+        welcomeScreen_->setRecentProjects(recentProjects.getEntries());
+        const bool showAtLaunch = appProperties.getUserSettings()->getBoolValue("showWelcomeScreenAtLaunch", true);
+        welcomeScreen_->setShowAtLaunch(showAtLaunch);
+        welcomeScreen_->setLatestVersionLabel(juce::String(synth::branding::kProductName) + " " +
+                                              synth::whatsnew::kReleaseTag);
+
+        // Added LAST — JUCE paints children in addAndMakeVisible order, so this must come after
+        // every other addAndMakeVisible() call above to sit on top of the toolbar/canvas.
+        addAndMakeVisible(*welcomeScreen_);
+        welcomeScreen_->setVisible(showAtLaunch);
+        // setSize(1600, 900) above already ran resized() once, before this component existed — a
+        // child added afterwards starts at zero bounds and would otherwise sit unsized until the
+        // next real window resize. resized() itself is idempotent (every other panel's layout is
+        // fraction-driven off already-settled state), so re-running it here just to size this one
+        // new child is safe.
+        resized();
+    }
 }
 
 void MainComponent::applyStoredDualIOPreferenceToPatch() {
@@ -1509,6 +1553,32 @@ void MainComponent::loadFactoryPresetAtIndex(int index) {
     // direction - a clean document stays clean, a dirty one stays dirty.
 }
 
+// T114/P8-10: shared by the Load menu's own factory-preset branch and the welcome screen's "Open
+// our default project" button (index 0). hideWelcomeScreen() is the LAST line inside `proceed` —
+// never before or after guardUnsavedChanges() itself — so a Cancel answer leaves the welcome screen
+// exactly as it was (see DirtyDocumentIsGuardedBeforeWelcomeScreenReplacesIt in
+// WelcomeScreenTests.cpp).
+void MainComponent::loadPresetGuarded(int index) {
+    auto presets = synth::PresetManager::getPresetList();
+    if (index < 0 || index >= presets.size())
+        return;
+    guardUnsavedChanges("Loading a preset", [this, presets, index] {
+        statusBar.showMessage("Loading preset...");
+        loadFactoryPresetAtIndex(index);
+        setCurrentPatchName(presets[(size_t)index].name);
+        statusBar.showMessage("Loaded: " + presets[(size_t)index].name);
+        hideWelcomeScreen();
+    });
+}
+
+// T114/P8-10: shared by the Load menu's "Recent Projects" submenu and the welcome screen's recent-
+// project rows. Goes through openFromFile like every other recent-project open, so autosave
+// recovery and the bundle/plain-preset split both apply unchanged — see openFromFile/
+// loadBundleFromFile/loadAutosaveFromFile's own hideWelcomeScreen() calls on their success paths.
+void MainComponent::openRecentProjectGuarded(const juce::File& file) {
+    guardUnsavedChanges("Opening a recent project", [this, file] { openFromFile(file); });
+}
+
 // Guards BEFORE the dialog opens — the chooser itself is the post-guard half, below.
 void MainComponent::openPresetFromFile() {
     guardUnsavedChanges("Opening another project", [this] { launchOpenPresetChooser(); });
@@ -1744,6 +1814,10 @@ bool MainComponent::openFromFile(const juce::File& file) {
     markDocumentClean();
     setCurrentPatchName(file.getFileNameWithoutExtension());
     statusBar.showMessage("Loaded: " + file.getFileNameWithoutExtension());
+    // T114/P8-10: covers the welcome screen's "Open an existing project" plain-.json path. The
+    // bundle path above returns through loadBundleFromFile/loadAutosaveFromFile instead, which each
+    // have their own call on their own success tail.
+    hideWelcomeScreen();
     return true;
 }
 
@@ -1787,6 +1861,9 @@ bool MainComponent::loadBundleFromFile(const juce::File& bundleDir) {
     saveRecentProjects();
     setCurrentPatchName(bundleDir.getFileNameWithoutExtension());
     statusBar.showMessage("Loaded: " + bundleDir.getFileNameWithoutExtension());
+    // T114/P8-10: covers both the welcome screen's "Open an existing project" bundle path AND its
+    // recent-project rows (both go through openFromFile -> here).
+    hideWelcomeScreen();
     return true;
 }
 
@@ -1826,6 +1903,9 @@ bool MainComponent::loadAutosaveFromFile(const juce::File& bundleDir) {
     // marker reflects the just-restored dirty state, not a stale one.
     setCurrentPatchName(bundleDir.getFileNameWithoutExtension());
     statusBar.showMessage("Recovered unsaved changes: " + bundleDir.getFileNameWithoutExtension());
+    // T114/P8-10: the autosave-recovery Restore arm is one more way a recent-project row (or "Open
+    // an existing project") can finish opening a bundle — see openFromFile's own comment.
+    hideWelcomeScreen();
     return true;
 }
 
@@ -1908,6 +1988,11 @@ void MainComponent::getAllCommands(juce::Array<juce::CommandID>& commands) {
                        AppCommands::snapCyclePrev, AppCommands::snapCycleNext, AppCommands::zoomInHorizontal,
                        AppCommands::zoomOutHorizontal, AppCommands::zoomInVertical, AppCommands::zoomOutVertical});
     commands.add(AppCommands::toggleTimelinePanel);
+    // T114/P8-10: unconditional (unlike checkForUpdates below) — neither command needs OS
+    // integration, only ownedAudioEngine != nullptr, which getCommandInfo enforces via setActive()
+    // and which is fixed for this MainComponent instance's whole lifetime.
+    commands.add(AppCommands::showWelcomeScreen);
+    commands.add(AppCommands::whatsNew);
 #if JUCE_MAC || JUCE_WINDOWS
     commands.add(AppCommands::checkForUpdates);
 #endif
@@ -2224,6 +2309,18 @@ void MainComponent::getCommandInfo(juce::CommandID commandID, juce::ApplicationC
         result.addDefaultKeypress(kp.getKeyCode(), kp.getModifiers());
         break;
     }
+    case AppCommands::showWelcomeScreen: {
+        result.setInfo("Show Welcome Screen", "Reopen the welcome screen", "Help", 0);
+        // Registered unconditionally (see getAllCommands), but only ever meaningful on the app
+        // path — ownedAudioEngine, and therefore welcomeScreen_, is fixed for this instance's whole
+        // lifetime, so this check alone is enough; getAllCommands/perform need no matching gate.
+        result.setActive(ownedAudioEngine != nullptr);
+        break;
+    }
+    case AppCommands::whatsNew: {
+        result.setInfo("What's New...", "See what's changed recently", "Help", 0);
+        break;
+    }
 #if JUCE_MAC || JUCE_WINDOWS
     case AppCommands::checkForUpdates: {
         result.setInfo("Check for Updates...", "Check for a newer version of the app", "Help", 0);
@@ -2524,6 +2621,12 @@ bool MainComponent::perform(const InvocationInfo& info) {
     }
     case AppCommands::toggleTimelinePanel:
         toggleTimelineButton.triggerClick();
+        return true;
+    case AppCommands::showWelcomeScreen:
+        showWelcomeScreen();
+        return true;
+    case AppCommands::whatsNew:
+        showWhatsNewDialog();
         return true;
 #if JUCE_MAC || JUCE_WINDOWS
     case AppCommands::checkForUpdates:
@@ -2865,6 +2968,12 @@ void MainComponent::resized() {
         moduleLibrary.setBounds(bounds.removeFromLeft(libW));
 
     graphEditor.setBounds(bounds);
+
+    // T114/P8-10: full window bounds on EVERY layout pass, whether or not it's currently visible —
+    // it must always cover the toolbar/canvas the moment it's shown, and a stale rect from before
+    // the last resize would leave gaps around the edges.
+    if (welcomeScreen_)
+        welcomeScreen_->setBounds(getLocalBounds());
 }
 
 // ---- Toolbar icon + text application ----
@@ -3120,6 +3229,48 @@ void MainComponent::setLibraryVisible(bool v) {
         ShortcutManager::keyPressToDisplayString(shortcutManager.getBinding("toggleLibrary"))));
 
     beginPanelSlide();
+}
+
+// ---- Welcome screen (T114/P8-10) ----
+
+void MainComponent::hideWelcomeScreen() {
+    // A no-op is deliberately safe here: null in Hosted mode, and every guarded action's `proceed`
+    // continuation (loadPresetGuarded, newPatch) calls this unconditionally as its last step even
+    // when the welcome screen was never showing in the first place (e.g. the toolbar's own Load
+    // button, not the welcome screen, triggered the load).
+    if (welcomeScreen_)
+        welcomeScreen_->setVisible(false);
+}
+
+void MainComponent::showWelcomeScreen() {
+    if (!welcomeScreen_)
+        return;
+    // The list may have changed since it was last shown (a project saved/opened elsewhere, or
+    // pruned since a bundle moved/vanished) — re-pruned exactly like the Load menu does before
+    // building its own Recent Projects submenu.
+    if (recentProjects.pruneMissing() > 0)
+        saveRecentProjects();
+    welcomeScreen_->setRecentProjects(recentProjects.getEntries());
+    welcomeScreen_->toFront(false);
+    welcomeScreen_->setVisible(true);
+}
+
+// Feature 2 of T114/P8-10: a small, synchronous, no-network dialog listing recent commit subjects
+// captured at CMake CONFIGURE time (see the root CMakeLists.txt's "What's New" block and
+// WhatsNewData.h). Never invoked from a test — it would open a real modal juce::AlertWindow, same
+// caution as every other real-dialog entry point in this file.
+void MainComponent::showWhatsNewDialog() {
+    juce::String message = juce::String(synth::whatsnew::kReleaseTag) + "\n\n";
+    for (int i = 0; i < synth::whatsnew::kHighlightsCount; ++i)
+        message << "- " << synth::whatsnew::kHighlights[i] << "\n";
+
+    auto options = juce::MessageBoxOptions()
+                       .withIconType(juce::MessageBoxIconType::InfoIcon)
+                       .withTitle("What's New")
+                       .withMessage(message)
+                       .withButton("Close")
+                       .withAssociatedComponent(this);
+    juce::AlertWindow::showAsync(options, nullptr);
 }
 
 // ---- Alignment guides toggle (UI Phase 7 - Item 4) ----
@@ -3606,6 +3757,10 @@ void MainComponent::newPatch() {
     markDocumentClean();
     setCurrentPatchName("Untitled");
     statusBar.showMessage("New patch");
+    // T114/P8-10: the welcome screen's "New empty project" button reaches this via
+    // AppCommands::newPatch's own guard — this line is what actually hides it, only once the guard
+    // has let the action proceed (a Cancel answer never runs newPatch() at all).
+    hideWelcomeScreen();
 }
 
 juce::AudioProcessorGraph::Node* MainComponent::findNodeByUuid(const juce::String& uuid) const {

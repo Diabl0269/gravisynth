@@ -195,6 +195,9 @@ private:
                 }
 #if JUCE_MAC
                 else if (menuIndex == 2) {
+                    menu.addCommandItem(&cm, AppCommands::showWelcomeScreen);
+                    menu.addCommandItem(&cm, AppCommands::whatsNew);
+                    menu.addSeparator();
                     menu.addCommandItem(&cm, AppCommands::checkForUpdates);
                 }
 #endif

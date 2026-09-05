@@ -499,6 +499,15 @@ Library sidebar and AI panel can each be fully hidden (width = 0). State persist
 
 Both keys are read at the top of `initialiseCommon()` before any `setVisible()` or `addAndMakeVisible()` call. Cmd+B toggles the library sidebar (wired via `ShortcutManager`).
 
+### Welcome screen overlay (T114/P8-10)
+
+`Source/UI/WelcomeScreenComponent` is a full-window overlay, not a docked panel — it covers the toolbar and canvas alike while shown, rather than carving a strip out of either. Two rules keep it correctly positioned and stacked:
+
+- **Added LAST.** `MainComponent::initialiseCommon()` calls `addAndMakeVisible(*welcomeScreen_)` after every other `addAndMakeVisible()` call in the constructor — JUCE paints/z-orders children in add order, so this is what makes it sit on top of the toolbar buttons and canvas rather than underneath them.
+- **Resized on every layout pass, visible or not.** `MainComponent::resized()`'s last line is `if (welcomeScreen_) welcomeScreen_->setBounds(getLocalBounds());` — the FULL window bounds, not whatever's left after the toolbar/status-bar/panels have carved their own strips out of the local `bounds` variable. Running this unconditionally (not gated on `isVisible()`) means a stale rect from before the last window resize can never show through the instant `showWelcomeScreen()` makes it visible again.
+
+App-only, gated on `ownedAudioEngine != nullptr` — see `docs/architecture.md`'s "Welcome screen" subsection for the full gating rationale, the persisted `"showWelcomeScreenAtLaunch"` key, and the guard-before-hide ordering that keeps a Cancel answer from dismissing it.
+
 ---
 
 ## 6. Module Width Buckets

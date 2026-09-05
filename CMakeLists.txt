@@ -128,6 +128,83 @@ set(SYNTH_WINSPARKLE_PUBLIC_KEY "" CACHE STRING "WinSparkle EdDSA public key (ba
 # builds default to "0" — never distributed, so Sparkle comparison doesn't matter for them.
 set(SYNTH_BUILD_NUMBER "0" CACHE STRING "CFBundleVersion — monotonic build number, CI sets this to the workflow run number")
 
+# ---- "What's New" (T114/P8-10, Feature 2): build-time, no-network release notes -----------------
+# Deliberately the CHEAP version: no HTTP client, no offline-handling complexity, works even in an
+# airgapped build. Sourced entirely from THIS repo's own git history at CONFIGURE time (not build
+# time — a re-run of `cmake --build` with no re-configure keeps showing whatever was captured at the
+# last `cmake -S . -B build`, which is fine: the alternative, a custom build-time command, buys
+# nothing here and would just make incremental builds re-run git on every invocation).
+#
+# Sensitive-info boundary: COMMIT SUBJECT LINES ONLY (the first line of each commit message) from
+# this project's own public commit history — never the body, never author name/email. See
+# docs/distribution.md's "What's New" section for the full rationale.
+execute_process(
+    COMMAND git describe --tags --abbrev=0
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE SYNTH_WHATSNEW_TAG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE SYNTH_WHATSNEW_TAG_RESULT
+)
+if(NOT SYNTH_WHATSNEW_TAG_RESULT EQUAL 0 OR SYNTH_WHATSNEW_TAG STREQUAL "")
+    # A shallow clone or a repo with no tags yet must not break the configure.
+    set(SYNTH_WHATSNEW_TAG "development build")
+endif()
+
+execute_process(
+    COMMAND git log --pretty=format:%s -n 15
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE SYNTH_WHATSNEW_LOG
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+    RESULT_VARIABLE SYNTH_WHATSNEW_LOG_RESULT
+)
+if(NOT SYNTH_WHATSNEW_LOG_RESULT EQUAL 0 OR SYNTH_WHATSNEW_LOG STREQUAL "")
+    # A source tarball (no .git directory at all) must not break the configure either.
+    set(SYNTH_WHATSNEW_LOG "No release history available.")
+endif()
+
+# Sanitize BOTH captures before they reach a C string literal: this text lands in a generated
+# header that reaches juce::String at runtime, and juce::String's `const char*` ctor decodes bytes
+# as Latin-1 (see CLAUDE.md's non-ASCII-literal invariant) — a stray UTF-8 byte in a commit subject
+# would mojibake. Escape backslash/quote FIRST, so the ASCII-range replacement below can't touch
+# (and corrupt) an escape sequence it just introduced.
+foreach(_synth_whatsnew_var SYNTH_WHATSNEW_TAG SYNTH_WHATSNEW_LOG)
+    string(REPLACE "\\" "\\\\" ${_synth_whatsnew_var} "${${_synth_whatsnew_var}}")
+    string(REPLACE "\"" "\\\"" ${_synth_whatsnew_var} "${${_synth_whatsnew_var}}")
+    # CMake's regex engine has no \xNN hex-escape syntax (that error's caught at configure time,
+    # not silently misparsed) — the bracket expression below spells the same printable-ASCII range
+    # (0x20 space .. 0x7E tilde) literally instead, plus \n so a real newline survives untouched.
+    string(REGEX REPLACE "[^ -~\n]" "?" ${_synth_whatsnew_var} "${${_synth_whatsnew_var}}")
+endforeach()
+
+# One line per commit subject, `;`-separated as a CMake list — safe because `;` cannot appear
+# inside a single-line git log subject (git itself uses it as the format-field separator).
+string(REPLACE "\n" ";" SYNTH_WHATSNEW_HIGHLIGHTS "${SYNTH_WHATSNEW_LOG}")
+list(LENGTH SYNTH_WHATSNEW_HIGHLIGHTS SYNTH_WHATSNEW_HIGHLIGHTS_COUNT)
+
+set(SYNTH_WHATSNEW_GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+file(MAKE_DIRECTORY "${SYNTH_WHATSNEW_GENERATED_DIR}")
+
+set(SYNTH_WHATSNEW_HEADER_CONTENT
+"#pragma once
+
+// GENERATED at CMake configure time — see the \"What's New\" block in the root CMakeLists.txt.
+// Do not edit by hand; edit the generator instead.
+namespace synth::whatsnew {
+inline constexpr const char* kReleaseTag = \"${SYNTH_WHATSNEW_TAG}\";
+inline constexpr const char* kHighlights[] = {
+")
+foreach(_synth_whatsnew_line ${SYNTH_WHATSNEW_HIGHLIGHTS})
+    string(APPEND SYNTH_WHATSNEW_HEADER_CONTENT "    \"${_synth_whatsnew_line}\",\n")
+endforeach()
+string(APPEND SYNTH_WHATSNEW_HEADER_CONTENT
+"};
+inline constexpr int kHighlightsCount = ${SYNTH_WHATSNEW_HIGHLIGHTS_COUNT};
+} // namespace synth::whatsnew
+")
+file(WRITE "${SYNTH_WHATSNEW_GENERATED_DIR}/WhatsNewData.h" "${SYNTH_WHATSNEW_HEADER_CONTENT}")
+
 if(ENABLE_COVERAGE)
     if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
@@ -568,6 +645,8 @@ add_library(AppUI STATIC
     Source/UI/ModMatrixComponent.h
     Source/UI/SettingsWindow.cpp
     Source/UI/SettingsWindow.h
+    Source/UI/WelcomeScreenComponent.cpp
+    Source/UI/WelcomeScreenComponent.h
     # Plugin hosting UI (TL7-5) — native editor windows for hosted VST3/AU plugins. In AppUI (a
     # window), not Core, mirroring HostedPluginModule/HostedPluginBackend's Core placement above.
     Source/Plugin/Hosting/HostedPluginEditorWindow.cpp
@@ -587,6 +666,10 @@ add_library(AppUI STATIC
 # PUBLIC so consumers (the app and the plugin) inherit Core's JUCE modules, include dirs,
 # the Assets binary-data lib and HAS_FONT_ASSETS.
 target_link_libraries(AppUI PUBLIC Core)
+
+# WhatsNewData.h (generated above, "What's New" block) — PRIVATE since only AppUI's
+# MainComponent.cpp includes it.
+target_include_directories(AppUI PRIVATE "${SYNTH_WHATSNEW_GENERATED_DIR}")
 
 # The VST3 is a shared object on Linux, and every object linked into a .so must be
 # position-independent. Core/AppUI/Assets are static libraries that were previously only ever
